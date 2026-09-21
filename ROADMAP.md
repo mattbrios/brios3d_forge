@@ -38,7 +38,7 @@ As fases seguem os quatro marcos do `CONTEXT.md` (MVP → Operação diária →
 | **Marco MVP** | | *Precifica corretamente e controla filamento* | |
 | 0 | Setup e fundações | Tooling, erros/validação padrão, migrations, health check, CI | ✅ |
 | 1 | Motor de preço (`pricing`) | Serviço puro com custo detalhado e preço por canal, bem testado | ✅ |
-| 2 | Dados de impressão pela URL do MakerWorld | Obter tempo, gramas por filamento, cores, AMS e impressora a partir da URL do perfil, sem processar arquivos | ⬜ |
+| 2 | Dados de impressão pela URL do MakerWorld | Obter tempo, gramas por filamento, cores, AMS e impressora a partir da URL do perfil, sem processar arquivos | ✅ |
 | 3 | Autenticação | Login, sessão, proteção de rotas na API e no web | ⬜ |
 | 4 | Usuários e papéis | CRUD de usuários e autorização por papel (admin, produção, vendas) | ⬜ |
 | 5 | Configurações globais e canais | Tarifas, hora de trabalho, margens, % falha/purga, custos fixos, taxas por canal | ⬜ |
@@ -149,17 +149,17 @@ As fases seguem os quatro marcos do `CONTEXT.md` (MVP → Operação diária →
 - No nível do modelo: `title`, `coverUrl`, `license` e `designCreator`. A Fase 14 reaproveita esses campos.
 
 **Tarefas:**
-- [ ] Validar e normalizar a URL: só HTTPS, só o host `makerworld.com` (com ou sem prefixo de idioma, como `/pt/`); extrair o `designId` do caminho e o `profileId` do fragmento `#profileId-N`, quando houver. Outra URL retorna 400 `{ error }`
-- [ ] Criar um adaptador `MakerWorldClient` atrás de uma interface, para trocar a fonte se a API mudar. Ele deve usar timeout, limite de tamanho da resposta e não seguir redirecionamentos para outro host
-- [ ] Criar um mapeador puro (sem rede) do JSON da API para o `PrintProfileData`: modelo (título, capa, licença, designer) e a lista de perfis, cada um com `id`, título, tempo em segundos, gramas totais, `needsAms`, impressora e bico, configurações de fatiamento, lista de filamentos (slot, tipo, cor, gramas, metros) e placas (índice, tempo, gramas e filamentos)
-- [ ] Todo campo ausente ou em formato inesperado vira `null` em vez de erro. Um modelo sem perfis volta com a lista vazia. O mapeador só falha quando a resposta não é um modelo reconhecível. Os números que vêm como texto (`"8"`, `"2.66"`) são convertidos e validados
-- [ ] Com `profileId` na URL, destacar esse perfil. Sem ele, usar o `defaultInstanceId` do modelo. Se o `profileId` não existir no modelo, retornar 400 `{ error }` explicando como ver os perfis disponíveis
-- [ ] Somar os filamentos de todas as placas do perfil pelo slot (um perfil do exemplo tem 11 placas) e manter também o detalhe por placa, que a Fase 19 usa para gerar os jobs
-- [ ] Endpoint `POST /print-profiles/import` com `{ "url": string }` que devolve o `PrintProfileData` sem gravar nada
-- [ ] Erros claros: URL inválida (400), modelo inexistente ou privado (404), e MakerWorld fora do ar, bloqueado ou com formato irreconhecível (502). Em todos os casos a resposta segue o formato `{ error }`, e o web oferece o preenchimento manual
+- [x] Validar e normalizar a URL: só HTTPS, só o host `makerworld.com` (com ou sem prefixo de idioma, como `/pt/`); extrair o `designId` do caminho e o `profileId` do fragmento `#profileId-N`, quando houver. Outra URL retorna 400 `{ error }`
+- [x] Criar um adaptador `MakerWorldClient` atrás de uma interface, para trocar a fonte se a API mudar. Ele deve usar timeout, limite de tamanho da resposta e não seguir redirecionamentos para outro host
+- [x] Criar um mapeador puro (sem rede) do JSON da API para o `PrintProfileData`: modelo (título, capa, licença, designer) e a lista de perfis, cada um com `id`, título, tempo em segundos, gramas totais, `needsAms`, impressora e bico, configurações de fatiamento, lista de filamentos (slot, tipo, cor, gramas, metros) e placas (índice, tempo, gramas e filamentos)
+- [x] Todo campo ausente ou em formato inesperado vira `null` em vez de erro. Um modelo sem perfis volta com a lista vazia. O mapeador só falha quando a resposta não é um modelo reconhecível. Os números que vêm como texto (`"8"`, `"2.66"`) são convertidos e validados
+- [x] Com `profileId` na URL, destacar esse perfil. Sem ele, usar o `defaultInstanceId` do modelo. Se o `profileId` não existir no modelo, retornar 400 `{ error }` explicando como ver os perfis disponíveis
+- [x] Somar os filamentos de todas as placas do perfil pelo slot (um perfil do exemplo tem 11 placas) e manter também o detalhe por placa, que a Fase 19 usa para gerar os jobs
+- [x] Endpoint `POST /print-profiles/import` com `{ "url": string }` que devolve o `PrintProfileData` sem gravar nada
+- [x] Erros claros: URL inválida (400), modelo inexistente ou privado (404), e MakerWorld fora do ar, bloqueado ou com formato irreconhecível (502). Em todos os casos a resposta segue o formato `{ error }`, e o web oferece o preenchimento manual
 - [x] Salvar a resposta real do modelo de exemplo como fixture em `api/test/fixtures/makerworld/design-3007827.json` (reduzida aos campos usados e a três perfis)
-- [ ] Os testes do mapeador e do endpoint usam o fixture e rodam sem acesso à internet (o cliente HTTP é substituído por um falso)
-- [ ] Web: campo "URL do MakerWorld" com botão de importar, seletor de perfil (quando o modelo tem vários) e um formulário com tempo, AMS, impressora e a lista de filamentos (tipo, cor, gramas). O que vier da API chega preenchido, e o que faltar fica em branco e editável. Mostrar os estados de carregamento, erro (com o formulário vazio para preencher à mão) e modelo sem perfis. Esta tela é a base da calculadora da Fase 12
+- [x] Os testes do mapeador e do endpoint usam o fixture e rodam sem acesso à internet (o cliente HTTP é substituído por um falso)
+- [x] Web: campo "URL do MakerWorld" com botão de importar, seletor de perfil (quando o modelo tem vários) e um formulário com tempo, AMS, impressora e a lista de filamentos (tipo, cor, gramas). O que vier da API chega preenchido, e o que faltar fica em branco e editável. Mostrar os estados de carregamento, erro (com o formulário vazio para preencher à mão) e modelo sem perfis. Esta tela é a base da calculadora da Fase 12
 
 **Critérios de aceite:**
 - Com o fixture do modelo 3007827, a URL `https://makerworld.com/pt/models/3007827-sea-animals-set?from=recommend#profileId-3387944` retorna o perfil "Sea star":

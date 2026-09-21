@@ -18,10 +18,10 @@
 
 ## Handoff
 
-**Feature**: phase-1-pricing - concluída
-**Where**: C1–C38 verificados (rodada 1 `light`: PASS; rodada 2 `standard`: PASS, 5 falhas injetadas e 5 mortas); `test:cov` com 95,34% de linhas em `pricing`
+**Feature**: phase-2-makerworld-profiles - concluída
+**Where**: C1–C56 verificados. Rodada 6 (escopada, `standard`): PASS, 56/56, 6 falhas injetadas e 6 mortas, `validate_verification.py` exit 0. As rodadas 1–5 deram FAIL, sempre por lacuna de teste (o código estava certo); o usuário autorizou as rodadas 4 a 6 além do limite de 3. Conferido também com o Playwright contra o MakerWorld real (importação, troca de perfil, URL inválida)
 **In progress**: nada
-**Next step**: Fase 2 - dados de impressão pela URL do MakerWorld. `plan.md` aprovado e `checks.md` escrito (C1–C41, perfil `standard`) em `.specs/features/phase-2-makerworld-profiles/`; próximo passo é o build
-**Blockers**: nenhum
-**Uncommitted**: ROADMAP.md (nova Fase 2), `.specs/features/phase-2-makerworld-profiles/` (`plan.md`, `checks.md`), `api/test/fixtures/makerworld/design-3007827.json`, este arquivo
+**Next step**: Fase 3 - autenticação. Antes do uso real da Fase 2, responder a questão 34 do ROADMAP (termos de uso da API não documentada do MakerWorld)
+**Blockers**: nenhum para a Fase 3
+**Uncommitted**: nada
 **Branch**: main (commits só locais; nada foi enviado ao remoto)
