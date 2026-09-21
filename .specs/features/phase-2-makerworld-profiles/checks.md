@@ -5,7 +5,7 @@ Plan: `.specs/features/phase-2-makerworld-profiles/plan.md`
 
 ## Intent
 
-55 checks em 9 fatias (C42–C46, C47–C51, C52–C54 e C55 acrescentados depois das rodadas 1 a 4 do Verifier, sem alterar os anteriores) · 4 one-way doors (a door 4 veio no build) · 2 perguntas abertas, uma `blocks go-live` (termos de uso do MakerWorld) e nenhuma que bloqueie o build
+56 checks em 10 fatias (C42–C56 acrescentados depois das rodadas 1 a 5 do Verifier, sem alterar os anteriores) · 4 one-way doors (a door 4 veio no build) · 2 perguntas abertas, uma `blocks go-live` (termos de uso do MakerWorld) e nenhuma que bloqueie o build
 
 O `AGENTS.md` não declara perfil. Uso `standard`, o mesmo em que a Fase 1 foi verificada: a
 fase depende de uma API externa não documentada e tem um mapeador cheio de ramos, justamente o
@@ -223,6 +223,14 @@ na fixture do web o perfil selecionado também era o primeiro. Nenhum check ante
 **C55** - Com a resposta de C24 alterada para `selectedProfileId` `3377800` (que não é o primeiro perfil), a tela abre com o seletor em `3377800`, `21` h `24` min e 4 linhas de filamento (AC 23, AC 5)
 Proof: `npm --prefix web run test -- src/components/print-profile-import.test.tsx -t "opens on the selected profile, not the first one"`
 
+### S10 - Lacuna da rodada 5 do Verifier · 1 file · 2 KB · ~0,5k
+
+Acrescentado depois da verificação da rodada 5 (FAIL: N7-N9 sobreviveram). O código já fazia o
+certo; C37 só provava 2 dos 8 campos. Nenhum check anterior mudou.
+
+**C56** - Com `printSeconds`, `needsAms`, `printer.nozzleDiameterMm` e o `type`, `color` e `meters` do primeiro filamento `null` no Sea star, Horas, Minutos, Bico, Tipo, Cor e Metros aparecem com valor `""` e aceitam o que for digitado, e "Precisa de AMS" aparece desmarcado e pode ser marcado (AC 24; "vazio" numa caixa de seleção é desmarcado)
+Proof: `npm --prefix web run test -- src/components/print-profile-import.test.tsx -t "every null field of the form is blank and editable"`
+
 ## Coverage
 
 | Set (size) | Member -> proof | Unproven |
@@ -241,6 +249,7 @@ Proof: `npm --prefix web run test -- src/components/print-profile-import.test.ts
 | falhas do upstream (7) | C21, table-driven over all 7: timeout C21, C23 · `500` C21 · `403` (Cloudflare) C21 · redirect `301` C21 · corpo > `maxBytes` C21 · corpo que não é JSON C21 · conexão recusada C21 | - |
 | tamanho do corpo `url` (2 bordas) | 2048 caracteres aceito C50 · 2049 caracteres recusado C54 (C44 prova um valor bem acima) | - |
 | erros de domínio -> HTTP (3) | 400 C31 · 404 C31 · 502 C31 | - |
+| campos nulos vazios e editáveis na tela (8) | `printer.name` C37 · `filament.grams` C37 · `printSeconds` (Horas e Minutos) C56 · `needsAms` C56 · `nozzleDiameterMm` C56 · `filament.type` C56 · `filament.color` C56 · `filament.meters` C56 | - |
 | perfil aberto na tela (2) | selecionado que é o primeiro C36 · selecionado que não é o primeiro C55 | - |
 | estados da tela (7) | inicial vazio C40 · carregando C35 · sucesso C34 · erro (API e rede) C38 · modelo sem perfis C39 · sucesso -> erro C51 · sucesso -> sem perfis C51 | - |
 | ações nas linhas de filamento (2) | adicionar C40 · remover C40 | - |
@@ -301,3 +310,4 @@ Arquivos que a fase toca: 3 existentes (`api/src/app.module.ts` 0,7 KB, `web/src
 - **Verification round 2 (`standard`):** FAIL - C1-C46 provados, 3 mutantes da rodada 1 mortos, 8 mutantes de sondagem sobreviveram (G1-G7, G9). C47-C51 acrescentados; os 8 e mais o id acima do inteiro seguro foram reinjetados e morreram
 - **Verification round 3 (`standard`):** FAIL - C1-C51 provados, mutantes das rodadas 1 e 2 mortos, 3 lacunas de teste (H2 ordem de slot, H16 valores por placa, H4 borda 2049). O código atual já estava correto nos três. Limite de 3 rodadas atingido; o usuário autorizou C52-C54 e uma rodada 4. H2, H16 e H4 foram reinjetados e morreram
 - **Verification round 4 (`standard`, autorizada pelo usuário além do limite de 3):** FAIL - C1-C54 provados, todos os mutantes das rodadas 1-3 mortos, 1 lacuna que conta (I6: a tela não provava abrir no `selectedProfileId`). C55 acrescentado e I6 reinjetado morreu. I1-I4 registrados como notas (sem requisito)
+- **Verification round 5 (`standard`, autorizada pelo usuário):** FAIL - C1-C55 provados, I6 e os mutantes anteriores mortos, 1 lacuna que conta (AC 24 provado em 2 de 8 campos; N7-N9). C56 acrescentado; N7-N9 e mais 3 variantes (cor, metros, bico) reinjetados morreram. N1-N6 registrados como notas ou equivalentes

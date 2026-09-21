@@ -241,4 +241,49 @@ describe("PrintProfileImport", () => {
     expect(valueOf("Minutos")).toBe("24");
     expect(filamentRows()).toHaveLength(4);
   });
+
+  it("every null field of the form is blank and editable", async () => {
+    type Nullable = {
+      printSeconds: number | null;
+      needsAms: boolean | null;
+      printer: { name: string | null; nozzleDiameterMm: number | null };
+      filaments: { type: string | null; color: string | null; meters: number | null }[];
+    };
+    const response = structuredClone(seaAnimals);
+    const seaStar = response.profiles.find((profile) => profile.id === 3387944) as unknown as
+      | Nullable
+      | undefined;
+    if (!seaStar) throw new Error("fixture sem o Sea star");
+    seaStar.printSeconds = null;
+    seaStar.needsAms = null;
+    seaStar.printer.nozzleDiameterMm = null;
+    seaStar.filaments[0].type = null;
+    seaStar.filaments[0].color = null;
+    seaStar.filaments[0].meters = null;
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(200, response)));
+    render(<PrintProfileImport />);
+    importUrl();
+    await screen.findByRole("combobox", { name: "Perfil" });
+
+    // AMS desconhecido abre desmarcado: "vazio" para uma caixa de seleção.
+    const ams = screen.getByLabelText("Precisa de AMS") as HTMLInputElement;
+    expect(ams.checked).toBe(false);
+    fireEvent.click(ams);
+    expect(ams.checked).toBe(true);
+
+    const row = within(filamentRows()[0]);
+    const fields: [HTMLInputElement, string][] = [
+      [screen.getByLabelText("Horas") as HTMLInputElement, "1"],
+      [screen.getByLabelText("Minutos") as HTMLInputElement, "5"],
+      [screen.getByLabelText("Bico (mm)") as HTMLInputElement, "0,6"],
+      [row.getByLabelText("Tipo") as HTMLInputElement, "PETG"],
+      [row.getByLabelText("Cor") as HTMLInputElement, "#00FF00"],
+      [row.getByLabelText("Metros") as HTMLInputElement, "3,1"],
+    ];
+    for (const [input, typed] of fields) {
+      expect(input.value).toBe("");
+      fireEvent.change(input, { target: { value: typed } });
+      expect(input.value).toBe(typed);
+    }
+  });
 });
