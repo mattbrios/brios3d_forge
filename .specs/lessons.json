@@ -1,0 +1,99 @@
+{
+  "schema": 1,
+  "promote_threshold": 2,
+  "window_days": 45,
+  "quarantine_threshold": 2,
+  "next_id": 6,
+  "lessons": [
+    {
+      "id": "L-001",
+      "key": "surviving_mutant::when a criterion says every null field is shown blank test every field the screen renders not a sample",
+      "text": "When a criterion says every null field is shown blank, test every field the screen renders, not a sample",
+      "signal": "surviving_mutant",
+      "scope": "web",
+      "status": "candidate",
+      "features": [
+        "phase-2-makerworld-profiles"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "N7-N9, checks C37/C56 (web)"
+      ],
+      "created": "2026-09-21T22:27:32Z",
+      "last_seen": "2026-09-21T22:27:32Z"
+    },
+    {
+      "id": "L-002",
+      "key": "spec_precision_gap::when a criterion says empty about a two state control such as a checkbox write which state that is before the test",
+      "text": "When a criterion says empty about a two-state control such as a checkbox, write which state that is before the test",
+      "signal": "spec_precision_gap",
+      "scope": "web",
+      "status": "candidate",
+      "features": [
+        "phase-2-makerworld-profiles"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "checks.md:231, C56 (web)"
+      ],
+      "created": "2026-09-21T22:27:33Z",
+      "last_seen": "2026-09-21T22:27:33Z"
+    },
+    {
+      "id": "L-003",
+      "key": "surviving_mutant::test that a selected item is shown with a fixture where the selected item is not the first one",
+      "text": "Test that a selected item is shown with a fixture where the selected item is not the first one",
+      "signal": "surviving_mutant",
+      "scope": "web",
+      "status": "candidate",
+      "features": [
+        "phase-2-makerworld-profiles"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "I6, C36/C55 (web)"
+      ],
+      "created": "2026-09-21T22:27:33Z",
+      "last_seen": "2026-09-21T22:27:33Z"
+    },
+    {
+      "id": "L-004",
+      "key": "surviving_mutant::when tests reach an external client over a different scheme than production add a proof that the production transport is used",
+      "text": "When tests reach an external client over a different scheme than production, add a proof that the production transport is used",
+      "signal": "surviving_mutant",
+      "scope": "api",
+      "status": "candidate",
+      "features": [
+        "phase-2-makerworld-profiles"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "F9, C42 (api)"
+      ],
+      "created": "2026-09-21T22:27:33Z",
+      "last_seen": "2026-09-21T22:27:33Z"
+    },
+    {
+      "id": "L-005",
+      "key": "surviving_mutant::assert per item values and ordering of aggregated lists with out of order input not only the totals",
+      "text": "Assert per-item values and ordering of aggregated lists with out-of-order input, not only the totals",
+      "signal": "surviving_mutant",
+      "scope": "api",
+      "status": "candidate",
+      "features": [
+        "phase-2-makerworld-profiles"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "H2/H16, C52/C53 (api)"
+      ],
+      "created": "2026-09-21T22:27:33Z",
+      "last_seen": "2026-09-21T22:27:33Z"
+    }
+  ]
+}
