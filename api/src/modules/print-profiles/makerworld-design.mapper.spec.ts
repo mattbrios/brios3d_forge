@@ -331,4 +331,33 @@ describe('mapMakerWorldDesign', () => {
     delete secondPlate.index;
     expect(profileOf(second, 3377800).plates[1].index).toBe(2);
   });
+
+  it('each plate keeps its own filament values', () => {
+    const profile = profileOf(design3007827(), 3377800);
+    const gramsOf = (index: number) =>
+      profile.plates[index - 1].filaments.map(({ slot, grams, meters }) => [slot, grams, meters]);
+    expect(gramsOf(1)).toEqual([
+      [1, 19, 6.19],
+      [2, 12, 3.82],
+      [3, 7, 2.3],
+    ]);
+    expect(gramsOf(10)).toEqual([
+      [1, 41, 13.46],
+      [2, 7, 2.13],
+      [4, 30, 9.85],
+    ]);
+  });
+
+  it('profile filaments are ordered by slot', () => {
+    const raw = design3007827();
+    const plates = modelInfo(raw, 3377800).plates as Json[];
+    plates[0].filaments = (plates[0].filaments as Json[]).filter((filament) => filament.id !== '1');
+    const profile = profileOf(raw, 3377800);
+    expect(profile.filaments.map(({ slot, grams }) => [slot, grams])).toEqual([
+      [1, 227],
+      [2, 64],
+      [3, 37],
+      [4, 61],
+    ]);
+  });
 });

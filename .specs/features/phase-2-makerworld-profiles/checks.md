@@ -5,7 +5,7 @@ Plan: `.specs/features/phase-2-makerworld-profiles/plan.md`
 
 ## Intent
 
-51 checks em 7 fatias (C42–C46 e C47–C51 acrescentados depois das rodadas 1 e 2 do Verifier, sem alterar os anteriores) · 4 one-way doors (a door 4 veio no build) · 2 perguntas abertas, uma `blocks go-live` (termos de uso do MakerWorld) e nenhuma que bloqueie o build
+54 checks em 8 fatias (C42–C46, C47–C51 e C52–C54 acrescentados depois das rodadas 1, 2 e 3 do Verifier, sem alterar os anteriores) · 4 one-way doors (a door 4 veio no build) · 2 perguntas abertas, uma `blocks go-live` (termos de uso do MakerWorld) e nenhuma que bloqueie o build
 
 O `AGENTS.md` não declara perfil. Uso `standard`, o mesmo em que a Fase 1 foi verificada: a
 fase depende de uma API externa não documentada e tem um mapeador cheio de ramos, justamente o
@@ -201,6 +201,20 @@ Proof: `npm --prefix api run test:e2e -- test/print-profiles.e2e-spec.ts -t "url
 **C51** - Depois de uma importação com sucesso (2 linhas de filamento), uma segunda importação que responde `502` ou `200` com `profiles: []` mostra a mensagem do estado, some com o seletor de perfil e deixa o formulário todo vazio (AC 25, AC 26)
 Proof: `npm --prefix web run test -- src/components/print-profile-import.test.tsx -t "a failed or empty import after a success clears the form"`
 
+### S8 - Lacunas da rodada 3 do Verifier · 2 files · 3 KB · ~1k
+
+Acrescentados depois da verificação da rodada 3 (FAIL: H2, H16 e H4 sobreviveram). O código já
+fazia o certo nos três casos; faltava o teste. Nenhum check anterior mudou.
+
+**C52** - No perfil `3377800`, cada placa mantém os próprios filamentos, e não os totais do perfil: a placa 1 tem `[slot, gramas, metros]` `[1, 19, 6.19]`, `[2, 12, 3.82]` e `[3, 7, 2.3]`, e a placa 10 tem `[1, 41, 13.46]`, `[2, 7, 2.13]` e `[4, 30, 9.85]` (door 1)
+Proof: `npm --prefix api run test -- src/modules/print-profiles/makerworld-design.mapper.spec.ts -t "each plate keeps its own filament values"`
+
+**C53** - Sem o slot `1` na placa 1 do `3377800` (o slot `1` passa a aparecer depois do `2` e do `3`), os filamentos do perfil saem em ordem de slot: `[1, 227]`, `[2, 64]`, `[3, 37]`, `[4, 61]` (AC 2)
+Proof: `npm --prefix api run test -- src/modules/print-profiles/makerworld-design.mapper.spec.ts -t "profile filaments are ordered by slot"`
+
+**C54** - Uma URL válida do MakerWorld com exatamente 2049 caracteres responde `400` com `error` contendo `url` e sem `URL inválida`, e o cliente falso não é chamado (AC 14, borda de C50)
+Proof: `npm --prefix api run test:e2e -- test/print-profiles.e2e-spec.ts -t "url with exactly 2049 characters returns 400"`
+
 ## Coverage
 
 | Set (size) | Member -> proof | Unproven |
@@ -212,12 +226,12 @@ Proof: `npm --prefix web run test -- src/components/print-profile-import.test.ts
 | campos escalares que podem voltar `null` (19) | C11, table-driven over all 19: `model.title` · `model.coverUrl` · `model.license` · `model.designer` · `profile.title` · `profile.printSeconds` · `profile.totalGrams` · `profile.needsAms` · `printer.name` · `printer.nozzleDiameterMm` · `settings.layerHeightMm` · `settings.wallLoops` · `settings.sparseInfillRate` · `filament.type` · `filament.color` · `filament.grams` · `filament.meters` · `plate.printSeconds` · `plate.totalGrams` | - |
 | números inválidos (4 formas) | texto `"abc"` C12 · negativo `"-1"`/`-5` C12 · vazio `""` C12 · texto numérico válido `"2.66"` C12 | - |
 | normalização de formato (4 campos) | `color` C13 · `sparseInfillRate` C13 · `layerHeightMm` C13 · `wallLoops` C13 | - |
-| origem dos filamentos do perfil (3 ramos) | soma das placas C5, C7 · soma com null numa placa -> null C47 · `instanceFilaments` sem placas C14 | - |
+| origem dos filamentos do perfil (5 ramos) | soma das placas C5, C7 · valores por placa preservados C52 · ordem de slot com entrada fora de ordem C53 · soma com null numa placa -> null C47 · `instanceFilaments` sem placas C14 | - |
 | escolha do perfil (4 ramos) | `profileId` existente C4 · ausente -> `defaultInstanceId` C8 · ausente sem `defaultInstanceId` válido -> primeiro perfil C46 · inexistente C16, C28 | - |
 | perfis da fixture (3) | `3387944` C4, C5 · `3377800` C7 · `3388305` C10 | - |
 | resposta irreconhecível (4 formas) | `[]` C17 · `null` C17 · `"texto"` C17 · `{}` C17 | - |
 | falhas do upstream (7) | C21, table-driven over all 7: timeout C21, C23 · `500` C21 · `403` (Cloudflare) C21 · redirect `301` C21 · corpo > `maxBytes` C21 · corpo que não é JSON C21 · conexão recusada C21 | - |
-| tamanho do corpo `url` (2 bordas) | 2048 caracteres aceito C50 · 2049 caracteres recusado C44 | - |
+| tamanho do corpo `url` (2 bordas) | 2048 caracteres aceito C50 · 2049 caracteres recusado C54 (C44 prova um valor bem acima) | - |
 | erros de domínio -> HTTP (3) | 400 C31 · 404 C31 · 502 C31 | - |
 | estados da tela (7) | inicial vazio C40 · carregando C35 · sucesso C34 · erro (API e rede) C38 · modelo sem perfis C39 · sucesso -> erro C51 · sucesso -> sem perfis C51 | - |
 | ações nas linhas de filamento (2) | adicionar C40 · remover C40 | - |
@@ -276,3 +290,4 @@ Arquivos que a fase toca: 3 existentes (`api/src/app.module.ts` 0,7 KB, `web/src
 - **Abandoned:** `fetch` nativo (door 3 como aprovado) - 403 com `cf-mitigated: challenge` contra o MakerWorld real
 - **Verification round 1 (`standard`):** FAIL - C1-C41 provados, 3 falhas sobreviveram (F9 transporte https, F6 arredondamento, F10 `MaxLength`). C42-C46 acrescentados; os três mutantes foram reinjetados e morreram
 - **Verification round 2 (`standard`):** FAIL - C1-C46 provados, 3 mutantes da rodada 1 mortos, 8 mutantes de sondagem sobreviveram (G1-G7, G9). C47-C51 acrescentados; os 8 e mais o id acima do inteiro seguro foram reinjetados e morreram
+- **Verification round 3 (`standard`):** FAIL - C1-C51 provados, mutantes das rodadas 1 e 2 mortos, 3 lacunas de teste (H2 ordem de slot, H16 valores por placa, H4 borda 2049). O código atual já estava correto nos três. Limite de 3 rodadas atingido; o usuário autorizou C52-C54 e uma rodada 4. H2, H16 e H4 foram reinjetados e morreram
