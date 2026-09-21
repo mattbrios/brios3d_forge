@@ -16,7 +16,7 @@
 ## Handoff
 
 **Feature**: phase-1-pricing - concluída
-**Where**: C1–C38 verificados (rodada 1 `light`: PASS; rodada 2 `standard`: em andamento); `test:cov` com 95,34% de linhas em `pricing`
+**Where**: C1–C38 verificados (rodada 1 `light`: PASS; rodada 2 `standard`: PASS, 5 falhas injetadas e 5 mortas); `test:cov` com 95,34% de linhas em `pricing`
 **In progress**: nada
 **Next step**: Fase 2 - parser de arquivos fatiados (G-code/3MF).
 **Blockers**: nenhum
