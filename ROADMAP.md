@@ -4,7 +4,7 @@
 
 O Brios3D Forge é um sistema de gestão para uma empresa de impressão 3D personalizada em FDM. Ele cobre cadastros, estoque de filamento por rolo, calculadora de preço, catálogo, orçamentos, produção, compras, financeiro, fiscal e relatórios.
 
-As fases seguem os quatro marcos do `CONTEXT.md` (MVP → Operação diária → Lucro real → Automação), com uma diferença: as partes mais arriscadas vêm primeiro. O motor de preço é um serviço puro e fica logo depois do setup. O parser de arquivos fatiados vem em seguida, já dentro do MVP. Cada fase entrega uma fatia vertical (API + tela, quando fizer sentido) e deixa o projeto estável.
+As fases seguem os quatro marcos do `CONTEXT.md` (MVP → Operação diária → Lucro real → Automação), com uma diferença: as partes mais arriscadas vêm primeiro. O motor de preço é um serviço puro e fica logo depois do setup. A importação dos dados de impressão pela URL do MakerWorld vem em seguida, já dentro do MVP. Cada fase entrega uma fatia vertical (API + tela, quando fizer sentido) e deixa o projeto estável.
 
 > **Nomenclatura:** o CONTEXT usa "Fase 2/3/4" para os blocos macro. Aqui eles se chamam **Marcos**, e **Fase N** é a unidade de trabalho numerada de 0 a 29.
 
@@ -38,7 +38,7 @@ As fases seguem os quatro marcos do `CONTEXT.md` (MVP → Operação diária →
 | **Marco MVP** | | *Precifica corretamente e controla filamento* | |
 | 0 | Setup e fundações | Tooling, erros/validação padrão, migrations, health check, CI | ✅ |
 | 1 | Motor de preço (`pricing`) | Serviço puro com custo detalhado e preço por canal, bem testado | ✅ |
-| 2 | Parser de arquivos fatiados | Extrair tempo e gramas por filamento de G-code/3MF (Bambu, Orca, Prusa) | ⬜ |
+| 2 | Dados de impressão pela URL do MakerWorld | Obter tempo, gramas por filamento, cores, AMS e impressora a partir da URL do perfil, sem processar arquivos | ⬜ |
 | 3 | Autenticação | Login, sessão, proteção de rotas na API e no web | ⬜ |
 | 4 | Usuários e papéis | CRUD de usuários e autorização por papel (admin, produção, vendas) | ⬜ |
 | 5 | Configurações globais e canais | Tarifas, hora de trabalho, margens, % falha/purga, custos fixos, taxas por canal | ⬜ |
@@ -48,7 +48,7 @@ As fases seguem os quatro marcos do `CONTEXT.md` (MVP → Operação diária →
 | 9 | Estoque de filamento por rolo | Rolos, movimentações, pesagem com tara, custo médio ponderado | ⬜ |
 | 10 | Insumos e peças de reposição | Itens controlados por quantidade, com movimentações e custo médio | ⬜ |
 | 11 | Estoque mínimo, alertas e etiqueta QR | Alertas de reposição e etiqueta com QR code para o rolo | ⬜ |
-| 12 | Calculadora integrada | Tela de precificação usando cadastros, estoque e upload de arquivo fatiado | ⬜ |
+| 12 | Calculadora integrada | Tela de precificação usando cadastros, estoque e os dados importados pela URL do MakerWorld | ⬜ |
 | **Marco 2** | | *Operação diária no sistema* | |
 | 13 | Catálogo e ficha técnica | Produtos com URL do modelo, variações, ficha técnica, licença e custo sempre atualizado | ⬜ |
 | 14 | Metadados do modelo por URL | Buscar imagem, título e licença no Printables, MakerWorld ou Thingiverse | ⬜ |
@@ -135,44 +135,47 @@ As fases seguem os quatro marcos do `CONTEXT.md` (MVP → Operação diária →
 
 ---
 
-### Fase 2 — Parser de arquivos fatiados (G-code/3MF)
+### Fase 2 — Dados de impressão pela URL do MakerWorld
 
-**Objetivo:** extrair o tempo estimado e os gramas por filamento (cor/material, incluindo multicor/AMS) de arquivos do Bambu Studio, OrcaSlicer e PrusaSlicer.
+**Objetivo:** a partir da URL de um modelo do MakerWorld, obter automaticamente os dados do perfil de impressão escolhido: tempo estimado, gramas e metros por filamento (tipo e cor), necessidade de AMS, impressora e bico do perfil e placas. O que não puder ser obtido volta vazio, para o usuário preencher à mão. **Nenhum arquivo G-code/3MF é baixado, enviado ou processado**, porque eles podem passar de 200 MB (veja "Fora de escopo").
 
 **Dependências:** Fase 0.
 
+**Fonte dos dados (verificado em 2026-09-21):**
+- A página HTML do MakerWorld responde `403` (desafio do Cloudflare) para requisições do servidor. **Não use scraping de HTML.**
+- A API pública `GET https://makerworld.com/api/v1/design-service/design/<designId>` responde `200` em JSON, sem login. Ela não é documentada, então pode mudar sem aviso.
+- Na URL `https://makerworld.com/pt/models/3007827-sea-animals-set?from=recommend#profileId-3387944`, o `designId` é `3007827` (o número antes do slug) e o `profileId-3387944` do fragmento é o `id` de um item de `instances[]`, **não** o campo `profileId` do item.
+- Campos usados, por item de `instances[]`: `title`, `prediction` (segundos), `weight` (g), `needAms`, `materialCnt`, `materialColorCnt`, `extention.modelInfo.compatibility` (`devProductName`, ex.: "X2D", e `nozzleDiameter`), `extention.modelInfo.otherCompatibility[]` (outras impressoras compatíveis), `extention.modelInfo.projectSettings` (`layerHeight`, `wallLoops`, `sparseInfillDensity`) e `extention.modelInfo.plates[]`, cada uma com `index`, `prediction`, `weight` e `filaments[]` (`id` do slot, `type`, `color`, `usedG`, `usedM`).
+- No nível do modelo: `title`, `coverUrl`, `license` e `designCreator`. A Fase 14 reaproveita esses campos.
+
 **Tarefas:**
-- [ ] Reunir arquivos reais de amostra em `api/test/fixtures/slicer/`: G-code de cada slicer, 3MF do Bambu/Orca, pelo menos um multicor/AMS e um 3MF com várias placas
-  - [x] 3MF multicor/AMS com duas placas do Bambu Studio: `example_files/3MF-2.3mf` (veja "Amostra disponível" abaixo)
-  - [ ] G-code puro do Bambu Studio, do OrcaSlicer e do PrusaSlicer
-  - [ ] 3MF com G-code embutido (`Metadata/plate_N.gcode`), de preferência o mesmo projeto do `3MF-2.3mf` exportado com "Exportar arquivo de placa fatiada"
-- [ ] Criar um parser puro com interface comum (`SlicedFileMetadata`): slicer detectado, versão, tempo estimado, lista de filamentos (índice, tipo, cor, gramas, e mm quando houver) e placas
-- [ ] Implementar a leitura dos comentários de cabeçalho/rodapé do G-code para cada slicer
-- [ ] Implementar a leitura de 3MF (ZIP) com o `Metadata/slice_info.config` como **fonte principal**: por placa, `prediction` (segundos), `weight` (g) e cada `<filament>` (`id` do slot, `type`, `color`, `used_g`, `used_m`)
-- [ ] Usar o G-code embutido (`Metadata/plate_N.gcode`) só como fonte complementar quando existir. O `model_settings.config` pode apontar para esse arquivo mesmo quando ele não está no ZIP, como acontece na amostra
-- [ ] Extrair também os dados do projeto: `Application` (slicer e versão), impressora (`printer_model` no `project_settings.config`) e os slots de filamento configurados (`filament_type`, `filament_colour`, `filament_density`), mesmo os que não são usados em nenhuma placa
-- [ ] Rejeitar com erro claro um 3MF que não foi fatiado (sem `slice_info.config` e sem G-code)
-- [ ] Ler o arquivo em streaming ou só nas regiões relevantes (cabeçalho/rodapé), para não carregar arquivos grandes inteiros na memória
-- [ ] Endpoint `POST /slicer-files/parse` (multipart, com limite de tamanho) que devolve os metadados sem persistir nada
-- [ ] Dar erros claros para formato não suportado, arquivo não fatiado e metadados ausentes
-- [ ] Testes Vitest com cada fixture, conferindo tempo e gramas esperados
+- [ ] Validar e normalizar a URL: só HTTPS, só o host `makerworld.com` (com ou sem prefixo de idioma, como `/pt/`); extrair o `designId` do caminho e o `profileId` do fragmento `#profileId-N`, quando houver. Outra URL retorna 400 `{ error }`
+- [ ] Criar um adaptador `MakerWorldClient` atrás de uma interface, para trocar a fonte se a API mudar. Ele deve usar timeout, limite de tamanho da resposta e não seguir redirecionamentos para outro host
+- [ ] Criar um mapeador puro (sem rede) do JSON da API para o `PrintProfileData`: modelo (título, capa, licença, designer) e a lista de perfis, cada um com `id`, título, tempo em segundos, gramas totais, `needsAms`, impressora e bico, configurações de fatiamento, lista de filamentos (slot, tipo, cor, gramas, metros) e placas (índice, tempo, gramas e filamentos)
+- [ ] Todo campo ausente ou em formato inesperado vira `null` em vez de erro. Um modelo sem perfis volta com a lista vazia. O mapeador só falha quando a resposta não é um modelo reconhecível. Os números que vêm como texto (`"8"`, `"2.66"`) são convertidos e validados
+- [ ] Com `profileId` na URL, destacar esse perfil. Sem ele, usar o `defaultInstanceId` do modelo. Se o `profileId` não existir no modelo, retornar 400 `{ error }` explicando como ver os perfis disponíveis
+- [ ] Somar os filamentos de todas as placas do perfil pelo slot (um perfil do exemplo tem 11 placas) e manter também o detalhe por placa, que a Fase 19 usa para gerar os jobs
+- [ ] Endpoint `POST /print-profiles/import` com `{ "url": string }` que devolve o `PrintProfileData` sem gravar nada
+- [ ] Erros claros: URL inválida (400), modelo inexistente ou privado (404), e MakerWorld fora do ar, bloqueado ou com formato irreconhecível (502). Em todos os casos a resposta segue o formato `{ error }`, e o web oferece o preenchimento manual
+- [x] Salvar a resposta real do modelo de exemplo como fixture em `api/test/fixtures/makerworld/design-3007827.json` (reduzida aos campos usados e a três perfis)
+- [ ] Os testes do mapeador e do endpoint usam o fixture e rodam sem acesso à internet (o cliente HTTP é substituído por um falso)
+- [ ] Web: campo "URL do MakerWorld" com botão de importar, seletor de perfil (quando o modelo tem vários) e um formulário com tempo, AMS, impressora e a lista de filamentos (tipo, cor, gramas). O que vier da API chega preenchido, e o que faltar fica em branco e editável. Mostrar os estados de carregamento, erro (com o formulário vazio para preencher à mão) e modelo sem perfis. Esta tela é a base da calculadora da Fase 12
 
 **Critérios de aceite:**
-- Todos os fixtures são lidos com os valores que o próprio slicer mostra (dentro de uma tolerância documentada)
-- O `3MF-2.3mf` retorna exatamente:
-  - Bambu Studio 01.10.01.50, Bambu Lab A1 mini, 4 slots de filamento configurados
-  - Placa 1: 2896 s, 8,18 g, filamento slot 3 PLA #FF0000 = 8,18 g
-  - Placa 2: 868 s, 2,36 g, slot 1 PLA #000000 = 0,26 g + slot 2 PLA #FFFFFF = 2,10 g
-- Um arquivo multicor devolve os gramas separados por filamento
-- Um arquivo inválido retorna 400 `{ error }` com uma mensagem útil
-- Um upload maior que o limite é rejeitado sem derrubar a API
+- Com o fixture do modelo 3007827, a URL `https://makerworld.com/pt/models/3007827-sea-animals-set?from=recommend#profileId-3387944` retorna o perfil "Sea star":
+  - 1707 s, 9 g, precisa de AMS, impressora X2D com bico de 0,4 mm, camada de 0,2 mm, 1 placa
+  - slot 1 PLA #FD8008 = 8 g (2,66 m) e slot 4 PLA #000000 = 1 g (0,08 m)
+- O perfil "0.2mm layer, 2 walls, 15% infill" (id 3377800) retorna 11 placas, 77054 s e 408 g, com os gramas somados por slot iguais à soma das placas
+- Um fixture com campos removidos devolve esses campos como `null`, e o web os mostra em branco para preencher
+- Uma URL de outro domínio ou sem `designId` retorna 400 `{ error }`; uma falha do MakerWorld retorna 502 `{ error }` sem derrubar a API
+- A tela foi validada com Playwright: importação com sucesso, seletor de perfil, erro com formulário manual e campos vazios editáveis
 
-**Riscos ou observações:** este é o **maior risco técnico**. Os formatos não são padronizados e mudam entre versões dos slicers. As amostras de G-code puro e do OrcaSlicer/PrusaSlicer ainda faltam (veja "Questões em aberto"). É provável que precise de uma dependência para ler ZIP.
-
-**Amostra disponível — `example_files/3MF-2.3mf`** (projeto "Flexi Funny Octopus", MakerWorld):
-- Tem 4,4 MB compactado. O `3D/Objects/object_1.model` ocupa 21 MB descompactado, então não descompacte o ZIP inteiro na memória. Leia só as entradas `Metadata/*.config` e `3D/3dmodel.model`.
-- **Não traz G-code.** Todo o tempo e todos os gramas vêm do `slice_info.config`. Se o projeto for alterado depois de fatiado, esses valores podem estar desatualizados, e não há como verificar isso sem o G-code.
-- O `project_settings.config` traz `filament_cost` (24,99) e `flush_volumes_matrix` (purga entre cores). O custo do slicer deve ser **ignorado**, porque o sistema usa o custo médio ponderado. Veja em "Questões em aberto" se o `used_g` já inclui a purga.
+**Riscos ou observações:**
+- Este continua sendo o **maior risco técnico**, agora por outro motivo: a API do MakerWorld não é pública nem estável. O Cloudflare pode passar a bloqueá-la, ela pode exigir login ou mudar de formato. Por isso o adaptador fica isolado, o mapeador tolera campos ausentes e o preenchimento manual precisa funcionar sempre.
+- **Precisão dos gramas:** o `usedG` vem arredondado para gramas inteiros (ex.: `"1"` para o preto do Sea star), enquanto o `usedM` tem duas casas decimais. Em cores com pouco uso o erro relativo é grande. Uma alternativa é calcular os gramas pelos metros × densidade do material (Fase 6) × área do filamento de 1,75 mm. Veja "Questões em aberto".
+- Os dados refletem o perfil **como foi publicado**. Se o usuário alterar o projeto no slicer (escala, preenchimento, cores), os números da URL deixam de valer, e ele precisa ajustar à mão.
+- Chamar a API sob demanda, só quando o usuário importar. Sem varredura nem chamadas em massa, para não ser bloqueado.
+- Só o MakerWorld traz dados de fatiamento estruturados. URLs do Printables e do Thingiverse não entram nesta fase: nelas o preenchimento é manual.
 
 ---
 
@@ -189,7 +192,7 @@ As fases seguem os quatro marcos do `CONTEXT.md` (MVP → Operação diária →
 - [ ] Emitir a sessão ou token conforme a estratégia decidida (veja "Questões em aberto")
 - [ ] Guard global de autenticação com decorator `@Public()` para as exceções (`/health`, login)
 - [ ] Seed idempotente do primeiro admin a partir de variáveis de ambiente (adicionar ao `.env.example`)
-- [ ] Proteger `/pricing/calculate` e `/slicer-files/parse`
+- [ ] Proteger `/pricing/calculate` e `/print-profiles/import`
 - [ ] Web: página de login, redirecionamento de quem não está logado, logout e usuário atual no cabeçalho
 - [ ] Testes: unitários do serviço de auth e e2e do login e de rota protegida (401 sem credencial)
 
@@ -380,17 +383,17 @@ As fases seguem os quatro marcos do `CONTEXT.md` (MVP → Operação diária →
 - [ ] Serviço de aplicação que monta a entrada do `pricing` a partir dos cadastros: impressora, materiais com custo médio R$/g, insumos com custo médio, configurações e canais
 - [ ] `POST /pricing/quote-preview` recebendo IDs e quantidades (impressora, materiais + gramas, insumos, horas, quantidade, canais)
 - [ ] Web: tela da calculadora com
-  - [ ] upload de G-code/3MF que preenche o tempo e os gramas por filamento (via Fase 2)
-  - [ ] mapeamento de cada filamento do arquivo para um material cadastrado
+  - [ ] URL do MakerWorld que preenche o tempo e os gramas por filamento (via Fase 2)
+  - [ ] mapeamento de cada filamento do perfil (tipo e cor) para um material cadastrado
   - [ ] preenchimento manual como alternativa
   - [ ] quadro com o custo detalhado por componente e o preço por canal lado a lado
   - [ ] simulação de quantidade (desconto por diluição)
 - [ ] Testes de integração: os valores da tela batem com o `pricing` puro para os mesmos dados
 
 **Critérios de aceite:**
-- Subir um fixture multicor, mapear os materiais e ver o preço por canal com o detalhamento
+- Importar um perfil multicor pela URL (fixture), mapear os materiais e ver o preço por canal com o detalhamento
 - Mudar o custo médio de um material (nova entrada de rolo) muda o resultado
-- A tela foi validada com Playwright nos estados de carregamento, erro (arquivo inválido) e vazio
+- A tela foi validada com Playwright nos estados de carregamento, erro (URL inválida ou MakerWorld indisponível, com o preenchimento manual) e vazio
 - **Critério do marco MVP:** o sistema precifica corretamente e controla filamento
 
 ---
@@ -406,7 +409,7 @@ As fases seguem os quatro marcos do `CONTEXT.md` (MVP → Operação diária →
 - [ ] Validar a URL: aceitar só os domínios do Printables, do MakerWorld e do Thingiverse, e normalizar para o endereço canônico do modelo (sem parâmetros de rastreio). Outros domínios retornam 400 `{ error }`
 - [ ] Não há upload de STL/3MF no catálogo. Nesta fase, os metadados podem ser preenchidos à mão; a busca automática vem na Fase 14
 - [ ] Variações (cor, tamanho), cada uma com a própria ficha técnica
-- [ ] Ficha técnica: materiais + gramas, tempo de impressão, impressora de referência, horas de mão de obra, insumos + quantidades
+- [ ] Ficha técnica: materiais + gramas, tempo de impressão, impressora de referência, horas de mão de obra, insumos + quantidades. Para modelos do MakerWorld, ela pode ser pré-preenchida com o perfil escolhido (Fase 2)
 - [ ] Custo e preço sugerido calculados sob demanda pelo `pricing`, para refletir sempre o custo médio atual do filamento
 - [ ] Aviso visível para produto cuja licença não permite uso comercial
 - [ ] Web: lista e detalhe do produto, editor de variações e ficha técnica, custo detalhado por variação
@@ -427,7 +430,7 @@ As fases seguem os quatro marcos do `CONTEXT.md` (MVP → Operação diária →
 **Dependências:** Fase 13.
 
 **Tarefas:**
-- [ ] Interface `ModelMetadataProvider` (adaptador) com uma implementação por plataforma: Printables, MakerWorld e Thingiverse. Cada uma devolve título, URL da imagem principal, designer, licença e se a licença permite uso comercial
+- [ ] Interface `ModelMetadataProvider` (adaptador) com uma implementação por plataforma: Printables, MakerWorld e Thingiverse. Cada uma devolve título, URL da imagem principal, designer, licença e se a licença permite uso comercial. A do MakerWorld reaproveita o `MakerWorldClient` da Fase 2
 - [ ] Buscar os metadados pela API pública da plataforma quando houver, ou pelas tags Open Graph/JSON-LD da página. Timeout, limite de tamanho da resposta e só HTTPS para os domínios permitidos (nada de seguir redirecionamento para outro host)
 - [ ] Mapear as licenças de cada plataforma (Creative Commons, "Standard Digital File License" do MakerWorld etc.) para um valor normalizado e para a flag "permite uso comercial"
 - [ ] `POST /products/model-metadata` recebendo a URL e devolvendo os metadados sem gravar nada, para pré-visualizar no formulário
@@ -443,7 +446,7 @@ As fases seguem os quatro marcos do `CONTEXT.md` (MVP → Operação diária →
 - Uma falha na busca mostra a mensagem de erro e deixa preencher à mão (Playwright, com os estados de carregamento, erro e vazio)
 - Os testes rodam sem acesso à internet
 
-**Riscos ou observações:** as plataformas não têm um contrato estável para isso. O MakerWorld costuma ficar atrás de proteção anti-bot, e a API do Thingiverse exige token (se for usada, a variável vai para o `.env.example`). A imagem é exibida pela URL da plataforma; se o hotlink for bloqueado, será preciso guardar uma cópia (veja "Questões em aberto").
+**Riscos ou observações:** as plataformas não têm um contrato estável para isso. A página do MakerWorld fica atrás do Cloudflare, mas a API JSON usada na Fase 2 respondia sem bloqueio em 2026-09-21. A API do Thingiverse exige token (se for usada, a variável vai para o `.env.example`). A imagem é exibida pela URL da plataforma; se o hotlink for bloqueado, será preciso guardar uma cópia (veja "Questões em aberto").
 
 ---
 
@@ -474,7 +477,7 @@ As fases seguem os quatro marcos do `CONTEXT.md` (MVP → Operação diária →
 
 **Tarefas:**
 - [ ] Entidades `Quote` e `QuoteItem`: cliente, canal, validade, status (rascunho, enviado, aprovado, recusado, expirado)
-- [ ] Item de catálogo (produto/variação) ou item personalizado (dados do arquivo fatiado ou manuais)
+- [ ] Item de catálogo (produto/variação) ou item personalizado (dados importados pela URL do MakerWorld ou manuais)
 - [ ] Desconto por quantidade (diluição) e preço mínimo por pedido aplicados no total
 - [ ] Guardar um **snapshot** do custo detalhado e dos parâmetros usados, para o orçamento não mudar depois de enviado
 - [ ] Recalcular enquanto o orçamento está em rascunho
@@ -538,11 +541,11 @@ As fases seguem os quatro marcos do `CONTEXT.md` (MVP → Operação diária →
 **Dependências:** Fases 7, 9 e 18.
 
 **Tarefas:**
-- [ ] Entidade `PrintJob`: pedido/item, arquivo fatiado (placa), tempo estimado, gramas por filamento, impressora, posição na fila, status (na fila, imprimindo, concluído, falhou, cancelado), início e fim reais
-- [ ] Gerar os jobs a partir das placas de um 3MF com várias placas, ou criar manualmente
+- [ ] Entidade `PrintJob`: pedido/item, placa (referência ao perfil do MakerWorld, quando houver), tempo estimado, gramas por filamento, impressora, posição na fila, status (na fila, imprimindo, concluído, falhou, cancelado), início e fim reais
+- [ ] Gerar os jobs a partir das placas de um perfil do MakerWorld (Fase 2), ou criar manualmente
 - [ ] Fila por impressora: alocar, reordenar e mover entre impressoras
 - [ ] Previsão de conclusão por job e por pedido a partir da fila (veja "Questões em aberto" sobre horário de operação)
-- [ ] Ao concluir: escolher o rolo usado para cada filamento, gerar o movimento de consumo com os gramas do G-code e somar as horas ao horímetro da impressora
+- [ ] Ao concluir: escolher o rolo usado para cada filamento, gerar o movimento de consumo com os gramas do job e somar as horas ao horímetro da impressora
 - [ ] Concluir job de pedido de pronta-entrega gera entrada no estoque de produtos acabados (Fase 15)
 - [ ] Web: fila por impressora (colunas), ações iniciar/concluir e o seletor de rolos na conclusão
 - [ ] Testes: baixa correta por rolo, horímetro atualizado, previsão calculada
@@ -792,14 +795,14 @@ As fases seguem os quatro marcos do `CONTEXT.md` (MVP → Operação diária →
 
 **Catálogo, orçamento e produção**
 16. **Arquivos:** o catálogo não guarda STL/3MF nem fotos (usa a URL do modelo). Onde guardar os arquivos personalizados dos clientes (Fase 18)? Volume local no Docker ou storage S3-compatível?
-17. **Amostras de arquivos fatiados:** o 3MF multicor com duas placas do Bambu Studio já está disponível (`example_files/3MF-2.3mf`). Ainda faltam G-code puro de cada slicer, amostras do OrcaSlicer e do PrusaSlicer, e um 3MF com G-code embutido.
+17. **Arredondamento dos gramas do MakerWorld:** usar o `usedG` (inteiro) como vem, ou calcular os gramas pelo `usedM` × densidade do material cadastrado × área do filamento de 1,75 mm? No Sea star, 2,66 m de PLA dão cerca de 7,9 g contra os 8 g informados.
 18. **Orçamento:** qual a validade padrão, o conteúdo e a identidade visual do PDF? O cliente aprova pelo link, ou a aprovação é só interna?
 19. **Kanban × jobs:** o status do pedido muda sozinho conforme os jobs (ex.: primeiro job iniciado → "Imprimindo"), ou só manualmente?
 20. **Previsão da fila:** considera operação 24/7 ou um horário de trabalho (para troca de placa)?
 21. **Clientes e fornecedores:** quais campos são obrigatórios (CPF/CNPJ, endereço, contato)?
 22. **Modelos próprios:** o catálogo aceita só URLs do Printables, do MakerWorld e do Thingiverse. Um modelo criado pela própria empresa precisa ser publicado numa dessas plataformas para entrar no catálogo, ou deve haver uma exceção?
-23. **Imagem do produto:** exibir direto da URL da plataforma ou guardar uma cópia (a imagem some se o modelo for removido)? E a ficha técnica do produto é só manual, ou pode ser preenchida lendo um arquivo fatiado (Fase 2) sem guardá-lo?
-24. **Arquivo do job de impressão:** o `PrintJob` da Fase 19 guarda o arquivo fatiado da placa (no armazenamento da Fase 18) ou só os dados lidos dele (tempo e gramas por filamento)? O CONTEXT proíbe guardar STL/3MF no catálogo, mas não fala da produção.
+23. **Imagem do produto:** exibir direto da URL da plataforma ou guardar uma cópia (a imagem some se o modelo for removido)? A ficha técnica pode ser pré-preenchida pela URL do MakerWorld (Fase 2); falta decidir se ela deve ser atualizada quando o autor mudar o perfil publicado.
+24. **Dados do job de impressão:** o `PrintJob` da Fase 19 guarda só os dados da placa (tempo e gramas por filamento), sem arquivo. Ele deve guardar também uma cópia dos dados do perfil do MakerWorld no momento da importação, para não mudar se o autor atualizar o perfil?
 
 **Compras e financeiro**
 25. **Rateio de frete e impostos:** por valor, por peso ou por quantidade?
@@ -812,9 +815,10 @@ As fases seguem os quatro marcos do `CONTEXT.md` (MVP → Operação diária →
 30. **Integrações da Fase 4 do CONTEXT:** qual marketplace e qual protocolo de impressora vêm primeiro? O CONTEXT marca as integrações de impressoras e marketplaces como "Futuro". Elas devem mesmo entrar neste roadmap ou ficar de fora?
 31. **Provedor fiscal:** Focus NFe, NFE.io ou eNotas?
 
-**Amostras e parser (encontrado ao analisar `3MF-2.3mf`)**
-32. **Purga × `used_g`:** os gramas que o slicer informa já incluem a purga de troca de cor e a torre de purga (`enable_prime_tower = 1` na amostra)? Se incluírem, aplicar o "% purga/perda" da fórmula por cima conta a purga duas vezes. É preciso confirmar comparando com o G-code do mesmo projeto e decidir se o % purga vale só para a entrada manual.
-33. **Fixtures no git:** a amostra é um modelo de terceiro sob a "Standard Digital File License" do MakerWorld. Ela pode ser commitada no repositório (privado?) ou deve ficar fora do git, sendo substituída por um modelo próprio nos testes da CI?
+**Dados do MakerWorld (Fase 2)**
+32. **Purga × `usedG`:** os gramas informados pelo MakerWorld vêm do slicer do autor. Eles provavelmente já incluem a purga de troca de cor e a torre de purga. Se incluírem, aplicar o "% purga/perda" da fórmula por cima conta a purga duas vezes. É preciso decidir se o % purga vale só para a entrada manual.
+33. **Fixture no git:** o JSON salvo do MakerWorld é de um modelo de terceiro. Ele pode ser commitado no repositório (privado?) ou deve ser reduzido aos campos usados nos testes?
+34. **Termos de uso do MakerWorld:** a API não é pública. Confirmar se o uso pontual (uma chamada por importação feita pelo usuário) é aceitável, e o que fazer se ela passar a exigir login.
 
 ## 6. Fora de escopo
 
@@ -822,6 +826,7 @@ As fases seguem os quatro marcos do `CONTEXT.md` (MVP → Operação diária →
 - **Integração direta com a SEFAZ.** A emissão fiscal é só por API de terceiros.
 - **Integrações sem adaptador.** Qualquer integração externa entra por uma interface isolada.
 - **Upload e armazenamento de STL/3MF no catálogo.** O produto aponta para a URL do modelo no Printables, no MakerWorld ou no Thingiverse.
+- **Leitura de arquivos G-code/3MF.** Eles podem passar de 200 MB. Os dados de impressão vêm da URL do MakerWorld (Fase 2) ou do preenchimento manual.
 - **Não descritos no CONTEXT e não planejados:** deploy/infra de produção, app mobile, multiempresa. Veja a questão 2.
 
 ## 7. Como executar

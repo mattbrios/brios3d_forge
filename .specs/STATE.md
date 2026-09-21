@@ -12,13 +12,15 @@
 | AD-006 | Contrato de dinheiro e taxas: centavos com sufixo `Cents` (fracionários na entrada, inteiros na saída), percentuais como fração com sufixo `Rate`, horas decimais, pesos em gramas | o ROADMAP fixa centavos no cálculo; as fases 5, 12, 13, 16 e 25 consomem o mesmo contrato | active | 2026-09-21 |
 | AD-007 | Arredondamento só em `pricing/rounding.ts`: custos meio para cima, preço de venda para cima (tolerância `1e-6`), agregados e preço partem dos valores exatos | a margem nunca fica abaixo da pedida; somar componentes já arredondados acumularia erro antes do markup | active | 2026-09-21 |
 | AD-008 | Módulo puro lança erro de domínio próprio (`PricingError`), e o controller converte em `BadRequestException` | catálogo e relatórios chamam o cálculo fora de uma requisição, então o serviço não pode depender do HTTP | active | 2026-09-21 |
+| AD-009 | Chamada HTTP de saída com `fetch` nativo, `redirect: "error"`, `AbortSignal.timeout`, corpo lido em stream com limite de tamanho, só para hosts fixos no código; a URL do usuário nunca vira a URL da requisição, só identificadores validados são interpolados | evita SSRF e dependência nova; as Fases 14, 28 e 29 também chamam serviços externos | active | 2026-09-21 |
+| AD-010 | O sistema não lê, recebe nem guarda arquivos G-code/3MF. Os dados de impressão vêm da URL do MakerWorld ou do preenchimento manual | os arquivos passam de 200 MB; decisão do usuário ao revisar a Fase 2 | active | 2026-09-21 |
 
 ## Handoff
 
 **Feature**: phase-1-pricing - concluída
 **Where**: C1–C38 verificados (rodada 1 `light`: PASS; rodada 2 `standard`: PASS, 5 falhas injetadas e 5 mortas); `test:cov` com 95,34% de linhas em `pricing`
 **In progress**: nada
-**Next step**: Fase 2 - parser de arquivos fatiados (G-code/3MF).
+**Next step**: Fase 2 - dados de impressão pela URL do MakerWorld. `plan.md` aprovado e `checks.md` escrito (C1–C41, perfil `standard`) em `.specs/features/phase-2-makerworld-profiles/`; próximo passo é o build
 **Blockers**: nenhum
-**Uncommitted**: nada
+**Uncommitted**: ROADMAP.md (nova Fase 2), `.specs/features/phase-2-makerworld-profiles/` (`plan.md`, `checks.md`), `api/test/fixtures/makerworld/design-3007827.json`, este arquivo
 **Branch**: main (commits só locais; nada foi enviado ao remoto)

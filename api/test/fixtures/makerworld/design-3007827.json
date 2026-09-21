@@ -1,0 +1,642 @@
+{
+  "id": 3007827,
+  "title": "Sea animals - set",
+  "coverUrl": "https://makerworld.bblmw.com/makerworld/model/USafe737868bbaa/design/6c21105d01a14e2f.jpeg",
+  "license": "Standard Digital File License",
+  "designCreator": {
+    "uid": 3320925678,
+    "name": "Real_Prints",
+    "handle": "Real_Prints"
+  },
+  "defaultInstanceId": 3377800,
+  "instances": [
+    {
+      "id": 3387944,
+      "profileId": 858421954,
+      "title": "Sea star",
+      "prediction": 1707,
+      "weight": 9,
+      "needAms": true,
+      "materialCnt": 2,
+      "materialColorCnt": 2,
+      "instanceFilaments": [
+        {
+          "type": "PLA",
+          "color": "#FD8008",
+          "usedM": "2.66",
+          "usedG": "8"
+        },
+        {
+          "type": "PLA",
+          "color": "#000000",
+          "usedM": "0.08",
+          "usedG": "1"
+        }
+      ],
+      "extention": {
+        "modelInfo": {
+          "compatibility": {
+            "devModelName": "N6",
+            "devProductName": "X2D",
+            "nozzleDiameter": 0.4
+          },
+          "otherCompatibility": [
+            {
+              "devModelName": "C11",
+              "devProductName": "P1P",
+              "nozzleDiameter": 0.4
+            },
+            {
+              "devModelName": "O1S",
+              "devProductName": "H2S",
+              "nozzleDiameter": 0.4
+            },
+            {
+              "devModelName": "N7",
+              "devProductName": "P2S",
+              "nozzleDiameter": 0.4
+            },
+            {
+              "devModelName": "O1E",
+              "devProductName": "H2D Pro",
+              "nozzleDiameter": 0.4
+            },
+            {
+              "devModelName": "N9",
+              "devProductName": "A2L",
+              "nozzleDiameter": 0.4
+            },
+            {
+              "devModelName": "BL-P002",
+              "devProductName": "X1",
+              "nozzleDiameter": 0.4
+            },
+            {
+              "devModelName": "N2S",
+              "devProductName": "A1",
+              "nozzleDiameter": 0.4
+            },
+            {
+              "devModelName": "N1",
+              "devProductName": "A1 mini",
+              "nozzleDiameter": 0.4
+            },
+            {
+              "devModelName": "O1C2",
+              "devProductName": "H2C",
+              "nozzleDiameter": 0.4
+            },
+            {
+              "devModelName": "C12",
+              "devProductName": "P1S",
+              "nozzleDiameter": 0.4
+            },
+            {
+              "devModelName": "O1D",
+              "devProductName": "H2D",
+              "nozzleDiameter": 0.4
+            },
+            {
+              "devModelName": "C13",
+              "devProductName": "X1E",
+              "nozzleDiameter": 0.4
+            },
+            {
+              "devModelName": "BL-P001",
+              "devProductName": "X1 Carbon",
+              "nozzleDiameter": 0.4
+            }
+          ],
+          "projectSettings": {
+            "layerHeight": "0.2",
+            "wallLoops": "2",
+            "sparseInfillDensity": "15%"
+          },
+          "plates": [
+            {
+              "index": 1,
+              "prediction": 1707,
+              "weight": 9,
+              "filaments": [
+                {
+                  "id": "1",
+                  "type": "PLA",
+                  "color": "#FD8008",
+                  "usedM": "2.66",
+                  "usedG": "8"
+                },
+                {
+                  "id": "4",
+                  "type": "PLA",
+                  "color": "#000000",
+                  "usedM": "0.08",
+                  "usedG": "1"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 3388305,
+      "profileId": 858519546,
+      "title": "Sea shell",
+      "prediction": 1984,
+      "weight": 9,
+      "needAms": false,
+      "materialCnt": 1,
+      "materialColorCnt": 1,
+      "instanceFilaments": [
+        {
+          "type": "PLA",
+          "color": "#FECC66",
+          "usedM": "2.71",
+          "usedG": "9"
+        }
+      ],
+      "extention": {
+        "modelInfo": {
+          "compatibility": {
+            "devModelName": "N6",
+            "devProductName": "X2D",
+            "nozzleDiameter": 0.4
+          },
+          "otherCompatibility": [
+            {
+              "devModelName": "O1S",
+              "devProductName": "H2S",
+              "nozzleDiameter": 0.4
+            },
+            {
+              "devModelName": "BL-P002",
+              "devProductName": "X1",
+              "nozzleDiameter": 0.4
+            },
+            {
+              "devModelName": "C12",
+              "devProductName": "P1S",
+              "nozzleDiameter": 0.4
+            },
+            {
+              "devModelName": "O1E",
+              "devProductName": "H2D Pro",
+              "nozzleDiameter": 0.4
+            },
+            {
+              "devModelName": "O1D",
+              "devProductName": "H2D",
+              "nozzleDiameter": 0.4
+            },
+            {
+              "devModelName": "BL-P001",
+              "devProductName": "X1 Carbon",
+              "nozzleDiameter": 0.4
+            },
+            {
+              "devModelName": "N7",
+              "devProductName": "P2S",
+              "nozzleDiameter": 0.4
+            },
+            {
+              "devModelName": "N2S",
+              "devProductName": "A1",
+              "nozzleDiameter": 0.4
+            },
+            {
+              "devModelName": "O1C2",
+              "devProductName": "H2C",
+              "nozzleDiameter": 0.4
+            },
+            {
+              "devModelName": "C11",
+              "devProductName": "P1P",
+              "nozzleDiameter": 0.4
+            },
+            {
+              "devModelName": "N1",
+              "devProductName": "A1 mini",
+              "nozzleDiameter": 0.4
+            },
+            {
+              "devModelName": "C13",
+              "devProductName": "X1E",
+              "nozzleDiameter": 0.4
+            },
+            {
+              "devModelName": "N9",
+              "devProductName": "A2L",
+              "nozzleDiameter": 0.4
+            }
+          ],
+          "projectSettings": {
+            "layerHeight": "0.2",
+            "wallLoops": "2",
+            "sparseInfillDensity": "15%"
+          },
+          "plates": [
+            {
+              "index": 1,
+              "prediction": 1984,
+              "weight": 9,
+              "filaments": [
+                {
+                  "id": "1",
+                  "type": "PLA",
+                  "color": "#FECC66",
+                  "usedM": "2.71",
+                  "usedG": "9"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 3377800,
+      "profileId": 854941165,
+      "title": "0.2mm layer, 2 walls, 15% infill",
+      "prediction": 77054,
+      "weight": 408,
+      "needAms": true,
+      "materialCnt": 4,
+      "materialColorCnt": 4,
+      "instanceFilaments": [
+        {
+          "type": "PLA",
+          "color": "#FECC66",
+          "usedM": "79.82",
+          "usedG": "246"
+        },
+        {
+          "type": "PLA",
+          "color": "#000000",
+          "usedM": "19.42",
+          "usedG": "64"
+        },
+        {
+          "type": "PLA",
+          "color": "#66CCFF",
+          "usedM": "11.86",
+          "usedG": "37"
+        },
+        {
+          "type": "PLA",
+          "color": "#66FF66",
+          "usedM": "19.62",
+          "usedG": "61"
+        }
+      ],
+      "extention": {
+        "modelInfo": {
+          "compatibility": {
+            "devModelName": "N6",
+            "devProductName": "X2D",
+            "nozzleDiameter": 0.4
+          },
+          "otherCompatibility": [
+            {
+              "devModelName": "N7",
+              "devProductName": "P2S",
+              "nozzleDiameter": 0.4
+            },
+            {
+              "devModelName": "O1D",
+              "devProductName": "H2D",
+              "nozzleDiameter": 0.4
+            },
+            {
+              "devModelName": "N1",
+              "devProductName": "A1 mini",
+              "nozzleDiameter": 0.4
+            },
+            {
+              "devModelName": "C11",
+              "devProductName": "P1P",
+              "nozzleDiameter": 0.4
+            },
+            {
+              "devModelName": "C13",
+              "devProductName": "X1E",
+              "nozzleDiameter": 0.4
+            },
+            {
+              "devModelName": "O1S",
+              "devProductName": "H2S",
+              "nozzleDiameter": 0.4
+            },
+            {
+              "devModelName": "N2S",
+              "devProductName": "A1",
+              "nozzleDiameter": 0.4
+            },
+            {
+              "devModelName": "BL-P002",
+              "devProductName": "X1",
+              "nozzleDiameter": 0.4
+            },
+            {
+              "devModelName": "N9",
+              "devProductName": "A2L",
+              "nozzleDiameter": 0.4
+            },
+            {
+              "devModelName": "O1E",
+              "devProductName": "H2D Pro",
+              "nozzleDiameter": 0.4
+            },
+            {
+              "devModelName": "O1C2",
+              "devProductName": "H2C",
+              "nozzleDiameter": 0.4
+            },
+            {
+              "devModelName": "BL-P001",
+              "devProductName": "X1 Carbon",
+              "nozzleDiameter": 0.4
+            },
+            {
+              "devModelName": "C12",
+              "devProductName": "P1S",
+              "nozzleDiameter": 0.4
+            }
+          ],
+          "projectSettings": {
+            "layerHeight": "0.2",
+            "wallLoops": "2",
+            "sparseInfillDensity": "15%"
+          },
+          "plates": [
+            {
+              "index": 1,
+              "prediction": 7346,
+              "weight": 38,
+              "filaments": [
+                {
+                  "id": "1",
+                  "type": "PLA",
+                  "color": "#FECC66",
+                  "usedM": "6.19",
+                  "usedG": "19"
+                },
+                {
+                  "id": "2",
+                  "type": "PLA",
+                  "color": "#000000",
+                  "usedM": "3.82",
+                  "usedG": "12"
+                },
+                {
+                  "id": "3",
+                  "type": "PLA",
+                  "color": "#66CCFF",
+                  "usedM": "2.30",
+                  "usedG": "7"
+                }
+              ]
+            },
+            {
+              "index": 2,
+              "prediction": 3923,
+              "weight": 14,
+              "filaments": [
+                {
+                  "id": "1",
+                  "type": "PLA",
+                  "color": "#FECC66",
+                  "usedM": "2.14",
+                  "usedG": "7"
+                },
+                {
+                  "id": "2",
+                  "type": "PLA",
+                  "color": "#000000",
+                  "usedM": "2.06",
+                  "usedG": "7"
+                }
+              ]
+            },
+            {
+              "index": 3,
+              "prediction": 3774,
+              "weight": 24,
+              "filaments": [
+                {
+                  "id": "1",
+                  "type": "PLA",
+                  "color": "#FECC66",
+                  "usedM": "7.20",
+                  "usedG": "22"
+                },
+                {
+                  "id": "2",
+                  "type": "PLA",
+                  "color": "#000000",
+                  "usedM": "0.61",
+                  "usedG": "2"
+                }
+              ]
+            },
+            {
+              "index": 4,
+              "prediction": 1594,
+              "weight": 9,
+              "filaments": [
+                {
+                  "id": "1",
+                  "type": "PLA",
+                  "color": "#FECC66",
+                  "usedM": "2.54",
+                  "usedG": "8"
+                },
+                {
+                  "id": "4",
+                  "type": "PLA",
+                  "color": "#66FF66",
+                  "usedM": "0.07",
+                  "usedG": "1"
+                }
+              ]
+            },
+            {
+              "index": 5,
+              "prediction": 3415,
+              "weight": 18,
+              "filaments": [
+                {
+                  "id": "1",
+                  "type": "PLA",
+                  "color": "#FECC66",
+                  "usedM": "5.65",
+                  "usedG": "18"
+                }
+              ]
+            },
+            {
+              "index": 6,
+              "prediction": 6930,
+              "weight": 37,
+              "filaments": [
+                {
+                  "id": "1",
+                  "type": "PLA",
+                  "color": "#FECC66",
+                  "usedM": "8.56",
+                  "usedG": "26"
+                },
+                {
+                  "id": "2",
+                  "type": "PLA",
+                  "color": "#000000",
+                  "usedM": "1.36",
+                  "usedG": "5"
+                },
+                {
+                  "id": "3",
+                  "type": "PLA",
+                  "color": "#66CCFF",
+                  "usedM": "1.96",
+                  "usedG": "6"
+                }
+              ]
+            },
+            {
+              "index": 7,
+              "prediction": 9099,
+              "weight": 63,
+              "filaments": [
+                {
+                  "id": "1",
+                  "type": "PLA",
+                  "color": "#FECC66",
+                  "usedM": "14.57",
+                  "usedG": "45"
+                },
+                {
+                  "id": "2",
+                  "type": "PLA",
+                  "color": "#000000",
+                  "usedM": "4.75",
+                  "usedG": "15"
+                },
+                {
+                  "id": "3",
+                  "type": "PLA",
+                  "color": "#66CCFF",
+                  "usedM": "0.74",
+                  "usedG": "3"
+                }
+              ]
+            },
+            {
+              "index": 8,
+              "prediction": 3790,
+              "weight": 24,
+              "filaments": [
+                {
+                  "id": "1",
+                  "type": "PLA",
+                  "color": "#FECC66",
+                  "usedM": "6.72",
+                  "usedG": "21"
+                },
+                {
+                  "id": "2",
+                  "type": "PLA",
+                  "color": "#000000",
+                  "usedM": "0.67",
+                  "usedG": "3"
+                }
+              ]
+            },
+            {
+              "index": 9,
+              "prediction": 10681,
+              "weight": 54,
+              "filaments": [
+                {
+                  "id": "1",
+                  "type": "PLA",
+                  "color": "#FECC66",
+                  "usedM": "8.53",
+                  "usedG": "26"
+                },
+                {
+                  "id": "2",
+                  "type": "PLA",
+                  "color": "#000000",
+                  "usedM": "2.13",
+                  "usedG": "7"
+                },
+                {
+                  "id": "3",
+                  "type": "PLA",
+                  "color": "#66CCFF",
+                  "usedM": "6.86",
+                  "usedG": "21"
+                }
+              ]
+            },
+            {
+              "index": 10,
+              "prediction": 17998,
+              "weight": 78,
+              "filaments": [
+                {
+                  "id": "1",
+                  "type": "PLA",
+                  "color": "#FECC66",
+                  "usedM": "13.46",
+                  "usedG": "41"
+                },
+                {
+                  "id": "2",
+                  "type": "PLA",
+                  "color": "#000000",
+                  "usedM": "2.13",
+                  "usedG": "7"
+                },
+                {
+                  "id": "4",
+                  "type": "PLA",
+                  "color": "#66FF66",
+                  "usedM": "9.85",
+                  "usedG": "30"
+                }
+              ]
+            },
+            {
+              "index": 11,
+              "prediction": 8504,
+              "weight": 49,
+              "filaments": [
+                {
+                  "id": "1",
+                  "type": "PLA",
+                  "color": "#FECC66",
+                  "usedM": "4.26",
+                  "usedG": "13"
+                },
+                {
+                  "id": "2",
+                  "type": "PLA",
+                  "color": "#000000",
+                  "usedM": "1.89",
+                  "usedG": "6"
+                },
+                {
+                  "id": "4",
+                  "type": "PLA",
+                  "color": "#66FF66",
+                  "usedM": "9.70",
+                  "usedG": "30"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
