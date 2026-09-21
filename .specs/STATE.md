@@ -15,10 +15,10 @@
 
 ## Handoff
 
-**Feature**: phase-1-pricing - construída, aguardando o Verifier
-**Where**: C1–C38 com proof verde local em `dc6cf66`; `test:cov` com 95,34% de linhas em `pricing`
-**In progress**: verificação independente e marcação do ROADMAP
-**Next step**: `validate_verification.py phase-1-pricing`, depois marcar a Fase 1 no ROADMAP. A seguir, Fase 2 (parser de arquivos fatiados)
-**Blockers**: nenhum. Pergunta aberta sem bloqueio: planilha real da empresa para conferir o R1
+**Feature**: phase-1-pricing - concluída
+**Where**: C1–C38 verificados (verification.md: PASS, `validate_verification.py` exit 0); `test:cov` com 95,34% de linhas em `pricing`
+**In progress**: nada
+**Next step**: Fase 2 - parser de arquivos fatiados (G-code/3MF). Pendente sem bloqueio: planilha real da empresa para conferir o R1
+**Blockers**: nenhum
 **Uncommitted**: nada
-**Branch**: main
+**Branch**: main (commits só locais; nada foi enviado ao remoto)

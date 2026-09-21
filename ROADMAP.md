@@ -37,7 +37,7 @@ As fases seguem os quatro marcos do `CONTEXT.md` (MVP → Operação diária →
 |---|---|---|---|
 | **Marco MVP** | | *Precifica corretamente e controla filamento* | |
 | 0 | Setup e fundações | Tooling, erros/validação padrão, migrations, health check, CI | ✅ |
-| 1 | Motor de preço (`pricing`) | Serviço puro com custo detalhado e preço por canal, bem testado | ⬜ |
+| 1 | Motor de preço (`pricing`) | Serviço puro com custo detalhado e preço por canal, bem testado | ✅ |
 | 2 | Parser de arquivos fatiados | Extrair tempo e gramas por filamento de G-code/3MF (Bambu, Orca, Prusa) | ⬜ |
 | 3 | Autenticação | Login, sessão, proteção de rotas na API e no web | ⬜ |
 | 4 | Usuários e papéis | CRUD de usuários e autorização por papel (admin, produção, vendas) | ⬜ |
@@ -115,16 +115,16 @@ As fases seguem os quatro marcos do `CONTEXT.md` (MVP → Operação diária →
 **Dependências:** Fase 0.
 
 **Tarefas:**
-- [ ] Definir os tipos de entrada: materiais (gramas, custo/g), horas de impressão, dados da impressora (potência W, custo, vida útil h), tarifa kWh, manutenção R$/h, horas de mão de obra (preparo, fatiamento, pós-processamento) e R$/h, insumos (qtd × custo), custos fixos mensais e horas produtivas/mês, % purga, % falha, % margem, % impostos, % taxa do canal, quantidade e preço mínimo
-- [ ] Implementar cada componente conforme a fórmula do CONTEXT: material (com purga), energia, depreciação, manutenção, mão de obra, insumos e custos fixos
-- [ ] Calcular o custo direto, o custo com risco (`× (1 + %falha)`) e o preço de venda com markup divisor
-- [ ] Desconto por quantidade: diluir preparo e fatiamento no lote (custo fixo do lote ÷ quantidade)
-- [ ] Aplicar o preço mínimo por pedido (sinalizar quando o piso for aplicado)
-- [ ] Calcular vários canais de uma vez, com preço por canal a partir do mesmo custo
-- [ ] Validar: soma de margem + impostos + taxa ≥ 100% gera erro de domínio; valores negativos são rejeitados
-- [ ] Definir a política de arredondamento em um único lugar
-- [ ] Testes Vitest: cada componente isolado, casos da fórmula calculados à mão, multimaterial, lote, preço mínimo, limites e erros. Meta: ≥ 95% de cobertura de linhas no módulo
-- [ ] Endpoint `POST /pricing/calculate` sem estado (todos os parâmetros no corpo, DTO validado), útil para testes e para as próximas fases
+- [x] Definir os tipos de entrada: materiais (gramas, custo/g), horas de impressão, dados da impressora (potência W, custo, vida útil h), tarifa kWh, manutenção R$/h, horas de mão de obra (preparo, fatiamento, pós-processamento) e R$/h, insumos (qtd × custo), custos fixos mensais e horas produtivas/mês, % purga, % falha, % margem, % impostos, % taxa do canal, quantidade e preço mínimo
+- [x] Implementar cada componente conforme a fórmula do CONTEXT: material (com purga), energia, depreciação, manutenção, mão de obra, insumos e custos fixos
+- [x] Calcular o custo direto, o custo com risco (`× (1 + %falha)`) e o preço de venda com markup divisor
+- [x] Desconto por quantidade: diluir preparo e fatiamento no lote (custo fixo do lote ÷ quantidade)
+- [x] Aplicar o preço mínimo por pedido (sinalizar quando o piso for aplicado)
+- [x] Calcular vários canais de uma vez, com preço por canal a partir do mesmo custo
+- [x] Validar: soma de margem + impostos + taxa ≥ 100% gera erro de domínio; valores negativos são rejeitados
+- [x] Definir a política de arredondamento em um único lugar
+- [x] Testes Vitest: cada componente isolado, casos da fórmula calculados à mão, multimaterial, lote, preço mínimo, limites e erros. Meta: ≥ 95% de cobertura de linhas no módulo
+- [x] Endpoint `POST /pricing/calculate` sem estado (todos os parâmetros no corpo, DTO validado), útil para testes e para as próximas fases
 
 **Critérios de aceite:**
 - `npm --prefix api run test:cov` mostra ≥ 95% no módulo `pricing`
