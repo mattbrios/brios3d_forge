@@ -9,5 +9,13 @@ export default defineConfig({
     globals: true,
     root: './',
     include: ['**/*.spec.ts'],
+    coverage: {
+      provider: 'v8',
+      // Sem o include, arquivo que nenhum teste carrega some do relatório e o piso passa sem medir.
+      include: ['src/**/*.ts'],
+      thresholds: {
+        'src/modules/pricing/**': { lines: 95 },
+      },
+    },
   },
 });
