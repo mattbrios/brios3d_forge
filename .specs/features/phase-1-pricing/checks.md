@@ -193,3 +193,7 @@ Proof: `! npm --prefix api run test:cov -- --exclude 'src/modules/pricing/**'`
 Arquivos que a fase toca: 2 existentes (`api/src/app.module.ts` 0,6 KB e `api/vitest.config.ts` 0,3 KB, medidos com `wc -c`) e uns 11 novos no módulo e nos testes. As novas specs são a maior parte, uns 50 KB estimados.
 
 - S1–S6 ≈ 60 KB ≈ 15k tokens, tudo em `pricing`, mais uma linha no `AppModule` e o limite de cobertura. Fica bem abaixo do orçamento padrão de 150k: um builder só, sem pergunta
+
+- **Boundary:** C1-C38 closed at `dc6cf66`
+- **Settled mid-build:** a checagem de taxas usa `1 - (margem + imposto + taxa) < 1e-9` em vez de `soma >= 1`, para que uma soma que dá `0.9999999999999999` em ponto flutuante também seja recusada. Os números de C24 não mudam. O `dto/calculate-pricing.dto.spec.ts` foi acrescentado porque o DTO só era carregado pelo e2e e o piso de cobertura (C38) falhava
+- **Abandoned:** nada

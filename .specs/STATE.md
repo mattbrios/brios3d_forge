@@ -9,13 +9,16 @@
 | AD-003 | Entrada validada com `class-validator` + `ValidationPipe` global `{ whitelist, forbidNonWhitelisted, transform }` | padrão do Nest; DTO é tipo e schema ao mesmo tempo | active | 2026-09-21 |
 | AD-004 | Módulos em `api/src/modules/<nome>/` (module/controller/service, `entities/`, `dto/`, spec ao lado) | 17 módulos previstos no roadmap; precedente vale para todos | active | 2026-09-21 |
 | AD-005 | Web fala com a API só por `web/src/lib/api.ts` (`apiFetch`, `ApiError`) | um único lugar decodifica `{ error }` e lê `NEXT_PUBLIC_API_URL` | active | 2026-09-21 |
+| AD-006 | Contrato de dinheiro e taxas: centavos com sufixo `Cents` (fracionários na entrada, inteiros na saída), percentuais como fração com sufixo `Rate`, horas decimais, pesos em gramas | o ROADMAP fixa centavos no cálculo; as fases 5, 12, 13, 16 e 25 consomem o mesmo contrato | active | 2026-09-21 |
+| AD-007 | Arredondamento só em `pricing/rounding.ts`: custos meio para cima, preço de venda para cima (tolerância `1e-6`), agregados e preço partem dos valores exatos | a margem nunca fica abaixo da pedida; somar componentes já arredondados acumularia erro antes do markup | active | 2026-09-21 |
+| AD-008 | Módulo puro lança erro de domínio próprio (`PricingError`), e o controller converte em `BadRequestException` | catálogo e relatórios chamam o cálculo fora de uma requisição, então o serviço não pode depender do HTTP | active | 2026-09-21 |
 
 ## Handoff
 
-**Feature**: phase-0-setup - concluída
-**Where**: C1–C29 verificados (verification.md: PASS); CI verde no GitHub (run 35564488335, `0f94542`)
-**In progress**: nada
-**Next step**: Fase 1 - motor de preço (`pricing`)
-**Blockers**: nenhum
+**Feature**: phase-1-pricing - construída, aguardando o Verifier
+**Where**: C1–C38 com proof verde local em `dc6cf66`; `test:cov` com 95,34% de linhas em `pricing`
+**In progress**: verificação independente e marcação do ROADMAP
+**Next step**: `validate_verification.py phase-1-pricing`, depois marcar a Fase 1 no ROADMAP. A seguir, Fase 2 (parser de arquivos fatiados)
+**Blockers**: nenhum. Pergunta aberta sem bloqueio: planilha real da empresa para conferir o R1
 **Uncommitted**: nada
 **Branch**: main
