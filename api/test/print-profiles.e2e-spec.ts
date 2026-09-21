@@ -161,4 +161,13 @@ describe('POST /print-profiles/import (e2e)', () => {
     expect(errorOf(response)).not.toContain('URL inválida');
     expect(fakeClient.calls).toEqual([]);
   });
+
+  it('url with exactly 2048 characters is accepted', async () => {
+    const base = 'https://makerworld.com/models/3007827?from=';
+    const url = `${base}${'a'.repeat(2048 - base.length)}`;
+    expect(url).toHaveLength(2048);
+    const response = await post({ url });
+    expect(response.status).toBe(200);
+    expect(fakeClient.calls).toEqual([3007827]);
+  });
 });

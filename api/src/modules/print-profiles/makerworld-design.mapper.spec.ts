@@ -291,4 +291,44 @@ describe('mapMakerWorldDesign', () => {
       expect(mapMakerWorldDesign(raw, 3007827, null).selectedProfileId).toBe(3387944);
     }
   });
+
+  it('null in one plate makes the slot total null', () => {
+    const raw = design3007827();
+    const plates = modelInfo(raw, 3377800).plates as Json[];
+    const slotOne = (plates[1].filaments as Json[]).find((filament) => filament.id === '1') as Json;
+    delete slotOne.usedG;
+    delete slotOne.usedM;
+    const profile = profileOf(raw, 3377800);
+    const bySlot = new Map(profile.filaments.map((filament) => [filament.slot, filament]));
+    expect(bySlot.get(1)?.grams).toBeNull();
+    expect(bySlot.get(1)?.meters).toBeNull();
+    expect(bySlot.get(2)?.grams).toBe(64);
+    expect(bySlot.get(3)?.grams).toBe(37);
+    expect(bySlot.get(4)?.grams).toBe(61);
+  });
+
+  it('identifiers are never null', () => {
+    const raw = design3007827();
+    const instances = raw.instances as Json[];
+    instances.push({ ...instance(raw, 3388305), id: undefined }, { title: 'sem id' });
+    const plate = firstPlate(raw);
+    delete plate.index;
+    (plate.filaments as Json[]).push(
+      { id: 'abc', type: 'PLA', color: '#FFFFFF', usedG: '1', usedM: '0.1' },
+      { id: '0', type: 'PLA', color: '#FFFFFF', usedG: '1', usedM: '0.1' },
+      { type: 'PLA', color: '#FFFFFF', usedG: '1', usedM: '0.1' },
+    );
+
+    const result = mapMakerWorldDesign(raw, 3007827, 3387944);
+    expect(result.profiles.map((profile) => profile.id)).toEqual([3387944, 3388305, 3377800]);
+    const seaStarProfile = result.profiles[0];
+    expect(seaStarProfile.plates.map((item) => item.index)).toEqual([1]);
+    expect(seaStarProfile.plates[0].filaments.map((filament) => filament.slot)).toEqual([1, 4]);
+    expect(seaStarProfile.filaments.map((filament) => filament.slot)).toEqual([1, 4]);
+
+    const second = design3007827();
+    const secondPlate = (modelInfo(second, 3377800).plates as Json[])[1];
+    delete secondPlate.index;
+    expect(profileOf(second, 3377800).plates[1].index).toBe(2);
+  });
 });

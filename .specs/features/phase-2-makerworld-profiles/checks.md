@@ -5,7 +5,7 @@ Plan: `.specs/features/phase-2-makerworld-profiles/plan.md`
 
 ## Intent
 
-46 checks em 6 fatias (C42–C46 acrescentados depois da rodada 1 do Verifier, sem alterar C1–C41) · 4 one-way doors (a door 4 veio no build) · 2 perguntas abertas, uma `blocks go-live` (termos de uso do MakerWorld) e nenhuma que bloqueie o build
+51 checks em 7 fatias (C42–C46 e C47–C51 acrescentados depois das rodadas 1 e 2 do Verifier, sem alterar os anteriores) · 4 one-way doors (a door 4 veio no build) · 2 perguntas abertas, uma `blocks go-live` (termos de uso do MakerWorld) e nenhuma que bloqueie o build
 
 O `AGENTS.md` não declara perfil. Uso `standard`, o mesmo em que a Fase 1 foi verificada: a
 fase depende de uma API externa não documentada e tem um mapeador cheio de ramos, justamente o
@@ -181,28 +181,48 @@ Proof: `npm --prefix api run test -- src/modules/print-profiles/makerworld-url.s
 **C46** - Sem `profileId` e com `defaultInstanceId` ausente ou apontando para um perfil que não existe (`123`), `selectedProfileId` é `3387944`, o primeiro perfil (AC 5)
 Proof: `npm --prefix api run test -- src/modules/print-profiles/makerworld-design.mapper.spec.ts -t "falls back to the first profile"`
 
+### S7 - Lacunas da rodada 2 do Verifier · 4 files · 6 KB · ~2k
+
+Acrescentados depois da verificação da rodada 2 (FAIL: 8 mutantes de sondagem sobreviveram).
+Nenhum check anterior mudou.
+
+**C47** - No perfil `3377800`, sem `usedG` e `usedM` no slot `1` da placa 2, o total do slot `1` volta `grams` `null` e `meters` `null` (nunca uma soma parcial), e os slots `2`, `3` e `4` continuam `64`, `37` e `61` g (AC 9)
+Proof: `npm --prefix api run test -- src/modules/print-profiles/makerworld-design.mapper.spec.ts -t "null in one plate makes the slot total null"`
+
+**C48** - `id`, `slot` e `index` nunca são null: perfis sem `id` numérico são descartados (`profiles` continua `[3387944, 3388305, 3377800]`), filamentos com `id` `"abc"`, `"0"` ou ausente são descartados da placa e do total (slots continuam `[1, 4]`), e placa sem `index` recebe a posição (`1` no Sea star, `2` na segunda placa do `3377800`) (door 1)
+Proof: `npm --prefix api run test -- src/modules/print-profiles/makerworld-design.mapper.spec.ts -t "identifiers are never null"`
+
+**C49** - `parseMakerWorldUrl` lança `PrintProfileError` `400` com a mensagem de C2 para `https://:pass@makerworld.com/models/3007827` e para `https://makerworld.com/models/99999999999999999999` (id acima de `Number.MAX_SAFE_INTEGER`) (AC 13)
+Proof: `npm --prefix api run test -- src/modules/print-profiles/makerworld-url.spec.ts -t "rejects password only userinfo and unsafe design ids"`
+
+**C50** - Uma URL válida do MakerWorld com exatamente 2048 caracteres responde `200`, e o cliente falso recebe `3007827` (AC 8, borda de C44)
+Proof: `npm --prefix api run test:e2e -- test/print-profiles.e2e-spec.ts -t "url with exactly 2048 characters is accepted"`
+
+**C51** - Depois de uma importação com sucesso (2 linhas de filamento), uma segunda importação que responde `502` ou `200` com `profiles: []` mostra a mensagem do estado, some com o seletor de perfil e deixa o formulário todo vazio (AC 25, AC 26)
+Proof: `npm --prefix web run test -- src/components/print-profile-import.test.tsx -t "a failed or empty import after a success clears the form"`
+
 ## Coverage
 
 | Set (size) | Member -> proof | Unproven |
 | --- | --- | --- |
 | `POST /print-profiles/import` statuses (4) | 200 C24, C30 · 400 C26, C27, C28 · 404 C29 · 502 C29 | - |
 | URLs aceitas (7) | ROADMAP `/pt/…?from=recommend#profileId-3387944` C1 · `/en/models/3007827-sea-animals-set` C1 · `https://www.makerworld.com/models/3007827` C1 · `/models/3007827` sem slug C1 · `/models/3007827-sea-animals-set?from=recommend` C1 · `/models/3007827/` com barra final C1 · `/pt/models/3007827` sem slug C1 | - |
-| URLs recusadas (11) | `https://user@makerworld.com/models/3007827` C45 · `https://user:pass@makerworld.com/models/3007827` C45 · `https://makerworld.com/models/0` C45 · `http://makerworld.com/models/3007827` C2 · `https://www.printables.com/model/1` C2 · `https://makerworld.com.evil.com/models/3007827` C2 · `https://evil.makerworld.com/models/3007827` C2 · `https://makerworld.com:8443/models/3007827` C2 · `https://makerworld.com/models/abc` C2 · `https://makerworld.com/collections/3007827` C2 · `não é url` C2 | - |
+| URLs recusadas (13) | `https://:pass@makerworld.com/models/3007827` C49 · `…/models/99999999999999999999` C49 · `https://user@makerworld.com/models/3007827` C45 · `https://user:pass@makerworld.com/models/3007827` C45 · `https://makerworld.com/models/0` C45 · `http://makerworld.com/models/3007827` C2 · `https://www.printables.com/model/1` C2 · `https://makerworld.com.evil.com/models/3007827` C2 · `https://evil.makerworld.com/models/3007827` C2 · `https://makerworld.com:8443/models/3007827` C2 · `https://makerworld.com/models/abc` C2 · `https://makerworld.com/collections/3007827` C2 · `não é url` C2 | - |
 | fragmento de perfil (3 formas) | válido `#profileId-3387944` C1 · malformado C3 · ausente C1, C8 | - |
 | campos escalares que podem voltar `null` (19) | C11, table-driven over all 19: `model.title` · `model.coverUrl` · `model.license` · `model.designer` · `profile.title` · `profile.printSeconds` · `profile.totalGrams` · `profile.needsAms` · `printer.name` · `printer.nozzleDiameterMm` · `settings.layerHeightMm` · `settings.wallLoops` · `settings.sparseInfillRate` · `filament.type` · `filament.color` · `filament.grams` · `filament.meters` · `plate.printSeconds` · `plate.totalGrams` | - |
 | números inválidos (4 formas) | texto `"abc"` C12 · negativo `"-1"`/`-5` C12 · vazio `""` C12 · texto numérico válido `"2.66"` C12 | - |
 | normalização de formato (4 campos) | `color` C13 · `sparseInfillRate` C13 · `layerHeightMm` C13 · `wallLoops` C13 | - |
-| origem dos filamentos do perfil (2 ramos) | soma das placas C5, C7 · `instanceFilaments` sem placas C14 | - |
+| origem dos filamentos do perfil (3 ramos) | soma das placas C5, C7 · soma com null numa placa -> null C47 · `instanceFilaments` sem placas C14 | - |
 | escolha do perfil (4 ramos) | `profileId` existente C4 · ausente -> `defaultInstanceId` C8 · ausente sem `defaultInstanceId` válido -> primeiro perfil C46 · inexistente C16, C28 | - |
 | perfis da fixture (3) | `3387944` C4, C5 · `3377800` C7 · `3388305` C10 | - |
 | resposta irreconhecível (4 formas) | `[]` C17 · `null` C17 · `"texto"` C17 · `{}` C17 | - |
 | falhas do upstream (7) | C21, table-driven over all 7: timeout C21, C23 · `500` C21 · `403` (Cloudflare) C21 · redirect `301` C21 · corpo > `maxBytes` C21 · corpo que não é JSON C21 · conexão recusada C21 | - |
-| tamanho do corpo `url` (1 borda) | 2049 caracteres recusado C44 | - |
+| tamanho do corpo `url` (2 bordas) | 2048 caracteres aceito C50 · 2049 caracteres recusado C44 | - |
 | erros de domínio -> HTTP (3) | 400 C31 · 404 C31 · 502 C31 | - |
-| estados da tela (5) | inicial vazio C40 · carregando C35 · sucesso C34 · erro (API e rede) C38 · modelo sem perfis C39 | - |
+| estados da tela (7) | inicial vazio C40 · carregando C35 · sucesso C34 · erro (API e rede) C38 · modelo sem perfis C39 · sucesso -> erro C51 · sucesso -> sem perfis C51 | - |
 | ações nas linhas de filamento (2) | adicionar C40 · remover C40 | - |
 | formatação do tempo (5 casos) | `1707` C41 · `77054` C41 · `89` C41 · arredonda para baixo `29` C41, `3569` C43 · arredonda o meio minuto para cima `90` C43, `3570` C43 | - |
-| one-way doors do plano (4) | 1 contrato `PrintProfileImport` C24, C13 · 2 fonte e interface do cliente C18, C32 · 3 padrão de saída (redirect, timeout, tamanho, host fixo, só `designId`) C18, C19, C21, C23, C25 · 4 `node:https` no baseUrl padrão C42 | - |
+| one-way doors do plano (4) | 1 contrato `PrintProfileImport` C24, C13, identificadores nunca null C48 · 2 fonte e interface do cliente C18, C32 · 3 padrão de saída (redirect, timeout, tamanho, host fixo, só `designId`) C18, C19, C21, C23, C25 · 4 `node:https` no baseUrl padrão C42 | - |
 | startup config do `PrintProfilesModule` (2) | `AppModule` usado pelo `main.ts` e pelo e2e C24 · token do cliente -> implementação HTTP C32 | - |
 
 - Claims naming a status code, route or response shape: C24–C30 - each has a proof that crosses the `POST /print-profiles/import` boundary
@@ -255,3 +275,4 @@ Arquivos que a fase toca: 3 existentes (`api/src/app.module.ts` 0,7 KB, `web/src
 - **Settled mid-build:** o usuário escolheu `node:https` no lugar do `fetch` (door 4, AD-011), porque o Cloudflare do MakerWorld desafia o `fetch` do Node. `app-shell.test.tsx` trocou a asserção "menu sem links" pela de C41 (AC 29)
 - **Abandoned:** `fetch` nativo (door 3 como aprovado) - 403 com `cf-mitigated: challenge` contra o MakerWorld real
 - **Verification round 1 (`standard`):** FAIL - C1-C41 provados, 3 falhas sobreviveram (F9 transporte https, F6 arredondamento, F10 `MaxLength`). C42-C46 acrescentados; os três mutantes foram reinjetados e morreram
+- **Verification round 2 (`standard`):** FAIL - C1-C46 provados, 3 mutantes da rodada 1 mortos, 8 mutantes de sondagem sobreviveram (G1-G7, G9). C47-C51 acrescentados; os 8 e mais o id acima do inteiro seguro foram reinjetados e morreram

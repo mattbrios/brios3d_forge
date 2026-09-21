@@ -194,4 +194,38 @@ describe("PrintProfileImport", () => {
       "PETG",
     );
   });
+
+  it("a failed or empty import after a success clears the form", async () => {
+    const empty = { ...structuredClone(seaAnimals), profiles: [], selectedProfileId: null };
+    const outcomes = [
+      {
+        second: jsonResponse(502, { error: UNAVAILABLE }),
+        message: UNAVAILABLE,
+      },
+      {
+        second: jsonResponse(200, empty),
+        message:
+          "Este modelo não tem perfis de impressão no MakerWorld. Preencha os dados manualmente",
+      },
+    ];
+    for (const { second, message } of outcomes) {
+      cleanup();
+      vi.stubGlobal(
+        "fetch",
+        vi
+          .fn()
+          .mockResolvedValueOnce(jsonResponse(200, seaAnimals))
+          .mockResolvedValueOnce(second),
+      );
+      render(<PrintProfileImport />);
+      importUrl();
+      await screen.findByRole("combobox", { name: "Perfil" });
+      expect(filamentRows()).toHaveLength(2);
+
+      importUrl();
+      expect(await screen.findByText(message)).toBeTruthy();
+      expect(screen.queryByRole("combobox", { name: "Perfil" })).toBeNull();
+      expectBlankForm();
+    }
+  });
 });

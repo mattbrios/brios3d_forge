@@ -75,4 +75,15 @@ describe('parseMakerWorldUrl', () => {
       expect(error.message, url).toBe(INVALID_URL);
     }
   });
+
+  it('rejects password only userinfo and unsafe design ids', () => {
+    for (const url of [
+      'https://:pass@makerworld.com/models/3007827',
+      'https://makerworld.com/models/99999999999999999999',
+    ]) {
+      const error = errorOf(() => parseMakerWorldUrl(url));
+      expect(error.status, url).toBe(400);
+      expect(error.message, url).toBe(INVALID_URL);
+    }
+  });
 });

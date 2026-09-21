@@ -2,212 +2,268 @@
 
 **Verdict**: FAIL
 **Profile**: standard
-**Diff range**: 5df0c52..6f4a6ed
-**Round**: 1 - full
+**Diff range**: 5df0c52..19ce72b
+**Round**: 2 - full (every proof re-run, every surface re-injected, coverage recomputed at `19ce72b`)
 **Verifier**: independent sub-agent (author != verifier)
 
-All 41 checks are green at `6f4a6ed`, and each has a located assertion. The verdict is FAIL because
-3 of 10 distinct injected faults survived and the recomputed Coverage leaves members unproven:
+Round 1 (at `6f4a6ed`, report committed in `19ce72b`): FAIL. C1–C41 were proven, but mutants F9 (https
+transport), F6 (`Math.round` -> `Math.floor`) and F10 (drop `@MaxLength(2048)`) survived, and the
+userinfo refusal, the `designId <= 0` refusal and the first-profile fallback had no case.
 
-1. **Door 4 (`node:https`, AD-011) is never exercised.** Every client test uses an `http://` base URL.
-   `makerworld.client.ts:86` picks `node:http` for that base URL and `node:https` for everything
-   else. Changing the `https` branch to `httpGet` breaks every real import (`ERR_INVALID_PROTOCOL`,
-   then 502), and the whole API unit suite still passes (72/72).
-2. **The rounding in `formatPrintTime` is unproven.** C41's "rounds up" case uses `89` s, which is
-   1.48 min, so `round` and `floor` both give `0 h 1 min`. `Math.round` -> `Math.floor` at
-   `format-print-time.ts:8` passes the whole web suite (19/19).
-3. **The `@MaxLength(2048)` refusal on `url` is untested.** Removing it from
-   `import-print-profile.dto.ts:5` passes the whole e2e file (7/7).
+All 46 checks are green at `19ce72b`, and each has a located assertion. The three round-1 mutants
+were re-injected and **all three now die**: F9 by C42, F6 by C43 and F10 by C44. The C45 and C46
+surfaces also kill their own mutants. The verdict is still FAIL, because 8 of the 20 mutants
+survived. All 8 are new probes, and they cover members that the recomputed Coverage shows are
+unproven:
+
+1. **The plate sum lets a missing value through.** `sumOrNull` (`makerworld-design.mapper.ts:151-153`)
+   is meant to leave the total `null` when one plate lacks a value, because "a partial total would
+   look complete" (comment at `:133-134`). Changing it to `(a ?? 0) + (b ?? 0)` passes the entire
+   API unit suite and the entire e2e suite (G3). C11 removes fields only from the Sea star, which
+   has a single plate, so the summing path never sees a `null`. With the mutant, a profile whose
+   plate 3 lacks `usedG` would report an understated gram total that looks complete. That is the
+   same pricing error the plan was written to prevent (AC 9).
+2. **The form is never shown to reset.** C38 and C39 assert a blank form only when the form was
+   already blank before the import. Deleting `setForm(BLANK_FORM)` from the error path (G7) or from
+   the no-profiles path (G9) passes the entire web suite. In the real flow, a failed import that
+   follows a successful one would show the old profile's time, printer and filaments next to the
+   error. AC 25 and AC 26 require a blank form.
+3. **Door 1's non-null identifiers have no proof.** The plan says "`id`, `slot` e `index` nunca"
+   (never null), but nothing tests malformed input. Each of these mutants passes the entire unit
+   suite: letting an instance without `id` through (G4, `mapper.ts:26`), emitting a filament with
+   no valid slot as `slot: 0` (G5, `mapper.ts:110`), and dropping the `position + 1` index fallback
+   (G6, `mapper.ts:102`).
+4. **The 2048 bound is proven from one side only.** C44 proves that a URL over 2048 characters is
+   refused, but nothing proves that a long valid URL is accepted. `@MaxLength(2048)` ->
+   `@MaxLength(100)` passes the whole e2e file (G1). With that mutant, a real MakerWorld URL with a
+   long slug and query string would be rejected, which contradicts AC 8.
+5. **A password-only userinfo is not tested (low).** C45 tests `user@` and `user:pass@`, and both
+   are caught by the `username` test. Removing the `url.password !== ''` clause
+   (`makerworld-url.ts:25`) passes the full unit suite (G2), so `https://:pass@makerworld.com/…` is
+   an untested row. The unsafe-integer refusal (`Number.isSafeInteger`, `:31`, for example a
+   20-digit id) also has no case. Neither row is required by AC 13: they are hardening that the code
+   decided, and the Test policy asks for one case per decision row.
 
 ## Binding sources
 
-Step 1 runs only under `ui`, and this feature was approved under `standard`. The plan also marks no
-source as binding. `Sources` lists `ROADMAP.md` and the MakerWorld response of 2026-09-21 only as
-provenance. No comparison was owed.
+Step 1 runs only under `ui`, and this feature was approved under `standard`. The plan marks no
+source as binding: `Sources` lists `ROADMAP.md` and the MakerWorld response of 2026-09-21 only as
+provenance. No comparison was owed. Verified at `19ce72b`.
 
 ## Checks
 
-The API unit proofs ran in one invocation:
-`npm --prefix api run test -- <5 spec files> -t "<25 names joined by |>" --reporter=verbose`. It
-exited 0, and each of the 25 names was listed individually as passed. The e2e proofs ran as
-`npm --prefix api run test:e2e -- test/print-profiles.e2e-spec.ts -t "<7 names>"`, exited 0, and
-listed 7/7 individually. The web proofs ran as
-`npm --prefix web run test -- <3 files> -t "<9 names>"`, exited 0, and listed 9/9 individually.
-C33 is a shell proof, and it exited 0. Every proof test was added in 5df0c52..HEAD. None resolves
-to a test that existed before the feature.
+Verified at `19ce72b` (real tree, read-only runs):
+
+- **API unit.** `npm --prefix api run test -- makerworld-url.spec.ts makerworld-design.mapper.spec.ts makerworld.client.spec.ts makerworld.client.https.spec.ts print-profiles.controller.spec.ts print-profiles.module.spec.ts -t "<28 names joined by |>" --reporter=verbose`
+  exited 0 with 28 passed and 1 skipped (the non-proof `other errors are not converted`). Each of
+  the 28 names is listed individually as ✓.
+- **e2e.** `npm --prefix api run test:e2e -- test/print-profiles.e2e-spec.ts -t "<8 names>"` exited
+  0 with 8/8 listed individually.
+- **Web.** `npm --prefix web run test -- print-profile-import.test.tsx app-shell.test.tsx format-print-time.test.ts -t "<10 names>"`
+  exited 0 with 10 passed and 1 skipped (the non-proof `renders header, nav and content`), each
+  listed individually.
+- **C33.** The shell proof exited 0.
+
+Every proof test was added in 5df0c52..HEAD, and C42–C46 were added in `19ce72b`. None resolves to
+a test from before the feature.
 
 | Check | Claim | Proof run | Evidence | Result |
 | --- | --- | --- | --- | --- |
-| C1 | 7 accepted URLs parse; the ROADMAP URL gives profileId 3387944, the other 6 give null | url spec `accepts makerworld model urls` ✓ | `api/src/modules/print-profiles/makerworld-url.spec.ts:25` - `toEqual({ designId: 3007827, profileId: 3387944 })`; `:36` - `toEqual({ designId: 3007827, profileId: null })` over 6 URLs | PASS |
-| C2 | 8 invalid inputs -> 400 + exact message | url spec `rejects non makerworld urls` ✓ | `makerworld-url.spec.ts:53` - `expect(error.status, url).toBe(400)`; `:54` - `toBe(INVALID_URL)` (literal at `:4-5`) | PASS |
-| C3 | malformed fragment -> profileId null | url spec `ignores malformed profile fragment` ✓ | `makerworld-url.spec.ts:60-63` - `toEqual({ designId: 3007827, profileId: null })` over 3 fragments | PASS |
-| C4 | Sea star scalars, printer, settings | mapper spec `maps the sea star profile` ✓ | `makerworld-design.mapper.spec.ts:73-80` - `selectedProfileId toBe(3387944)`, `printSeconds toBe(1707)`, `printer toEqual({ name: 'X2D', nozzleDiameterMm: 0.4 })`, `settings toEqual({ layerHeightMm: 0.2, wallLoops: 2, sparseInfillRate: 0.15 })` | PASS |
-| C5 | Sea star filaments by slot and the single plate | mapper spec `sea star filaments by slot` ✓ | `makerworld-design.mapper.spec.ts:85` - `toEqual(SEA_STAR_FILAMENTS)` (literal at `:10-13`); `:86-88` - plates `toEqual([{ index: 1, printSeconds: 1707, totalGrams: 9, ... }])` | PASS |
-| C6 | model and source | mapper spec `maps model and source` ✓ | `makerworld-design.mapper.spec.ts:93` - `toEqual(MODEL)` (literal at `:31-37`); `:94-98` - source literal | PASS |
-| C7 | 11 plates, 77054 s, 408 g, per-slot grams, colors, and meters to 1e-9 | mapper spec `sums plate filaments by slot` ✓ | `makerworld-design.mapper.spec.ts:103-114` - `toHaveLength(11)`, index `[1..11]`, `toBe(77054)`, `toBe(408)`, 4-slot literal; `:117` - `toBeLessThan(1e-9)` against `[79.82, 19.42, 11.86, 19.62]` | PASS |
-| C8 | no profileId -> defaultInstanceId 3377800 | mapper spec `defaults to the default instance` ✓ | `makerworld-design.mapper.spec.ts:122` - `.selectedProfileId).toBe(3377800)` | PASS |
+| C1 | 7 accepted URLs parse; the ROADMAP URL gives profileId 3387944, the other 6 give null | url spec `accepts makerworld model urls` ✓ | `api/src/modules/print-profiles/makerworld-url.spec.ts:25` - `toEqual({ designId: 3007827, profileId: 3387944 })`; `makerworld-url.spec.ts:36` - `toEqual({ designId: 3007827, profileId: null })` over 6 URLs | PASS |
+| C2 | 8 invalid inputs -> 400 + exact message | url spec `rejects non makerworld urls` ✓ | `makerworld-url.spec.ts:53` - `error.status toBe(400)`; `makerworld-url.spec.ts:54` - `toBe(INVALID_URL)` (literal at `:4-5`) | PASS |
+| C3 | malformed fragment -> profileId null | url spec `ignores malformed profile fragment` ✓ | `makerworld-url.spec.ts:60` - `toEqual({ designId: 3007827, profileId: null })` over 3 fragments | PASS |
+| C4 | Sea star scalars, printer, settings | mapper spec `maps the sea star profile` ✓ | `makerworld-design.mapper.spec.ts:73` - `selectedProfileId toBe(3387944)`; `:75-80` - `'Sea star'`, `1707`, `9`, `true`, printer and settings literals | PASS |
+| C5 | Sea star filaments by slot + single plate | mapper spec `sea star filaments by slot` ✓ | `makerworld-design.mapper.spec.ts:85` - `toEqual(SEA_STAR_FILAMENTS)` (literal `:10-13`); `:86-88` - plates literal | PASS |
+| C6 | model and source | mapper spec `maps model and source` ✓ | `makerworld-design.mapper.spec.ts:93` - `toEqual(MODEL)` (literal `:31-37`); `:94-98` - source literal | PASS |
+| C7 | 11 plates, 77054 s, 408 g, per-slot grams/colors, meters to 1e-9 | mapper spec `sums plate filaments by slot` ✓ | `makerworld-design.mapper.spec.ts:103-114` - `toHaveLength(11)`, index `[1..11]`, `77054`, `408`, 4-slot literal; `:117` - `toBeLessThan(1e-9)` | PASS |
+| C8 | no profileId -> defaultInstanceId 3377800 | mapper spec `defaults to the default instance` ✓ | `makerworld-design.mapper.spec.ts:122` - `selectedProfileId toBe(3377800)` | PASS |
 | C9 | profile order | mapper spec `keeps profile order` ✓ | `makerworld-design.mapper.spec.ts:127` - `toEqual([3387944, 3388305, 3377800])` | PASS |
-| C10 | Sea shell needsAms false | mapper spec `needs ams false` ✓ | `makerworld-design.mapper.spec.ts:131` - `.needsAms).toBe(false)` | PASS |
-| C11 | each of the 19 scalars removed -> null, the rest unchanged | mapper spec `missing field becomes null` ✓ | `makerworld-design.mapper.spec.ts:177` - `toHaveLength(19)`; `:202-203` - `toEqual(expectedModel)` / `toEqual(expectedProfile)`, where the expected objects are the C4–C6 literals (`:15-37`) with that one key set to null | PASS |
-| C12 | invalid numbers -> null; "2.66" -> number | mapper spec `invalid numbers become null` ✓ | `makerworld-design.mapper.spec.ts:212-213` - `grams toBeNull()` for `abc`,`-1`,`""`; `:218` - `printSeconds toBeNull()`; `:221-222` - `toBe(2.66)`, `typeof ... toBe('number')` (the fixture holds `usedM` as the string `"2.66"`) | PASS |
-| C13 | color, rate, layer height, wall loops normalization | mapper spec `normalizes color and rates` ✓ | `makerworld-design.mapper.spec.ts:231-243` - `toBe('#FD8008')`, `toBeNull()` x2, `toBe(0.15)`, `toBeNull()`, `toBe(0.2)`, `toBe(2)` | PASS |
-| C14 | no plates -> instanceFilaments with sequential slots | mapper spec `falls back to instance filaments` ✓ | `makerworld-design.mapper.spec.ts:250-254` - `plates toEqual([])`, filaments slot 1/2 literal | PASS |
-| C15 | `instances: []` and missing instances -> [] and null | mapper spec `model without profiles` ✓ | `makerworld-design.mapper.spec.ts:264-265` - `toEqual([])`, `toBeNull()` | PASS |
+| C10 | Sea shell needsAms false | mapper spec `needs ams false` ✓ | `makerworld-design.mapper.spec.ts:131` - `needsAms toBe(false)` | PASS |
+| C11 | each of 19 scalars removed -> null, rest unchanged | mapper spec `missing field becomes null` ✓ | `makerworld-design.mapper.spec.ts:177` - `toHaveLength(19)`; `:202-203` - `toEqual(expectedModel)` / `toEqual(expectedProfile)` built from the C4–C6 literals. Claim holds as written; see precision gap P1 | PASS |
+| C12 | invalid numbers -> null; "2.66" -> number | mapper spec `invalid numbers become null` ✓ | `makerworld-design.mapper.spec.ts:212-213` - `toBeNull()`; `:218` - `toBeNull()`; `:221-222` - `toBe(2.66)`, `typeof toBe('number')` | PASS |
+| C13 | color, rate, layer height, wall loops | mapper spec `normalizes color and rates` ✓ | `makerworld-design.mapper.spec.ts:231-243` - `'#FD8008'`, `toBeNull()` x2, `0.15`, `toBeNull()`, `0.2`, `2` | PASS |
+| C14 | no plates -> instanceFilaments, sequential slots | mapper spec `falls back to instance filaments` ✓ | `makerworld-design.mapper.spec.ts:250-254` - `plates toEqual([])`, slot 1/2 literal | PASS |
+| C15 | `instances: []` / missing -> [] and null | mapper spec `model without profiles` ✓ | `makerworld-design.mapper.spec.ts:264-265` - `toEqual([])`, `toBeNull()` | PASS |
 | C16 | unknown profileId 999 -> 400 + message | mapper spec `unknown profile id` ✓ | `makerworld-design.mapper.spec.ts:271-274` - `toBe(400)`, exact message literal | PASS |
 | C17 | `[]`, `null`, `"texto"`, `{}` -> 502 + message | mapper spec `unrecognized design is 502` ✓ | `makerworld-design.mapper.spec.ts:280-281` - `toBe(502)`, `toBe(UNAVAILABLE)` | PASS |
-| C18 | one GET to the design path with accept and user-agent; returns the JSON | client spec `requests the design endpoint` ✓ | `makerworld.client.spec.ts:104-110` - `resolves.toEqual({ id: 3007827, title: 'x' })`, `toHaveLength(1)`, `url toBe('/api/v1/design-service/design/3007827')`, `accept toBe('application/json')`, `user-agent toBe(\`Brios3DForge/${VERSION}\`)` | PASS |
+| C18 | one GET to the design path with accept + user-agent; returns JSON | client spec `requests the design endpoint` ✓ | `makerworld.client.spec.ts:104-110` - `resolves.toEqual(...)`, `toHaveLength(1)`, url, accept, `` toBe(`Brios3DForge/${VERSION}`) `` | PASS |
 | C19 | default baseUrl, timeout, maxBytes | client spec `default limits` ✓ | `makerworld.client.spec.ts:117-121` - `toEqual({ baseUrl: 'https://makerworld.com', timeoutMs: 10000, maxBytes: 5242880 })` | PASS |
-| C20 | upstream 404 -> 404 + message | client spec `upstream 404` ✓ | `makerworld.client.spec.ts:132-133` - `toBe(404)`, `toBe('Modelo 3007827 não encontrado no MakerWorld')` | PASS |
-| C21 | 7 upstream failures -> 502; the redirect makes one request | client spec `upstream failures are 502` ✓ | `makerworld.client.spec.ts:140` - `toHaveLength(7)`; `:153-156` - `toBe(502)`, `toBe(UNAVAILABLE)`, redirect `requests toHaveLength(1)` | PASS |
-| C22 | warn with designId and reason; the message leaks no reason | client spec `logs upstream failure` ✓ | `makerworld.client.spec.ts:181-186` - `toHaveBeenCalledTimes(1)`, `toContain('3007827')`, `toContain(failure.reason)`, `not.toContain(other.reason)` | PASS |
+| C20 | upstream 404 -> 404 + message | client spec `upstream 404` ✓ | `makerworld.client.spec.ts:132-133` - `toBe(404)`, exact message | PASS |
+| C21 | 7 upstream failures -> 502; the redirect makes one request | client spec `upstream failures are 502` ✓ | `makerworld.client.spec.ts:140` - `toHaveLength(7)`; `:153-156` - `toBe(502)`, `toBe(UNAVAILABLE)`, `requests toHaveLength(1)` | PASS |
+| C22 | warn with designId + reason; message leaks no reason | client spec `logs upstream failure` ✓ | `makerworld.client.spec.ts:181-186` - `toHaveBeenCalledTimes(1)`, `toContain('3007827')`, `toContain(failure.reason)`, `not.toContain(other.reason)` | PASS |
 | C23 | timeout 200 ms rejects in < 2 s | client spec `timeout aborts the request` ✓ | `makerworld.client.spec.ts:204-205` - `toBe(502)`, `toBeLessThan(2000)` | PASS |
-| C24 | route 200 with the full Sea star contract | e2e `imports the sea star profile` ✓ | `api/test/print-profiles.e2e-spec.ts:59` - `status toBe(200)`; `:66-90` - source, model, `selectedProfileId toBe(3387944)`, `profiles toHaveLength(3)`, full profile literal `toEqual` | PASS |
-| C25 | the fake client gets exactly one numeric designId | e2e `client receives only the design id` ✓ | `print-profiles.e2e-spec.ts:95-96` - `calls toEqual([3007827])`, `typeof ... toBe('number')` | PASS |
-| C26 | printables URL -> 400 exact body; client not called | e2e `invalid url returns 400` ✓ | `print-profiles.e2e-spec.ts:101-105` - `toBe(400)`, `body toEqual({ error: 'URL inválida: ...' })`, `calls toEqual([])` | PASS |
+| C24 | route 200 with full Sea star contract | e2e `imports the sea star profile` ✓ | `api/test/print-profiles.e2e-spec.ts:59` - `status toBe(200)`; `print-profiles.e2e-spec.ts:66-90` - source, model, `3387944`, `toHaveLength(3)`, full profile literal | PASS |
+| C25 | fake client gets exactly one numeric designId | e2e `client receives only the design id` ✓ | `print-profiles.e2e-spec.ts:95-96` - `toEqual([3007827])`, `typeof toBe('number')` | PASS |
+| C26 | printables URL -> 400 exact body; client not called | e2e `invalid url returns 400` ✓ | `print-profiles.e2e-spec.ts:101-105` - `toBe(400)`, `body toEqual({ error: 'URL inválida: …' })`, `calls toEqual([])` | PASS |
 | C27 | body validation 400s | e2e `body validation` ✓ | `print-profiles.e2e-spec.ts:110-119` - `toBe(400)` x3, `toContain('url')` x2, `toContain('should not exist')` | PASS |
-| C28 | unknown profile -> 400 exact body | e2e `unknown profile returns 400` ✓ | `print-profiles.e2e-spec.ts:124-128` - `toBe(400)`, `body toEqual({ error: 'Perfil 999 ...' })` | PASS |
-| C29 | 404 and 502 exact bodies; /health 200 afterwards | e2e `upstream errors` ✓ | `print-profiles.e2e-spec.ts:135-144` - `toBe(404)`, `toEqual({ error: 'Modelo 3007827 ...' })`, `toBe(502)`, `toEqual({ error: UNAVAILABLE })`, `health.status toBe(200)` | PASS |
+| C28 | unknown profile -> 400 exact body | e2e `unknown profile returns 400` ✓ | `print-profiles.e2e-spec.ts:124-128` - `toBe(400)`, exact body | PASS |
+| C29 | 404 / 502 exact bodies; /health 200 after | e2e `upstream errors` ✓ | `print-profiles.e2e-spec.ts:135-144` - `toBe(404)`, body, `toBe(502)`, body, `health.status toBe(200)` | PASS |
 | C30 | `instances: []` at the route -> 200, [] and null | e2e `model without profiles returns 200` ✓ | `print-profiles.e2e-spec.ts:150-153` - `toBe(200)`, `toEqual([])`, `toBeNull()` | PASS |
-| C31 | 400/404/502 -> BadRequest/NotFound/BadGateway, same message | controller spec `maps domain errors to http` ✓ | `print-profiles.controller.spec.ts:28-30` - `toBeInstanceOf(type)`, `getStatus() toBe(status)`, `message toBe(\`erro ${status}\`)` | PASS |
-| C32 | the token resolves to HttpMakerWorldClient; AppModule imports the module | module spec `wires the http client` ✓ | `print-profiles.module.spec.ts:9` - `toBeInstanceOf(HttpMakerWorldClient)`; `:13` - regex over `app.module.ts`. Assembly read directly: `app.module.ts:21` lists `PrintProfilesModule`, `main.ts:6` creates `AppModule` | PASS |
-| C33 | no typeorm import under print-profiles | `test -z "$(grep -rlE ...)"` exit 0 | `api/src/modules/print-profiles/print-profiles.module.ts:6-12` - module with no `TypeOrmModule`; `grep -rn typeorm api/src/modules/print-profiles` returns 0 lines | PASS |
-| C34 | form filled from the import, swatches colored | web `fills the form from the import` ✓ | `web/src/components/print-profile-import.test.tsx:64-68` - Horas `"0"`, Minutos `"28"`, AMS `checked true`, `X2D`, `0,4`; `:71-82` - 2 rows, slot/type/color/grams literal, `swatch.style.backgroundColor toBe('rgb(253, 128, 8)')` | PASS |
-| C35 | "Importando…" and the button disabled | web `shows importing` ✓ | `print-profile-import.test.tsx:90-93` - `getByText("Importando…")`, `disabled toBe(true)` | PASS |
-| C36 | 3 labelled options, switch without refetch | web `switches profile without refetch` ✓ | `print-profile-import.test.tsx:104-117` - `toHaveLength(3)`, `"Sea star · 0 h 28 min · 9 g"`, `select.value toBe("3387944")`, `"21"`/`"24"`, 4 rows, `toHaveBeenCalledTimes(1)` | PASS |
-| C37 | null fields blank and editable | web `null fields are blank and editable` ✓ | `print-profile-import.test.tsx:131-138` - `toBe("")` x2, then `toBe("A1 mini")`, `toBe("7,5")` | PASS |
-| C38 | 502 message and API-down message, each with a blank form | web `error shows message and blank form` ✓ | `print-profile-import.test.tsx:145-155` - `findByText(UNAVAILABLE)`, `expectBlankForm()` (`:32-39`), `findByText("Não foi possível conectar à API")` | PASS |
-| C39 | no profiles -> message + blank form | web `model without profiles` ✓ | `print-profile-import.test.tsx:163-168` - `findByText("Este modelo não tem perfis ...")`, `expectBlankForm()` | PASS |
-| C40 | initial blank form, add x2, remove 1 | web `blank form and filament rows` ✓ | `print-profile-import.test.tsx:176-195` - `expectBlankForm()`, `not.toHaveBeenCalled()`, `toHaveLength(2)`, `toHaveLength(1)`, the remaining row is `"PETG"` | PASS |
-| C41 | nav link + formatPrintTime 4 cases | web `links to print profiles` ✓ + `rounds to the nearest minute` ✓ | `web/src/components/app-shell.test.tsx:31-32` - `getByRole("link", { name: "Importar do MakerWorld" })`, `href toBe("/print-profiles")`; `web/src/lib/format-print-time.test.ts:6-9` - the 4 literals. The claimed values hold, but see precision gap P1 | PASS |
+| C31 | 400/404/502 -> BadRequest/NotFound/BadGateway, same message | controller spec `maps domain errors to http` ✓ | `print-profiles.controller.spec.ts:28-30` - `toBeInstanceOf(type)`, `getStatus() toBe(status)`, `message toBe(...)` | PASS |
+| C32 | token -> HttpMakerWorldClient; AppModule imports the module | module spec `wires the http client` ✓ | `print-profiles.module.spec.ts:9` - `toBeInstanceOf(HttpMakerWorldClient)`; `print-profiles.module.spec.ts:13` - regex over `app.module.ts`. Assemblies read directly: `api/src/app.module.ts:21` lists `PrintProfilesModule`, `api/src/main.ts:6` creates `AppModule` | PASS |
+| C33 | no typeorm import under print-profiles | `test -z "$(grep -rlE ...)"` exit 0 | `api/src/modules/print-profiles/print-profiles.module.ts:6-12` - module with no `TypeOrmModule`; the grep returns no file | PASS |
+| C34 | form filled from the import, swatches colored | web `fills the form from the import` ✓ | `web/src/components/print-profile-import.test.tsx:64-68` - `"0"`, `"28"`, AMS `true`, `"X2D"`, `"0,4"`; `print-profile-import.test.tsx:71-82` - 2 rows, slot/type/color/grams, `backgroundColor toBe(rgb)` | PASS |
+| C35 | "Importando…" + button disabled | web `shows importing` ✓ | `print-profile-import.test.tsx:90-93` - `getByText("Importando…")`, `disabled toBe(true)` | PASS |
+| C36 | 3 labelled options, switch without refetch | web `switches profile without refetch` ✓ | `print-profile-import.test.tsx:104-117` - `toHaveLength(3)`, `"Sea star · 0 h 28 min · 9 g"`, `value toBe("3387944")`, `"21"`/`"24"`, 4 rows, `toHaveBeenCalledTimes(1)` | PASS |
+| C37 | null fields blank and editable | web `null fields are blank and editable` ✓ | `print-profile-import.test.tsx:131-138` - `toBe("")` x2, then `"A1 mini"`, `"7,5"` | PASS |
+| C38 | 502 message / API-down message, each with a blank form | web `error shows message and blank form` ✓ | `print-profile-import.test.tsx:145-146` - `findByText(UNAVAILABLE)`, `expectBlankForm()` (`:32-39`); `print-profile-import.test.tsx:154-155` - `"Não foi possível conectar à API"`, `expectBlankForm()`. Claim holds as written; see P2 | PASS |
+| C39 | no profiles -> message + blank form | web `model without profiles` ✓ | `print-profile-import.test.tsx:163-168` - `findByText("Este modelo não tem perfis …")`, `expectBlankForm()`. See P2 | PASS |
+| C40 | initial blank form, add x2, remove 1 | web `blank form and filament rows` ✓ | `print-profile-import.test.tsx:177-195` - `expectBlankForm()`, `not.toHaveBeenCalled()`, `toHaveLength(2)`, `toHaveLength(1)`, remaining `"PETG"` | PASS |
+| C41 | nav link + formatPrintTime 4 cases | web `links to print profiles` ✓ + `rounds to the nearest minute` ✓ | `web/src/components/app-shell.test.tsx:31-32` - `getByRole("link", { name: "Importar do MakerWorld" })`, `href toBe("/print-profiles")`; `web/src/lib/format-print-time.test.ts:6-9` - the 4 literals | PASS |
+| C42 | default baseUrl goes through `node:https` `get` with URL, headers, signal; never `node:http` | https spec `uses node:https for the default base url` ✓ | `api/src/modules/print-profiles/makerworld.client.https.spec.ts:36-37` - `httpCalls toHaveLength(0)`, `httpsCalls toHaveLength(1)`; `makerworld.client.https.spec.ts:39-44` - `url.href toBe('https://makerworld.com/api/v1/design-service/design/3007827')`, `toMatchObject({ accept: 'application/json' })`, `toMatch(/^Brios3DForge\//)`, `signal toBeInstanceOf(AbortSignal)` | PASS |
+| C43 | 90 -> 0 h 2 min, 3569 -> 0 h 59 min, 3570 -> 1 h 0 min | web `rounds half a minute up` ✓ | `web/src/lib/format-print-time.test.ts:13-15` - the 3 literals | PASS |
+| C44 | url > 2048 chars -> 400 from ValidationPipe, client not called | e2e `url longer than 2048 characters returns 400` ✓ | `print-profiles.e2e-spec.ts:157` - URL of 2087 chars; `print-profiles.e2e-spec.ts:159-162` - `toBe(400)`, `toContain('url')`, `not.toContain('URL inválida')`, `calls toEqual([])`. Claim holds as written; see P3 | PASS |
+| C45 | `user@`, `user:pass@`, `/models/0` -> 400 + C2 message | url spec `rejects userinfo and non positive design ids` ✓ | `makerworld-url.spec.ts:69-71` - the 3 URLs; `makerworld-url.spec.ts:74-75` - `toBe(400)`, `toBe(INVALID_URL)` | PASS |
+| C46 | defaultInstanceId missing or `123` -> first profile 3387944 | mapper spec `falls back to the first profile` ✓ | `makerworld-design.mapper.spec.ts:287-289` - the two variants; `makerworld-design.mapper.spec.ts:291` - `selectedProfileId toBe(3387944)` | PASS |
 
-Precision gaps (findings about the checks, not the code):
+Precision gaps. These are findings about the checks, not the code:
 
-- **P1 - C41 / "formatação do tempo" row.** `89` is labelled "arredonda para cima", but 89 s is
-  1.483 min, so truncation also gives `0 h 1 min`. No case in C41 or C36 separates
-  round-to-nearest from `floor`: 1707 s is 28.45 min, 1984 s is 33.07 min and 77054 s is
-  1284.2 min. The assumption "Tempo na tela" (nearest minute) is therefore unproven. A value such
-  as `90` (-> `0 h 2 min`) would pin it. Mutant F6 survived.
-- **P2 - C34 wording.** "mostra o tempo `0 h 28 min`" is proven as two inputs, Horas `0` and
-  Minutos `28`, not as that literal string. The literal appears only in the selector label (C36).
-  This is an acceptable reading of AC 21 for an editable form, so it is recorded as a note and not
-  as a failure.
+- **P1 (C11 and the "campos escalares" row).** C11 removes `usedG`, `usedM`, `type` and `color`
+  only from the Sea star's single plate. That exercises `bySlot.set` and never `sumOrNull`, so it
+  cannot tell null propagation apart from treating a missing value as zero across plates (G3). AC 9
+  applied to a multi-plate profile, for example 3377800 with one plate's `usedG` removed, is never
+  claimed.
+- **P2 (C38, C39).** "o formulário com todos os campos vazios" is asserted only on a component that
+  never held data, so it cannot tell a reset apart from no reset (G7, G9). The claim needs a
+  successful import first.
+- **P3 (C44).** The bound is claimed from above only. A check that a valid URL near the bound (or
+  at least well over 100 chars) still imports is missing (G1).
+- **P4 (door 1).** The literal shape says `id`, `slot` and `index` are never null, but no check
+  claims what happens to an instance without `id`, a filament without a valid slot, or a plate
+  without `index` (G4–G6).
 
-Other notes:
+Notes:
 
-- `web/src/components/fixtures/print-profile-import.json` was compared with the real mapper output.
-  Running `mapMakerWorldDesign` from the built `api/dist` over the API fixture with `profileId`
-  3387944 and comparing with `JSON.stringify` gives `equal: true`. So the web proofs use the
-  response C24 proves, and the web fixture has not drifted from the API contract.
-- **The `app-shell.test.tsx` edit is legitimate.** The removed assertion
-  `within(nav).queryAllByRole("link")).toHaveLength(0)` encoded the Phase-0 placeholder of an
-  empty nav. AC 29 changes exactly that behaviour. The replacement keeps the nav landmark
-  assertion (`app-shell.test.tsx:18`). The new test asserts the link's name and href (`:31-32`).
-  Residual: nothing bounds the nav to exactly one link, which is minor.
-- **Door 4 deviation.** The code matches the door-4 literal shape: `new URL(...)` at
-  `makerworld.client.ts:81`, headers at `:94-97`, `signal` at `:93`, 3xx -> `redirect` at `:115`,
-  and `data` counting with `destroy` above `maxBytes` at `:127-133`. AD-011 is recorded in
-  `.specs/STATE.md`. What is not proven is that the `https` branch is taken; see Coverage and F9.
+- C42 mocks `node:https` inside its own file (`makerworld.client.https.spec.ts:9-28`). It makes no
+  network call: the mocked `get` emits an error. `node:http` is replaced with a throwing `get`, so a
+  regression to `httpGet` is caught directly (F9 died at `:36`).
+- The 5 MB `content-length` pre-check (`makerworld.client.ts:120-124`) is never exercised. The C21
+  "too large" case streams a chunked body, so it takes the counting path at `:127-133`. Removing
+  the pre-check does not change any claimed behaviour, because the streamed limit still refuses.
+  This is recorded as a note, not a gap.
+- Swept re-read: the only existing constraint the flow relies on is the global `ValidationPipe`
+  with `whitelist` and `forbidNonWhitelisted`, and it is present at `api/src/app.setup.ts:9-13`.
+  AD-011 is recorded in `.specs/STATE.md:17`, with AD-009 marked superseded at `:15`. The `n/a`
+  rows are approved policy.
 
 ## Coverage
 
-Recomputed from the authority for each set: plan `Surface`/`Landing`/`Criteria` where the code must
-satisfy the set, and the code's own branches where the code is where the set is discovered.
+Recomputed at `19ce72b` from the authority over each set. Where the code must satisfy a set, the
+authority is the plan's `Surface`, `Landing` and `Criteria`. Where the code is where the set is
+discovered, the authority is the code's own branches. Each member was then looked up in a proof,
+and the ones in doubt were confirmed by mutation.
 
 | Set (size) | Recomputed from | Member -> proof | Unproven |
 | --- | --- | --- | --- |
-| route statuses (4) | plan `Surface` | 200 C24, C30 · 400 C26, C27, C28 · 404 C29 · 502 C29 | - |
-| accepted URLs (7) | plan AC 8 (`/pt/`, `/en/`, `www.`, slug, query) | all 7 in C1 (`makerworld-url.spec.ts:23-34`) | - |
-| refused URLs, plan AC 13 (8) | plan AC 13 (scheme, host, path) | all 8 in C2 (`makerworld-url.spec.ts:42-49`) | - |
-| refusal branches of `parseMakerWorldUrl` (code, 7) | `makerworld-url.ts:15-33` | parse failure C2 · scheme C2 · host C2 · port C2 · path C2 · userinfo (`:23-24`) none · `designId <= 0` (`:31`, e.g. `/models/0`) none | userinfo; designId 0 |
+| route statuses (4) | plan `Surface` | 200 C24, C30 · 400 C26, C27, C28, C44 · 404 C29 · 502 C29 | - |
+| accepted URLs (7) | plan AC 8 | all 7 in C1 (`makerworld-url.spec.ts:23-34`) | - |
+| refused URLs, plan AC 13 (8) | plan AC 13 | all 8 in C2 (`makerworld-url.spec.ts:42-49`) | - |
+| refusal branches of `parseMakerWorldUrl` (code, 9) | `makerworld-url.ts:15-33` | parse failure C2 · scheme C2 · host C2 · port C2 · `username` C45 · `password` with empty username (`:25`) none · path C2 · unsafe integer (`:31` `isSafeInteger`) none · `designId <= 0` C45 | password-only userinfo (G2 survived); unsafe-integer id |
 | profile fragment (3) | `makerworld-url.ts:35-39` | valid C1 · malformed C3 · absent C1, C8 | - |
-| nullable scalars (19) | door 1 ("todo campo escalar ... pode ser null") and `print-profiles.types.ts` | 4 model + 4 profile + 2 printer + 3 settings + 4 filament + 2 plate = 19, table-driven in C11 (`mapper.spec.ts:141-177`) | - |
-| invalid numbers (4) | AC 10, `toNonNegative` `mapper.ts:174-182` | "abc", negative, "", "2.66" all in C12 | - |
+| request body refusals (4) | `ImportPrintProfileDto` + `app.setup.ts:9-13` | missing C27 · not text C27 · extra key C27 · > 2048 C44 | - |
+| `url` length bound (2 sides) | `dto/import-print-profile.dto.ts:5` + AC 8 | over 2048 refused C44 · long valid URL (> 88 chars, ≤ 2048) accepted none | accepted side (G1 survived) |
+| nullable scalars (19) | door 1 + `print-profiles.types.ts` | 19 members table-driven in C11 (`mapper.spec.ts:141-177`) | - |
+| door 1 never-null identifiers (3) | plan `Landing` door 1 ("`id`, `slot` e `index` nunca") | instance without valid `id` dropped (`mapper.ts:26`) none · filament without valid slot dropped (`mapper.ts:110`) none · plate without `index` gets its position (`mapper.ts:102`) none | id (G4), slot (G5), index (G6) |
+| plate sum with a missing value (code + AC 9, 2) | `sumOrNull` `mapper.ts:151-153` | both present -> sum C7 · either `null` -> `null` none | null propagation (G3 survived) |
+| invalid numbers (4) | AC 10, `toNonNegative` `mapper.ts:174-182` | `"abc"`, negative, `""`, `"2.66"` in C12 | - |
 | format normalization (4) | door 1, `mapper.ts:184-206` | color, rate, layer height, wall loops in C13 | - |
 | filament origin (2) | `mapper.ts:92-95` | plates C5, C7 · instanceFilaments C14 | - |
-| profile selection (code, 4 branches) | `selectProfile` `mapper.ts:46-66` | given and existing C4 · given and unknown C16, C28 · absent -> defaultInstanceId C8 · absent with default missing or not among instances -> `ids[0]` (`:65`) none · no profiles -> null C15 | `ids[0]` fallback |
+| profile selection (5 branches) | `selectProfile` `mapper.ts:46-66` | given + existing C4 · given + unknown C16, C28 · absent -> default C8 · absent, default missing/unknown -> first C46 · no profiles -> null C15 | - |
 | fixture profiles (3) | fixture `instances[]` | 3387944 C4, C5 · 3377800 C7 · 3388305 C10 | - |
-| unrecognized response (4) | AC 17 last clause, `mapper.ts:19-22` | `[]`, `null`, `"texto"`, `{}` in C17 | - |
-| upstream failures (7) | AC 17 and `makerworld.client.ts:65-76,100-137` | timeout C21, C23 · 500 C21 · 403 C21 · 301 C21 · too large C21 (streamed path) · invalid json C21 · network C21; each logged C22 | - |
-| domain -> HTTP (3) | `print-profiles.controller.ts:35-43` | 400, 404, 502 in C31, and at the route C26/C28, C29 | - |
-| request body refusals (code, 4) | `ImportPrintProfileDto` + `ValidationPipe` `app.setup.ts:9-13` | missing C27 · not text C27 · extra key C27 · `url` > 2048 chars (`dto:5`) none | url > 2048 (mutant F10 survived) |
-| screen states (5) | plan `Observable` + AC 21-28 | idle C40 · loading C35 · loaded C34 · error (API and network) C38 · empty C39 | - |
+| unrecognized response (4) | AC 17, `mapper.ts:19-22` | `[]`, `null`, `"texto"`, `{}` in C17 | - |
+| upstream failures (7) | AC 17 + `makerworld.client.ts:65-76,100-137` | timeout C21, C23 · 500 · 403 · 301 · too large (streamed) · invalid json · network - all C21, each logged C22 | - |
+| domain -> HTTP (3) | `print-profiles.controller.ts:35-43` | 400, 404, 502 in C31; at the route C26/C28, C29 | - |
+| screen states (5) | plan `Observable` + AC 21–28 | idle C40 · loading C35 · loaded C34 · error C38 · empty C39 | - |
+| form reset when leaving `loaded` (2) | AC 25, AC 26 ("formulário em branco") + `print-profile-import.tsx:101,110` | loaded -> error none · loaded -> empty none | both (G7, G9 survived) |
 | filament row actions (2) | AC 27 | add C40 · remove C40 | - |
-| time formatting (4) | assumption "Tempo na tela" (nearest minute) | 1707 C41 · 77054 C41 · "rounds up" 89 does not round up (1.48 min) · rounds down 29 C41 | rounds up (mutant F6 survived) |
-| one-way doors (4, not 3: door 4 was added in range) | plan `Landing` at HEAD | 1 contract C24, C13 · 2 source/interface C18, C32 · 3 redirect/timeout/size/fixed host/designId only C18, C19, C21, C23, C25 · 4 `node:https` transport none: every client test uses an `http://` base and so takes `httpGet` (`makerworld.client.ts:86`) | door 4 `https` branch (mutant F9 survived) |
-| startup config (2) | assemblies read directly | `main.ts:6` -> `AppModule` -> `app.module.ts:21` `PrintProfilesModule` (C32 regex) · token -> `HttpMakerWorldClient` `print-profiles.module.ts:10` (C32) | - |
-
-Swept: no `Swept` row resolves to an existing constraint that could be missing. The only
-pre-existing constraint in the flow is the `ValidationPipe` with `forbidNonWhitelisted`, and it is
-present at `app.setup.ts:9-13`. The `n/a` rows are approved policy.
+| time formatting (5 cases) | assumption "Tempo na tela" | 1707, 77054, 89 C41 · round down 29 C41, 3569 C43 · half up 90, 3570 C43 | - |
+| one-way doors (4) | plan `Landing` at HEAD | 1 contract C24, C13 (never-null ids: see row above) · 2 source/interface C18, C32 · 3 redirect/timeout/size/host/designId C18, C19, C21, C23, C25 · 4 `node:https` C42 | - |
+| startup config (2) | assemblies read directly | `main.ts:6` -> `AppModule` -> `app.module.ts:21` (C32 regex) · token -> `HttpMakerWorldClient` `print-profiles.module.ts:10` (C32) | - |
 
 ## Test policy rows
 
+Verified at `19ce72b`.
+
 | Row | Files it classifies | Required proof | Expectation met |
 | --- | --- | --- | --- |
-| Decides, reached through the route | `makerworld-url.ts`, `makerworld-design.mapper.ts` | route C24–C30 · own layer C1–C17 | no - gap: one case per decision-table row is missing for the userinfo and `designId <= 0` refusals (`makerworld-url.ts:23-24,31`) and the `ids[0]` fallback (`makerworld-design.mapper.ts:65`) |
-| Decides, outside the route (HTTP client) | `makerworld.client.ts` | own layer against a local server, C18–C23 | yes - all 7 failures, 404 and the happy path are members. The `https` transport gap is recorded under doors and F9 |
-| Input that does not decide (controller) | `print-profiles.controller.ts`, `dto/import-print-profile.dto.ts` | route C24, C26–C30 (+ C31 at its own layer) | no - gap: the refusal of `url` longer than 2048 chars is not proven at the route (F10 survived) |
-| Screen component | `print-profile-import.tsx`, `app-shell.tsx`, `format-print-time.ts` | Testing Library C34–C41 | yes - all 5 screen states are members; the rounding gap is recorded under P1 and F6 |
+| Decides, reached through the route | `makerworld-url.ts`, `makerworld-design.mapper.ts` | route C24–C30, C44 · own layer C1–C17, C45, C46 | no - gap: the decision rows password-only userinfo (`url.ts:25`), unsafe integer (`url.ts:31`), plate-sum null propagation (`mapper.ts:151-153`) and the three door-1 identifier guards (`mapper.ts:26,102,110`) have no case |
+| Decides, outside the route (HTTP client) | `makerworld.client.ts` | own layer against a local server C18–C23 + https transport C42 | yes - happy path, 404 and all 7 failures are members; the https branch is proven (F9 killed) |
+| Input that does not decide (controller) | `print-profiles.controller.ts`, `dto/import-print-profile.dto.ts` | route C24, C26–C30, C44 (+ C31 own layer) | yes - accepted input, each of the 4 refusals, each error. The one-sided bound is recorded under P3 and G1 |
+| Screen component | `print-profile-import.tsx`, `app-shell.tsx`, `format-print-time.ts` | Testing Library C34–C41, C43 | no - gap: the error and empty states are proven only from a blank form, so the reset that makes them blank is unproven (G7, G9) |
 
 ## Faults injected
 
-Isolation: a `git worktree add --detach <scratchpad>/wt HEAD` with the real `node_modules`
-symlinked. The real tree's porcelain was recorded first (`?? .playwright-mcp/`). Each mutant was
-applied by an exact single-occurrence replacement and reverted with `git checkout -- <file>`.
-After `git worktree remove`, the real tree's porcelain matched the baseline.
+Isolation: `git worktree add --detach <scratchpad>/wt HEAD` at `19ce72b`. `api/node_modules` and
+`.env` were symlinked, and `web/node_modules` was APFS-cloned (Turbopack refuses a symlink). The
+real tree's porcelain (`?? .playwright-mcp/`) was recorded first. Each mutant was an exact
+single-occurrence replacement: its covering proof was run, then it was reverted with
+`git checkout -- <file>`, with a clean porcelain check in the worktree after each one. After
+`git worktree remove`, the real tree's porcelain matched the baseline.
 
-The five-fault cap in `verify.md` was deliberately exceeded, because the orchestrator required at
-least one fault per assertion surface. There are 9 proof files: url spec, mapper spec, client spec,
-controller spec, module spec, e2e, component test, app-shell test and format test. That gives 10
-distinct mutants. F2 and F4 were each run against two surfaces.
+The five-fault cap in `verify.md` was deliberately exceeded, as in round 1. The orchestrator
+required re-injecting F9, F6 and F10, at least one fault per assertion surface (10 proof files), and
+a hunt for new gaps. Rows F9–M9 run the narrowest covering proof. Rows G1–G9 are gap probes, and
+each ran against the **whole** covering suite (API unit, e2e or web), so a survivor there survived
+everything.
 
 | Mutation | Location | Killed |
 | --- | --- | --- |
-| F1 drop the port check (`url.port !== ''`) | `api/src/modules/print-profiles/makerworld-url.ts:23` | yes - C2 `rejects non makerworld urls` |
-| F2 unknown profileId no longer throws | `api/src/modules/print-profiles/makerworld-design.mapper.ts:54` | yes - C16 `unknown profile id` (mapper spec) and C28 `unknown profile returns 400` (e2e) |
-| F3 drop the streamed size limit (`total > maxBytes`) | `api/src/modules/print-profiles/makerworld.client.ts:129` | yes - C21 `upstream failures are 502` |
-| F4 404 -> `BadGatewayException` | `api/src/modules/print-profiles/print-profiles.controller.ts:40` | yes - C31 `maps domain errors to http` (controller spec) and C29 `upstream errors` (e2e: `expected 502 to be 404`) |
-| F5 token wired to a non-HTTP client object | `api/src/modules/print-profiles/print-profiles.module.ts:10` | yes - C32 `wires the http client` |
-| F6 `Math.round` -> `Math.floor` in `splitPrintTime` | `web/src/lib/format-print-time.ts:8` | no - survived C41 and the whole web suite (19/19) |
-| F7 `needsAms` forced to `false` in the form | `web/src/components/print-profile-import.tsx:67` | yes - C34 `fills the form from the import` |
-| F7b button never disabled while loading | `web/src/components/print-profile-import.tsx:160` | yes - C35 `shows importing` |
-| F8 nav href `/print-profiles` -> `/print-profile` | `web/src/components/app-shell.tsx:18` | yes - C41 `links to print profiles` |
-| F9 `https` branch uses `httpGet` (door 4 transport) | `api/src/modules/print-profiles/makerworld.client.ts:86` | no - survived the client and module specs and the whole API unit suite (72/72); in production every import would 502 |
-| F10 drop `@MaxLength(2048)` on `url` | `api/src/modules/print-profiles/dto/import-print-profile.dto.ts:5` | no - survived the whole e2e file (7/7) |
+| F9 (round-1 survivor) https branch uses `httpGet` | `api/src/modules/print-profiles/makerworld.client.ts:86` | yes - C42 (`expected [ … ] to have a length of +0 but got 1`) |
+| F6 (round-1 survivor) `Math.round` -> `Math.floor` | `web/src/lib/format-print-time.ts:8` | yes - C43 (`expected '0 h 1 min' to be '0 h 2 min'`) |
+| F10 (round-1 survivor) drop `@MaxLength(2048)` | `api/src/modules/print-profiles/dto/import-print-profile.dto.ts:5` | yes - C44 (`expected 200 to be 400`) |
+| M1 `designId <= 0` -> `designId < 0` | `api/src/modules/print-profiles/makerworld-url.ts:31` | yes - C45 |
+| M2 drop the `url.username` clause | `api/src/modules/print-profiles/makerworld-url.ts:24` | yes - C45 |
+| M3 first-profile fallback -> last profile | `api/src/modules/print-profiles/makerworld-design.mapper.ts:65` | yes - C46 (`expected 3377800 to be 3387944`) |
+| M4 swap `timeout` / `network` log reasons | `api/src/modules/print-profiles/makerworld.client.ts:72-74` | yes - C22 |
+| M5 404 -> `BadGatewayException` | `api/src/modules/print-profiles/print-profiles.controller.ts:40` | yes - C31 |
+| M6 token wired to a non-HTTP client | `api/src/modules/print-profiles/print-profiles.module.ts:10` | yes - C32 |
+| M7 drop `@HttpCode(200)` | `api/src/modules/print-profiles/print-profiles.controller.ts:22` | yes - C24 (`expected 201 to be 200`) |
+| M8 "Importando…" never rendered | `web/src/components/print-profile-import.tsx:165` | yes - C35 |
+| M9 nav link text `Importar do MakerWorld` -> `Importar` | `web/src/components/app-shell.tsx:21` | yes - C41 |
+| G1 `@MaxLength(2048)` -> `@MaxLength(100)` | `api/src/modules/print-profiles/dto/import-print-profile.dto.ts:5` | no - survived the whole `print-profiles.e2e-spec.ts` file (8/8) |
+| G2 drop the `url.password` clause | `api/src/modules/print-profiles/makerworld-url.ts:25` | no - survived the whole API unit suite (75/75) |
+| G3 `sumOrNull` -> `(a ?? 0) + (b ?? 0)` | `api/src/modules/print-profiles/makerworld-design.mapper.ts:152` | no - survived the whole API unit + e2e suites |
+| G4 keep instances without a valid `id` | `api/src/modules/print-profiles/makerworld-design.mapper.ts:26` | no - survived the whole API unit + e2e suites |
+| G5 keep filaments without a valid slot as `slot: 0` | `api/src/modules/print-profiles/makerworld-design.mapper.ts:110` | no - survived the whole API unit suite (75/75) |
+| G6 drop the plate `index` fallback | `api/src/modules/print-profiles/makerworld-design.mapper.ts:102` | no - survived the whole API unit suite (75/75) |
+| G7 error path no longer resets the form | `web/src/components/print-profile-import.tsx:110` | no - survived the whole web suite (20/20) |
+| G9 no-profiles path no longer resets the form | `web/src/components/print-profile-import.tsx:101` | no - survived the whole web suite (20/20) |
 
 ## Gate
 
-Run in the scratch worktree at `6f4a6ed`:
+Run in the scratch worktree at `19ce72b`, clean:
 
-- `npm --prefix api run test` - 72 passed, 0 failed (14 files)
-- `npm --prefix api run test:e2e` - 28 passed, 0 failed (5 files)
-- `npm --prefix web run test` - 19 passed, 0 failed (5 files)
-- `npm --prefix api run lint` and `npm --prefix web run lint` - clean
-- `npm --prefix api run build` and `npm --prefix web run build` - exit 0; `/print-profiles` is
+- `npm --prefix api run test`: 75 passed, 0 failed (15 files)
+- `npm --prefix api run test:e2e`: 29 passed, 0 failed (5 files)
+- `npm --prefix web run test`: 20 passed, 0 failed (5 files)
+- `npm --prefix api run lint` and `npm --prefix web run lint`: clean
+- `npm --prefix api run build` and `npm --prefix web run build`: exit 0, and `/print-profiles` is
   prerendered
 
 ## Ranked gaps
 
-1. Door 4 `node:https` transport unproven - Coverage "one-way doors" row, F9 -
-   `api/src/modules/print-profiles/makerworld.client.ts:86`. Add a proof that the `https` base
-   goes through `node:https`'s `get` with the door-4 options, for example `vi.mock('node:https')`
-   or a local TLS server with a self-signed certificate.
-2. Nearest-minute rounding unproven - C41 precision gap P1, F6 - `web/src/lib/format-print-time.ts:8`
-   and `web/src/lib/format-print-time.test.ts:8`. Replace or add a case that only rounding
-   satisfies, for example `90` -> `0 h 2 min`.
-3. `url` > 2048 chars refusal unproven - Test policy row "controller", F10 -
-   `api/src/modules/print-profiles/dto/import-print-profile.dto.ts:5`.
-4. Decision branches with no case: the userinfo and `designId <= 0` refusals
-   (`api/src/modules/print-profiles/makerworld-url.ts:23-24,31`) and the fallback to the first
-   profile when `defaultInstanceId` is missing or unknown
-   (`api/src/modules/print-profiles/makerworld-design.mapper.ts:65`).
+1. Plate-sum null propagation unproven (AC 9, pricing correctness) - P1, G3 -
+   `api/src/modules/print-profiles/makerworld-design.mapper.ts:151-153`. It needs a case on profile
+   3377800 with one plate's `usedG` removed, expecting that slot's profile `grams` to be `null`.
+2. Form reset on error / empty after a successful import unproven (AC 25, AC 26) - P2, G7, G9 -
+   `web/src/components/print-profile-import.tsx:101,110`. C38/C39 need a successful import before the
+   failing one.
+3. Door 1 never-null `id` / `slot` / `index` unproven - P4, G4, G5, G6 -
+   `api/src/modules/print-profiles/makerworld-design.mapper.ts:26,102,110`.
+4. Accepted side of the 2048 bound unproven (AC 8) - P3, G1 -
+   `api/src/modules/print-profiles/dto/import-print-profile.dto.ts:5`. It needs a valid URL of
+   ~2048 chars that imports with 200.
+5. (low) Password-only userinfo and unsafe-integer design id have no case - G2 -
+   `api/src/modules/print-profiles/makerworld-url.ts:25,31`.
 
 ## Lessons
 
 The Verifier was told to change nothing outside this report, so `scripts/lessons.py` was not run.
 It writes `.specs/lessons.json` and `.specs/LESSONS.md`. Proposed lessons for the orchestrator:
 
-- A mid-build one-way door added to `Landing` needs its own check row. The doors set grew from 3
-  to 4 while `checks.md` stayed frozen, and the new door's defining element went unproven.
-- A "rounds up/down" formatting case has to straddle the .5 boundary. Otherwise truncation passes
-  it.
+- An aggregation that propagates `null` needs a missing-value case on a multi-item input. Removing
+  a field where the aggregate has one item never reaches the combining branch.
+- A "resets to blank" screen claim has to start from a filled state. Asserting blank on a component
+  that was never filled proves nothing about the reset.
+- A length bound needs both sides: over the bound refused, and a realistic long valid input
+  accepted.
