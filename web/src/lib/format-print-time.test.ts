@@ -8,4 +8,10 @@ describe("formatPrintTime", () => {
     expect(formatPrintTime(89)).toBe("0 h 1 min");
     expect(formatPrintTime(29)).toBe("0 h 0 min");
   });
+
+  it("rounds half a minute up", () => {
+    expect(formatPrintTime(90)).toBe("0 h 2 min");
+    expect(formatPrintTime(3569)).toBe("0 h 59 min");
+    expect(formatPrintTime(3570)).toBe("1 h 0 min");
+  });
 });

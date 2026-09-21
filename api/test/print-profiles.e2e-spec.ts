@@ -152,4 +152,13 @@ describe('POST /print-profiles/import (e2e)', () => {
     expect(body.profiles).toEqual([]);
     expect(body.selectedProfileId).toBeNull();
   });
+
+  it('url longer than 2048 characters returns 400', async () => {
+    const url = `https://makerworld.com/models/3007827?${'a'.repeat(2049)}`;
+    const response = await post({ url });
+    expect(response.status).toBe(400);
+    expect(errorOf(response)).toContain('url');
+    expect(errorOf(response)).not.toContain('URL inválida');
+    expect(fakeClient.calls).toEqual([]);
+  });
 });

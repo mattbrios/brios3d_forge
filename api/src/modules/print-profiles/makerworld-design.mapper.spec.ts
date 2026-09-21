@@ -281,4 +281,14 @@ describe('mapMakerWorldDesign', () => {
       expect(error.message).toBe(UNAVAILABLE);
     }
   });
+
+  it('falls back to the first profile', () => {
+    const missing = design3007827();
+    delete missing.defaultInstanceId;
+    const unknown = design3007827();
+    unknown.defaultInstanceId = 123;
+    for (const raw of [missing, unknown]) {
+      expect(mapMakerWorldDesign(raw, 3007827, null).selectedProfileId).toBe(3387944);
+    }
+  });
 });

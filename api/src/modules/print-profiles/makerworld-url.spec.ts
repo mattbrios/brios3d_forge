@@ -63,4 +63,16 @@ describe('parseMakerWorldUrl', () => {
       });
     }
   });
+
+  it('rejects userinfo and non positive design ids', () => {
+    for (const url of [
+      'https://user@makerworld.com/models/3007827',
+      'https://user:pass@makerworld.com/models/3007827',
+      'https://makerworld.com/models/0',
+    ]) {
+      const error = errorOf(() => parseMakerWorldUrl(url));
+      expect(error.status, url).toBe(400);
+      expect(error.message, url).toBe(INVALID_URL);
+    }
+  });
 });
