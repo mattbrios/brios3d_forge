@@ -36,7 +36,7 @@ As fases seguem os quatro marcos do `CONTEXT.md` (MVP → Operação diária →
 | # | Fase | Objetivo | Status |
 |---|---|---|---|
 | **Marco MVP** | | *Precifica corretamente e controla filamento* | |
-| 0 | Setup e fundações | Tooling, erros/validação padrão, migrations, health check, CI | 🟡 falta a CI rodar no GitHub (primeiro push) |
+| 0 | Setup e fundações | Tooling, erros/validação padrão, migrations, health check, CI | ✅ |
 | 1 | Motor de preço (`pricing`) | Serviço puro com custo detalhado e preço por canal, bem testado | ⬜ |
 | 2 | Parser de arquivos fatiados | Extrair tempo e gramas por filamento de G-code/3MF (Bambu, Orca, Prusa) | ⬜ |
 | 3 | Autenticação | Login, sessão, proteção de rotas na API e no web | ⬜ |

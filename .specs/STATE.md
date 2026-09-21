@@ -12,10 +12,10 @@
 
 ## Handoff
 
-**Feature**: phase-0-setup
-**Where**: C1–C29 implementados e verificados (verification.md: PASS, profile light); ROADMAP Fase 0 com tarefas marcadas
+**Feature**: phase-0-setup - concluída
+**Where**: C1–C29 verificados (verification.md: PASS); CI verde no GitHub (run 35564488335, `0f94542`)
 **In progress**: nada
-**Next step**: autorizar commit + push para a CI rodar no GitHub (último critério da Fase 0); depois Fase 1 (`pricing`)
-**Blockers**: push não autorizado
-**Uncommitted**: tudo (repositório sem commits)
+**Next step**: Fase 1 - motor de preço (`pricing`)
+**Blockers**: nenhum
+**Uncommitted**: nada
 **Branch**: main

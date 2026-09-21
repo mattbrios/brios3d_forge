@@ -190,7 +190,7 @@ Um clone novo sobe com um comando, e todo push passa pelos mesmos portões.
 
 | # | Kind | Question | Until answered |
 | --- | --- | --- | --- |
-| 1 | blocks go-live | Posso fazer o primeiro push para `origin` (`github.com/mattbrios/brios3d_forge`)? A branch `main` ainda não tem nenhum commit | o AC 28 só é provado de verdade por uma execução no GitHub. Até lá, a proof local roda os mesmos comandos do workflow |
+| 1 | resolved | ~~Posso fazer o primeiro push para `origin` (`github.com/mattbrios/brios3d_forge`)? A branch `main` ainda não tem nenhum commit~~ Autorizado em 2026-09-21; a CI passou no run 35564488335 (commit `0f94542`) | o AC 28 só é provado de verdade por uma execução no GitHub. Até lá, a proof local roda os mesmos comandos do workflow |
 
 ## Observable
 
