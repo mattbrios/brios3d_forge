@@ -228,4 +228,17 @@ describe("PrintProfileImport", () => {
       expectBlankForm();
     }
   });
+
+  it("opens on the selected profile, not the first one", async () => {
+    const response = { ...structuredClone(seaAnimals), selectedProfileId: 3377800 };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(200, response)));
+    render(<PrintProfileImport />);
+    importUrl("https://makerworld.com/models/3007827");
+
+    const select = (await screen.findByRole("combobox", { name: "Perfil" })) as HTMLSelectElement;
+    expect(select.value).toBe("3377800");
+    expect(valueOf("Horas")).toBe("21");
+    expect(valueOf("Minutos")).toBe("24");
+    expect(filamentRows()).toHaveLength(4);
+  });
 });
