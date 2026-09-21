@@ -1,0 +1,426 @@
+{
+  "source": {
+    "platform": "makerworld",
+    "designId": 3007827,
+    "url": "https://makerworld.com/models/3007827"
+  },
+  "model": {
+    "title": "Sea animals - set",
+    "coverUrl": "https://makerworld.bblmw.com/makerworld/model/USafe737868bbaa/design/6c21105d01a14e2f.jpeg",
+    "license": "Standard Digital File License",
+    "designer": "Real_Prints"
+  },
+  "selectedProfileId": 3387944,
+  "profiles": [
+    {
+      "id": 3387944,
+      "title": "Sea star",
+      "printSeconds": 1707,
+      "totalGrams": 9,
+      "needsAms": true,
+      "printer": {
+        "name": "X2D",
+        "nozzleDiameterMm": 0.4
+      },
+      "settings": {
+        "layerHeightMm": 0.2,
+        "wallLoops": 2,
+        "sparseInfillRate": 0.15
+      },
+      "filaments": [
+        {
+          "slot": 1,
+          "type": "PLA",
+          "color": "#FD8008",
+          "grams": 8,
+          "meters": 2.66
+        },
+        {
+          "slot": 4,
+          "type": "PLA",
+          "color": "#000000",
+          "grams": 1,
+          "meters": 0.08
+        }
+      ],
+      "plates": [
+        {
+          "index": 1,
+          "printSeconds": 1707,
+          "totalGrams": 9,
+          "filaments": [
+            {
+              "slot": 1,
+              "type": "PLA",
+              "color": "#FD8008",
+              "grams": 8,
+              "meters": 2.66
+            },
+            {
+              "slot": 4,
+              "type": "PLA",
+              "color": "#000000",
+              "grams": 1,
+              "meters": 0.08
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3388305,
+      "title": "Sea shell",
+      "printSeconds": 1984,
+      "totalGrams": 9,
+      "needsAms": false,
+      "printer": {
+        "name": "X2D",
+        "nozzleDiameterMm": 0.4
+      },
+      "settings": {
+        "layerHeightMm": 0.2,
+        "wallLoops": 2,
+        "sparseInfillRate": 0.15
+      },
+      "filaments": [
+        {
+          "slot": 1,
+          "type": "PLA",
+          "color": "#FECC66",
+          "grams": 9,
+          "meters": 2.71
+        }
+      ],
+      "plates": [
+        {
+          "index": 1,
+          "printSeconds": 1984,
+          "totalGrams": 9,
+          "filaments": [
+            {
+              "slot": 1,
+              "type": "PLA",
+              "color": "#FECC66",
+              "grams": 9,
+              "meters": 2.71
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3377800,
+      "title": "0.2mm layer, 2 walls, 15% infill",
+      "printSeconds": 77054,
+      "totalGrams": 408,
+      "needsAms": true,
+      "printer": {
+        "name": "X2D",
+        "nozzleDiameterMm": 0.4
+      },
+      "settings": {
+        "layerHeightMm": 0.2,
+        "wallLoops": 2,
+        "sparseInfillRate": 0.15
+      },
+      "filaments": [
+        {
+          "slot": 1,
+          "type": "PLA",
+          "color": "#FECC66",
+          "grams": 246,
+          "meters": 79.82000000000001
+        },
+        {
+          "slot": 2,
+          "type": "PLA",
+          "color": "#000000",
+          "grams": 64,
+          "meters": 19.42
+        },
+        {
+          "slot": 3,
+          "type": "PLA",
+          "color": "#66CCFF",
+          "grams": 37,
+          "meters": 11.86
+        },
+        {
+          "slot": 4,
+          "type": "PLA",
+          "color": "#66FF66",
+          "grams": 61,
+          "meters": 19.619999999999997
+        }
+      ],
+      "plates": [
+        {
+          "index": 1,
+          "printSeconds": 7346,
+          "totalGrams": 38,
+          "filaments": [
+            {
+              "slot": 1,
+              "type": "PLA",
+              "color": "#FECC66",
+              "grams": 19,
+              "meters": 6.19
+            },
+            {
+              "slot": 2,
+              "type": "PLA",
+              "color": "#000000",
+              "grams": 12,
+              "meters": 3.82
+            },
+            {
+              "slot": 3,
+              "type": "PLA",
+              "color": "#66CCFF",
+              "grams": 7,
+              "meters": 2.3
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "printSeconds": 3923,
+          "totalGrams": 14,
+          "filaments": [
+            {
+              "slot": 1,
+              "type": "PLA",
+              "color": "#FECC66",
+              "grams": 7,
+              "meters": 2.14
+            },
+            {
+              "slot": 2,
+              "type": "PLA",
+              "color": "#000000",
+              "grams": 7,
+              "meters": 2.06
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "printSeconds": 3774,
+          "totalGrams": 24,
+          "filaments": [
+            {
+              "slot": 1,
+              "type": "PLA",
+              "color": "#FECC66",
+              "grams": 22,
+              "meters": 7.2
+            },
+            {
+              "slot": 2,
+              "type": "PLA",
+              "color": "#000000",
+              "grams": 2,
+              "meters": 0.61
+            }
+          ]
+        },
+        {
+          "index": 4,
+          "printSeconds": 1594,
+          "totalGrams": 9,
+          "filaments": [
+            {
+              "slot": 1,
+              "type": "PLA",
+              "color": "#FECC66",
+              "grams": 8,
+              "meters": 2.54
+            },
+            {
+              "slot": 4,
+              "type": "PLA",
+              "color": "#66FF66",
+              "grams": 1,
+              "meters": 0.07
+            }
+          ]
+        },
+        {
+          "index": 5,
+          "printSeconds": 3415,
+          "totalGrams": 18,
+          "filaments": [
+            {
+              "slot": 1,
+              "type": "PLA",
+              "color": "#FECC66",
+              "grams": 18,
+              "meters": 5.65
+            }
+          ]
+        },
+        {
+          "index": 6,
+          "printSeconds": 6930,
+          "totalGrams": 37,
+          "filaments": [
+            {
+              "slot": 1,
+              "type": "PLA",
+              "color": "#FECC66",
+              "grams": 26,
+              "meters": 8.56
+            },
+            {
+              "slot": 2,
+              "type": "PLA",
+              "color": "#000000",
+              "grams": 5,
+              "meters": 1.36
+            },
+            {
+              "slot": 3,
+              "type": "PLA",
+              "color": "#66CCFF",
+              "grams": 6,
+              "meters": 1.96
+            }
+          ]
+        },
+        {
+          "index": 7,
+          "printSeconds": 9099,
+          "totalGrams": 63,
+          "filaments": [
+            {
+              "slot": 1,
+              "type": "PLA",
+              "color": "#FECC66",
+              "grams": 45,
+              "meters": 14.57
+            },
+            {
+              "slot": 2,
+              "type": "PLA",
+              "color": "#000000",
+              "grams": 15,
+              "meters": 4.75
+            },
+            {
+              "slot": 3,
+              "type": "PLA",
+              "color": "#66CCFF",
+              "grams": 3,
+              "meters": 0.74
+            }
+          ]
+        },
+        {
+          "index": 8,
+          "printSeconds": 3790,
+          "totalGrams": 24,
+          "filaments": [
+            {
+              "slot": 1,
+              "type": "PLA",
+              "color": "#FECC66",
+              "grams": 21,
+              "meters": 6.72
+            },
+            {
+              "slot": 2,
+              "type": "PLA",
+              "color": "#000000",
+              "grams": 3,
+              "meters": 0.67
+            }
+          ]
+        },
+        {
+          "index": 9,
+          "printSeconds": 10681,
+          "totalGrams": 54,
+          "filaments": [
+            {
+              "slot": 1,
+              "type": "PLA",
+              "color": "#FECC66",
+              "grams": 26,
+              "meters": 8.53
+            },
+            {
+              "slot": 2,
+              "type": "PLA",
+              "color": "#000000",
+              "grams": 7,
+              "meters": 2.13
+            },
+            {
+              "slot": 3,
+              "type": "PLA",
+              "color": "#66CCFF",
+              "grams": 21,
+              "meters": 6.86
+            }
+          ]
+        },
+        {
+          "index": 10,
+          "printSeconds": 17998,
+          "totalGrams": 78,
+          "filaments": [
+            {
+              "slot": 1,
+              "type": "PLA",
+              "color": "#FECC66",
+              "grams": 41,
+              "meters": 13.46
+            },
+            {
+              "slot": 2,
+              "type": "PLA",
+              "color": "#000000",
+              "grams": 7,
+              "meters": 2.13
+            },
+            {
+              "slot": 4,
+              "type": "PLA",
+              "color": "#66FF66",
+              "grams": 30,
+              "meters": 9.85
+            }
+          ]
+        },
+        {
+          "index": 11,
+          "printSeconds": 8504,
+          "totalGrams": 49,
+          "filaments": [
+            {
+              "slot": 1,
+              "type": "PLA",
+              "color": "#FECC66",
+              "grams": 13,
+              "meters": 4.26
+            },
+            {
+              "slot": 2,
+              "type": "PLA",
+              "color": "#000000",
+              "grams": 6,
+              "meters": 1.89
+            },
+            {
+              "slot": 4,
+              "type": "PLA",
+              "color": "#66FF66",
+              "grams": 30,
+              "meters": 9.7
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
