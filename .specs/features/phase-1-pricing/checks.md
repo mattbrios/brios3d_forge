@@ -1,6 +1,6 @@
 # Fase 1 — Motor de preço (`pricing`) · checks
 
-Profile: light
+Profile: standard
 Plan: `.specs/features/phase-1-pricing/plan.md`
 
 ## Intent
@@ -197,3 +197,4 @@ Arquivos que a fase toca: 2 existentes (`api/src/app.module.ts` 0,6 KB e `api/vi
 - **Boundary:** C1-C38 closed at `dc6cf66`
 - **Settled mid-build:** a checagem de taxas usa `1 - (margem + imposto + taxa) < 1e-9` em vez de `soma >= 1`, para que uma soma que dá `0.9999999999999999` em ponto flutuante também seja recusada. Os números de C24 não mudam. O `dto/calculate-pricing.dto.spec.ts` foi acrescentado porque o DTO só era carregado pelo e2e e o piso de cobertura (C38) falhava
 - **Abandoned:** nada
+- **Profile raised:** de `light` para `standard` a pedido do usuário depois do build (verificação da rodada 2). Nenhum check nem proof foi alterado

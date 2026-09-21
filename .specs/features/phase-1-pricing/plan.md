@@ -204,7 +204,7 @@ A rota expõe o motor sem persistir nada, e a cobertura do módulo é um portão
 
 | # | Kind | Question | Until answered |
 | --- | --- | --- | --- |
-| 1 | open | A empresa tem uma planilha de preço já usada para validar o R1 (o ROADMAP sugere isso)? | o R1 é conferido só pelo cálculo à mão deste plano. Se houver planilha, um caso real vira mais um teste |
+| 1 | resolved | ~~A empresa tem uma planilha de preço já usada para validar o R1?~~ Não tem (resposta do usuário em 2026-09-21) | o R1 fica conferido só pelo cálculo à mão deste plano |
 
 ## Observable
 
