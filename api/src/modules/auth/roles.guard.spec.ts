@@ -8,6 +8,8 @@ const EXPECTED = new Set([
   'auth.controller.ts',
   'pricing.controller.ts',
   'print-profiles.controller.ts',
+  'sales-channels.controller.ts',
+  'settings.controller.ts',
 ]);
 
 function controllerFilesWithRolesDecorator(dir: string): string[] {

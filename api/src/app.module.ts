@@ -6,6 +6,7 @@ import { AuthModule } from './modules/auth/auth.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { PricingModule } from './modules/pricing/pricing.module.js';
 import { PrintProfilesModule } from './modules/print-profiles/print-profiles.module.js';
+import { SettingsModule } from './modules/settings/settings.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 
 @Module({
@@ -23,6 +24,7 @@ import { UsersModule } from './modules/users/users.module.js';
     HealthModule,
     PricingModule,
     PrintProfilesModule,
+    SettingsModule,
   ],
 })
 export class AppModule {}
