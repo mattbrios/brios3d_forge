@@ -32,11 +32,23 @@ export function AppShell({
               </Link>
             </li>
             {role === "admin" && (
-              <li>
-                <Link href="/users" className={LINK_CLASS}>
-                  Usuários
-                </Link>
-              </li>
+              <>
+                <li>
+                  <Link href="/users" className={LINK_CLASS}>
+                    Usuários
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/settings" className={LINK_CLASS}>
+                    Configurações
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/sales-channels" className={LINK_CLASS}>
+                    Canais de venda
+                  </Link>
+                </li>
+              </>
             )}
             <li>
               <Link href="/account" className={LINK_CLASS}>

@@ -43,16 +43,20 @@ describe("AppShell", () => {
     expect(links.map((link) => link.textContent)).toEqual([
       "Importar do MakerWorld",
       "Usuários",
+      "Configurações",
+      "Canais de venda",
       "Minha conta",
     ]);
     expect(links.map((link) => link.getAttribute("href"))).toEqual([
       "/print-profiles",
       "/users",
+      "/settings",
+      "/sales-channels",
       "/account",
     ]);
   });
 
-  it("production and sales do not see users", () => {
+  it("production and sales do not see settings or sales channels", () => {
     for (const role of ["production", "sales"] as const) {
       render(
         <AppShell role={role}>
@@ -65,6 +69,8 @@ describe("AppShell", () => {
         "Minha conta",
       ]);
       expect(within(nav).queryByRole("link", { name: "Usuários" })).toBeNull();
+      expect(within(nav).queryByRole("link", { name: "Configurações" })).toBeNull();
+      expect(within(nav).queryByRole("link", { name: "Canais de venda" })).toBeNull();
       cleanup();
     }
   });
