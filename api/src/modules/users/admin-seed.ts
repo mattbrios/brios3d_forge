@@ -1,13 +1,13 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { QueryFailedError, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { hashPassword } from '../auth/password.js';
 import { User } from './entities/user.entity.js';
+import { isUniqueViolation } from './is-unique-violation.js';
 import { normalizeEmail } from './normalize-email.js';
 
 const MIN_PASSWORD_LENGTH = 12;
-const UNIQUE_VIOLATION = '23505';
 
 // Cria o primeiro admin a partir do ambiente. Nunca altera um usuário que já existe.
 @Injectable()
@@ -50,16 +50,4 @@ export class AdminSeed implements OnApplicationBootstrap {
       throw error;
     }
   }
-}
-
-function isUniqueViolation(error: unknown): boolean {
-  if (!(error instanceof QueryFailedError)) {
-    return false;
-  }
-  const driverError: unknown = error.driverError;
-  return (
-    typeof driverError === 'object' &&
-    driverError !== null &&
-    (driverError as { code?: unknown }).code === UNIQUE_VIOLATION
-  );
 }
