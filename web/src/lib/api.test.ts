@@ -77,4 +77,25 @@ describe("apiFetch", () => {
     expect(error.status).toBe(502);
     expect(error.message).toBe("Erro 502 da API");
   });
+  it("sends credentials", async () => {
+    vi.stubEnv("NEXT_PUBLIC_API_URL", "http://api.test:3001");
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(200, {})));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await apiFetch("/health");
+    await apiFetch("/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
+    await apiFetch("/health", { credentials: "omit" });
+
+    const inits = fetchMock.mock.calls.map((call) => call[1] as RequestInit);
+    expect(inits.map((init) => init.credentials)).toEqual(["include", "include", "include"]);
+    expect(inits[1]).toMatchObject({
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
+  });
 });

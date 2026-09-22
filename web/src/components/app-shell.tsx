@@ -1,11 +1,12 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell({ children, account }: { children: ReactNode; account?: ReactNode }) {
   return (
     <div className="flex min-h-full flex-1 flex-col">
-      <header className="border-b border-zinc-200 bg-white px-6 py-4 dark:border-zinc-800 dark:bg-zinc-950">
+      <header className="flex items-center justify-between border-b border-zinc-200 bg-white px-6 py-4 dark:border-zinc-800 dark:bg-zinc-950">
         <span className="text-lg font-semibold">Brios3D Forge</span>
+        {account}
       </header>
       <div className="flex flex-1">
         <nav
