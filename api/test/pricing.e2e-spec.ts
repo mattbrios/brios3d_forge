@@ -2,9 +2,11 @@ import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { App } from 'supertest/types';
+import { DataSource } from 'typeorm';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/app.setup.js';
 import { r1 } from '../src/modules/pricing/fixtures/r1.js';
+import { createUser, deleteUsers, loginCookie } from './auth-helper.js';
 
 type Json = Record<string, unknown>;
 
@@ -22,20 +24,28 @@ function withValue(path: string, value: unknown): Json {
 
 describe('POST /pricing/calculate (e2e)', () => {
   let app: INestApplication<App>;
+  let dataSource: DataSource;
+  // Desde a Fase 3 a rota exige sessão.
+  let cookie: string;
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication();
     configureApp(app);
     await app.init();
+    dataSource = app.get(DataSource);
+    await deleteUsers(dataSource, ['pricing-e2e@test.local']);
+    await createUser(dataSource, { email: 'pricing-e2e@test.local' });
+    cookie = await loginCookie(app.getHttpServer(), 'pricing-e2e@test.local');
   });
 
   afterAll(async () => {
+    await deleteUsers(dataSource, ['pricing-e2e@test.local']);
     await app.close();
   });
 
   const post = (body: unknown) =>
-    request(app.getHttpServer()).post('/pricing/calculate').send(body as object);
+    request(app.getHttpServer()).post('/pricing/calculate').set('Cookie', cookie).send(body as object);
 
   const errorOf = (response: { body: unknown }): string => (response.body as { error: string }).error;
 

@@ -2,9 +2,11 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { buildTypeOrmOptions } from './database/typeorm-options.js';
+import { AuthModule } from './modules/auth/auth.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { PricingModule } from './modules/pricing/pricing.module.js';
 import { PrintProfilesModule } from './modules/print-profiles/print-profiles.module.js';
+import { UsersModule } from './modules/users/users.module.js';
 
 @Module({
   imports: [
@@ -16,6 +18,8 @@ import { PrintProfilesModule } from './modules/print-profiles/print-profiles.mod
         autoLoadEntities: true,
       }),
     }),
+    AuthModule,
+    UsersModule,
     HealthModule,
     PricingModule,
     PrintProfilesModule,

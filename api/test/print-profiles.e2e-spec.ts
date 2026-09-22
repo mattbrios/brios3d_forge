@@ -2,11 +2,13 @@ import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { App } from 'supertest/types';
+import { DataSource } from 'typeorm';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/app.setup.js';
 import { design3007827 } from '../src/modules/print-profiles/fixtures/design-3007827.js';
 import { MAKERWORLD_CLIENT } from '../src/modules/print-profiles/makerworld.client.js';
 import { PrintProfileError } from '../src/modules/print-profiles/print-profile.error.js';
+import { createUser, deleteUsers, loginCookie } from './auth-helper.js';
 
 const SEA_STAR_URL =
   'https://makerworld.com/pt/models/3007827-sea-animals-set?from=recommend#profileId-3387944';
@@ -29,6 +31,9 @@ const fakeClient = {
 
 describe('POST /print-profiles/import (e2e)', () => {
   let app: INestApplication<App>;
+  let dataSource: DataSource;
+  // Desde a Fase 3 a rota exige sessão.
+  let cookie: string;
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
@@ -38,9 +43,14 @@ describe('POST /print-profiles/import (e2e)', () => {
     app = moduleRef.createNestApplication();
     configureApp(app);
     await app.init();
+    dataSource = app.get(DataSource);
+    await deleteUsers(dataSource, ['print-profiles-e2e@test.local']);
+    await createUser(dataSource, { email: 'print-profiles-e2e@test.local' });
+    cookie = await loginCookie(app.getHttpServer(), 'print-profiles-e2e@test.local');
   });
 
   afterAll(async () => {
+    await deleteUsers(dataSource, ['print-profiles-e2e@test.local']);
     await app.close();
   });
 
@@ -50,7 +60,7 @@ describe('POST /print-profiles/import (e2e)', () => {
   });
 
   const post = (body: unknown) =>
-    request(app.getHttpServer()).post('/print-profiles/import').send(body as object);
+    request(app.getHttpServer()).post('/print-profiles/import').set('Cookie', cookie).send(body as object);
 
   const errorOf = (response: { body: unknown }): string => (response.body as { error: string }).error;
 

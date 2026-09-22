@@ -13,5 +13,7 @@ export function buildTypeOrmOptions(read: EnvReader) {
     password: read('DB_PASSWORD') ?? 'forge',
     database: read('DB_NAME') ?? 'forge',
     synchronize: false,
+    // gen_random_uuid() é nativo do Postgres 13+; evita a extensão uuid-ossp.
+    uuidExtension: 'pgcrypto',
   } satisfies DataSourceOptions;
 }

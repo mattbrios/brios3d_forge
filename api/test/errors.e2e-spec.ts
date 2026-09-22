@@ -6,6 +6,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/app.setup.js';
+import { Public } from '../src/modules/auth/public.decorator.js';
 
 class ProbeBody {
   @IsString()
@@ -23,6 +24,8 @@ class ProbeQuery {
   count?: number;
 }
 
+// Público: este arquivo prova o contrato de erro, não a autenticação.
+@Public()
 @Controller('probe')
 class ProbeController {
   @Post()
