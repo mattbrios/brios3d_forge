@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 6,
+  "next_id": 13,
   "lessons": [
     {
       "id": "L-001",
@@ -94,6 +94,132 @@
       ],
       "created": "2026-09-21T22:27:33Z",
       "last_seen": "2026-09-21T22:27:33Z"
+    },
+    {
+      "id": "L-006",
+      "key": "ac_gap::when a limit is checked and then counted across an await count the attempt before the first await and prove it with simultaneous requests",
+      "text": "When a limit is checked and then counted across an await, count the attempt before the first await and prove it with simultaneous requests",
+      "signal": "ac_gap",
+      "scope": "api",
+      "status": "candidate",
+      "features": [
+        "phase-3-auth"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "verification.md gap 1, auth.service.ts:38/:84, C53 (api)"
+      ],
+      "created": "2026-09-22T02:23:49Z",
+      "last_seen": "2026-09-22T02:23:49Z"
+    },
+    {
+      "id": "L-007",
+      "key": "gate_fail::make every proof test build its own state so it passes when run alone with its selector",
+      "text": "Make every proof test build its own state so it passes when run alone with its selector",
+      "signal": "gate_fail",
+      "scope": "api",
+      "status": "candidate",
+      "features": [
+        "phase-3-auth"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "verification.md gap 2, C12 auth.e2e-spec.ts:203, C31 admin-seed.e2e-spec.ts:80 (api)"
+      ],
+      "created": "2026-09-22T02:23:49Z",
+      "last_seen": "2026-09-22T02:23:49Z"
+    },
+    {
+      "id": "L-008",
+      "key": "ac_gap::give every defensive branch a proof including catch blocks and size triggered cleanup",
+      "text": "Give every defensive branch a proof, including catch blocks and size-triggered cleanup",
+      "signal": "ac_gap",
+      "scope": "api",
+      "status": "candidate",
+      "features": [
+        "phase-3-auth"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "verification.md gaps 3-4, password.ts:45, login-attempts.ts:48-56 (api)"
+      ],
+      "created": "2026-09-22T02:23:49Z",
+      "last_seen": "2026-09-22T02:23:49Z"
+    },
+    {
+      "id": "L-009",
+      "key": "spec_precision_gap::pin a time window at its exact edge on both sides not one step past it",
+      "text": "Pin a time window at its exact edge on both sides, not one step past it",
+      "signal": "spec_precision_gap",
+      "scope": "",
+      "status": "candidate",
+      "features": [
+        "phase-3-auth"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "verification.md gap 6, C26 login-attempts.ts:33"
+      ],
+      "created": "2026-09-22T02:23:49Z",
+      "last_seen": "2026-09-22T02:23:49Z"
+    },
+    {
+      "id": "L-010",
+      "key": "surviving_mutant::when a fix counts an attempt up front prove at the route that the success path undoes the count",
+      "text": "When a fix counts an attempt up front, prove at the route that the success path undoes the count",
+      "signal": "surviving_mutant",
+      "scope": "api",
+      "status": "candidate",
+      "features": [
+        "phase-3-auth"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "verification.md round 2 F5, auth.service.ts:58, C57 (api)"
+      ],
+      "created": "2026-09-22T02:34:19Z",
+      "last_seen": "2026-09-22T02:34:19Z"
+    },
+    {
+      "id": "L-011",
+      "key": "surviving_mutant::prove a reset with a sequence where the success is not the attempt that triggers the limit",
+      "text": "Prove a reset with a sequence where the success is not the attempt that triggers the limit",
+      "signal": "surviving_mutant",
+      "scope": "api",
+      "status": "candidate",
+      "features": [
+        "phase-3-auth"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "verification.md round 3 G2, auth.service.ts:58, C57 (api)"
+      ],
+      "created": "2026-09-22T02:45:02Z",
+      "last_seen": "2026-09-22T02:45:02Z"
+    },
+    {
+      "id": "L-012",
+      "key": "gate_fail::give tests that hash passwords repeatedly an explicit timeout well above their measured duration",
+      "text": "Give tests that hash passwords repeatedly an explicit timeout well above their measured duration",
+      "signal": "gate_fail",
+      "scope": "api",
+      "status": "candidate",
+      "features": [
+        "phase-3-auth"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "verification.md round 3 gap 4, auth.e2e-spec.ts:305 C57 timeout at 5000 ms (api)"
+      ],
+      "created": "2026-09-22T02:45:02Z",
+      "last_seen": "2026-09-22T02:45:02Z"
     }
   ]
 }

@@ -15,13 +15,19 @@
 | AD-009 | Chamada HTTP de saída com `fetch` nativo, `redirect: "error"`, `AbortSignal.timeout`, corpo lido em stream com limite de tamanho, só para hosts fixos no código; a URL do usuário nunca vira a URL da requisição, só identificadores validados são interpolados | evita SSRF e dependência nova; as Fases 14, 28 e 29 também chamam serviços externos | superseded by AD-011 | 2026-09-21 |
 | AD-010 | O sistema não lê, recebe nem guarda arquivos G-code/3MF. Os dados de impressão vêm da URL do MakerWorld ou do preenchimento manual | os arquivos passam de 200 MB; decisão do usuário ao revisar a Fase 2 | active | 2026-09-21 |
 | AD-011 | Chamada HTTP de saída com `node:https` (`https.get`), sem seguir redirecionamento, `signal: AbortSignal.timeout`, corpo contado com limite de tamanho, só para hosts fixos no código; a URL do usuário nunca vira a URL da requisição, só identificadores validados são interpolados. User-Agent honesto, nunca de navegador | o Cloudflare do MakerWorld desafia o `fetch` nativo do Node (403) e aceita `node:https` com o mesmo User-Agent; mantém a proteção contra SSRF do AD-009 | active | 2026-09-21 |
+| AD-012 | Produção em `brios3d.com.br`: web em `https://forge.brios3d.com.br`, API em `https://api.brios3d.com.br` | decisão do usuário; os dois hosts são o mesmo site (`.com.br` é sufixo público), então cookie `SameSite=Lax` e CORS com credenciais funcionam | active | 2026-09-21 |
+| AD-013 | Sessão no servidor: token opaco de 32 bytes no cookie `forge_session` (`HttpOnly; SameSite=Lax; Path=/`, `Secure` salvo `SESSION_COOKIE_SECURE=false`), só o SHA-256 do token na tabela `sessions`, prazo fixo de 7 dias | logout e desativação revogam na hora; decisão do usuário na Fase 3 (questão 3 do ROADMAP) | active | 2026-09-21 |
+| AD-014 | Entidades identificadas por `uuid` (`gen_random_uuid()`), a começar por `users` e `sessions` | ids sequenciais expõem volume e vizinhos em rotas como `/users/:id`; as FKs das Fases 9+ herdam a largura | active | 2026-09-21 |
+| AD-015 | Toda rota da API exige sessão por padrão (`APP_GUARD` global); exceções declaram `@Public()` | uma rota nova esquecida responde `401` em vez de nascer aberta | active | 2026-09-21 |
+| AD-016 | O web chama a API sempre com `credentials: "include"`, e a API habilita CORS com `credentials: true` só para `FRONTEND_URL` | o cookie de sessão mora no host da API; sem proxy do Next no meio (AD-005) | active | 2026-09-21 |
+| AD-017 | Senhas com `scrypt` do `node:crypto`, no formato `scrypt$N=131072,r=8,p=1$<salt>$<hash>` (parâmetros dentro da string) | mínimo da OWASP sem dependência nativa; os parâmetros podem subir sem invalidar hashes antigos | active | 2026-09-21 |
 
 ## Handoff
 
-**Feature**: phase-2-makerworld-profiles - concluída
-**Where**: C1–C56 verificados. Rodada 6 (escopada, `standard`): PASS, 56/56, 6 falhas injetadas e 6 mortas, `validate_verification.py` exit 0. As rodadas 1–5 deram FAIL, sempre por lacuna de teste (o código estava certo); o usuário autorizou as rodadas 4 a 6 além do limite de 3. Conferido também com o Playwright contra o MakerWorld real (importação, troca de perfil, URL inválida)
+**Feature**: phase-3-auth - concluída
+**Where**: C1–C58 verificados. Rodada 4 (escopada, `standard`, autorizada pelo usuário além do limite de 3): PASS, 58/58, `validate_verification.py` exit 0. As rodadas 1–3 deram FAIL: um bug real (logins simultâneos furavam o limitador, corrigido contando a tentativa antes do primeiro `await`) e lacunas de teste. Conferido também com o Playwright no app rodando (login, senha errada, `next`, sessão expirada, logout, API parada)
 **In progress**: nada
-**Next step**: Fase 3 - autenticação. Antes do uso real da Fase 2, responder a questão 34 do ROADMAP (termos de uso da API não documentada do MakerWorld)
-**Blockers**: nenhum para a Fase 3
-**Uncommitted**: nada
-**Branch**: main (commits só locais; nada foi enviado ao remoto)
+**Next step**: o usuário decide sobre o commit (o `AGENTS.md` pede pedido explícito). Depois, Fase 4 - usuários e papéis
+**Blockers**: nenhum
+**Uncommitted**: toda a Fase 3 (API, web, migration, specs, ROADMAP, STATE, `docker-compose.yml`, `.env.example`)
+**Branch**: main

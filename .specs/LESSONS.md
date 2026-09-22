@@ -44,6 +44,48 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: H2/H16, C52/C53 (api)
 - last seen: 2026-09-21T22:27:33Z
 
+### L-006 - When a limit is checked and then counted across an await, count the attempt before the first await and prove it with simultaneous requests
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `api` · harmful: 0
+- features: phase-3-auth
+- evidence: verification.md gap 1, auth.service.ts:38/:84, C53 (api)
+- last seen: 2026-09-22T02:23:49Z
+
+### L-007 - Make every proof test build its own state so it passes when run alone with its selector
+- signal: `gate_fail` · recurrence: 1 feature(s) · scope: `api` · harmful: 0
+- features: phase-3-auth
+- evidence: verification.md gap 2, C12 auth.e2e-spec.ts:203, C31 admin-seed.e2e-spec.ts:80 (api)
+- last seen: 2026-09-22T02:23:49Z
+
+### L-008 - Give every defensive branch a proof, including catch blocks and size-triggered cleanup
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `api` · harmful: 0
+- features: phase-3-auth
+- evidence: verification.md gaps 3-4, password.ts:45, login-attempts.ts:48-56 (api)
+- last seen: 2026-09-22T02:23:49Z
+
+### L-009 - Pin a time window at its exact edge on both sides, not one step past it
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · harmful: 0
+- features: phase-3-auth
+- evidence: verification.md gap 6, C26 login-attempts.ts:33
+- last seen: 2026-09-22T02:23:49Z
+
+### L-010 - When a fix counts an attempt up front, prove at the route that the success path undoes the count
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `api` · harmful: 0
+- features: phase-3-auth
+- evidence: verification.md round 2 F5, auth.service.ts:58, C57 (api)
+- last seen: 2026-09-22T02:34:19Z
+
+### L-011 - Prove a reset with a sequence where the success is not the attempt that triggers the limit
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `api` · harmful: 0
+- features: phase-3-auth
+- evidence: verification.md round 3 G2, auth.service.ts:58, C57 (api)
+- last seen: 2026-09-22T02:45:02Z
+
+### L-012 - Give tests that hash passwords repeatedly an explicit timeout well above their measured duration
+- signal: `gate_fail` · recurrence: 1 feature(s) · scope: `api` · harmful: 0
+- features: phase-3-auth
+- evidence: verification.md round 3 gap 4, auth.e2e-spec.ts:305 C57 timeout at 5000 ms (api)
+- last seen: 2026-09-22T02:45:02Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

@@ -39,7 +39,7 @@ As fases seguem os quatro marcos do `CONTEXT.md` (MVP → Operação diária →
 | 0 | Setup e fundações | Tooling, erros/validação padrão, migrations, health check, CI | ✅ |
 | 1 | Motor de preço (`pricing`) | Serviço puro com custo detalhado e preço por canal, bem testado | ✅ |
 | 2 | Dados de impressão pela URL do MakerWorld | Obter tempo, gramas por filamento, cores, AMS e impressora a partir da URL do perfil, sem processar arquivos | ✅ |
-| 3 | Autenticação | Login, sessão, proteção de rotas na API e no web | ⬜ |
+| 3 | Autenticação | Login, sessão, proteção de rotas na API e no web | ✅ |
 | 4 | Usuários e papéis | CRUD de usuários e autorização por papel (admin, produção, vendas) | ⬜ |
 | 5 | Configurações globais e canais | Tarifas, hora de trabalho, margens, % falha/purga, custos fixos, taxas por canal | ⬜ |
 | 6 | Materiais | Cadastro de materiais e padrão de CRUD reutilizável (API + web) | ⬜ |
@@ -186,15 +186,15 @@ As fases seguem os quatro marcos do `CONTEXT.md` (MVP → Operação diária →
 **Dependências:** Fase 0.
 
 **Tarefas:**
-- [ ] Entidade `User` (nome, e-mail único, hash de senha, papel, ativo) com migration
-- [ ] Hash de senha com um algoritmo forte (argon2 ou bcrypt)
-- [ ] `POST /auth/login`, `POST /auth/logout` e `GET /auth/me`
-- [ ] Emitir a sessão ou token conforme a estratégia decidida (veja "Questões em aberto")
-- [ ] Guard global de autenticação com decorator `@Public()` para as exceções (`/health`, login)
-- [ ] Seed idempotente do primeiro admin a partir de variáveis de ambiente (adicionar ao `.env.example`)
-- [ ] Proteger `/pricing/calculate` e `/print-profiles/import`
-- [ ] Web: página de login, redirecionamento de quem não está logado, logout e usuário atual no cabeçalho
-- [ ] Testes: unitários do serviço de auth e e2e do login e de rota protegida (401 sem credencial)
+- [x] Entidade `User` (nome, e-mail único, hash de senha, papel, ativo) com migration
+- [x] Hash de senha com um algoritmo forte (argon2 ou bcrypt)
+- [x] `POST /auth/login`, `POST /auth/logout` e `GET /auth/me`
+- [x] Emitir a sessão ou token conforme a estratégia decidida (veja "Questões em aberto")
+- [x] Guard global de autenticação com decorator `@Public()` para as exceções (`/health`, login)
+- [x] Seed idempotente do primeiro admin a partir de variáveis de ambiente (adicionar ao `.env.example`)
+- [x] Proteger `/pricing/calculate` e `/print-profiles/import`
+- [x] Web: página de login, redirecionamento de quem não está logado, logout e usuário atual no cabeçalho
+- [x] Testes: unitários do serviço de auth e e2e do login e de rota protegida (401 sem credencial)
 
 **Critérios de aceite:**
 - Credenciais inválidas retornam 401 `{ error }` com mensagem genérica
@@ -772,10 +772,10 @@ As fases seguem os quatro marcos do `CONTEXT.md` (MVP → Operação diária →
 
 **Infra e convenções**
 1. **Convenções de dinheiro e unidades** (centavos, `numeric`, percentuais como fração) e fuso horário (America/Sao_Paulo?). Confirmar.
-2. **Deploy e produção:** o CONTEXT não descreve o ambiente de produção nem de backup. O roadmap cobre só o local e a CI.
+2. **Deploy e produção:** o CONTEXT não descreve o ambiente de produção nem de backup. O roadmap cobre só o local e a CI. *Parcialmente respondida (2026-09-21):* o domínio de produção é `brios3d.com.br`, com o web em `forge.brios3d.com.br` e a API em `api.brios3d.com.br` (mesmo site, o que permite o cookie `SameSite=Lax` da Fase 3). Seguem abertos o provedor, o banco gerenciado e o backup.
 
 **Autenticação e permissões**
-3. **Estratégia de sessão:** JWT em cookie httpOnly, bearer token ou sessão no servidor?
+3. **Estratégia de sessão:** JWT em cookie httpOnly, bearer token ou sessão no servidor? *Respondida (2026-09-21):* sessão no servidor, com token opaco em cookie httpOnly `SameSite=Lax` e o hash do token numa tabela `sessions`. O login tem limite de tentativas por e-mail. Detalhes em `.specs/features/phase-3-auth/plan.md`.
 4. **Matriz de permissões:** o CONTEXT só lista os papéis (admin, produção, vendas). Quem vê custos e margens? Quem mexe no estoque?
 
 **Calculadora**
