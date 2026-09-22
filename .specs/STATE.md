@@ -21,13 +21,15 @@
 | AD-015 | Toda rota da API exige sessão por padrão (`APP_GUARD` global); exceções declaram `@Public()` | uma rota nova esquecida responde `401` em vez de nascer aberta | active | 2026-09-21 |
 | AD-016 | O web chama a API sempre com `credentials: "include"`, e a API habilita CORS com `credentials: true` só para `FRONTEND_URL` | o cookie de sessão mora no host da API; sem proxy do Next no meio (AD-005) | active | 2026-09-21 |
 | AD-017 | Senhas com `scrypt` do `node:crypto`, no formato `scrypt$N=131072,r=8,p=1$<salt>$<hash>` (parâmetros dentro da string) | mínimo da OWASP sem dependência nativa; os parâmetros podem subir sem invalidar hashes antigos | active | 2026-09-21 |
+| AD-018 | Autorização por padrão: `RolesGuard` (`APP_GUARD`, depois do `AuthGuard`) exige `admin` em toda rota protegida sem `@Roles()`; `@Roles(...)` libera outros papéis, e `admin` passa sempre sem precisar ser listado | uma rota nova esquecida nasce só de admin, nunca aberta a todo mundo; mesmo raciocínio do AD-015. Decisão do usuário na Fase 4 | active | 2026-09-22 |
+| AD-019 | Contrato do usuário na administração (`PublicUser`): `{ id, name, email, role, active }` em `GET /users`, `POST /users` e `PATCH /users/:id`, sem `password_hash` nem datas | é o `AuthUser` da Fase 3 mais `active`; as fases seguintes que listam ou editam usuários reusam o mesmo formato | active | 2026-09-22 |
 
 ## Handoff
 
-**Feature**: phase-3-auth - concluída
-**Where**: C1–C58 verificados. Rodada 4 (escopada, `standard`, autorizada pelo usuário além do limite de 3): PASS, 58/58, `validate_verification.py` exit 0. As rodadas 1–3 deram FAIL: um bug real (logins simultâneos furavam o limitador, corrigido contando a tentativa antes do primeiro `await`) e lacunas de teste. Conferido também com o Playwright no app rodando (login, senha errada, `next`, sessão expirada, logout, API parada)
+**Feature**: phase-4-users-roles - concluída
+**Where**: C1-C53 verificados. Rodada 1 (`standard`): FAIL - 49/53, mutante F4 sobrevivente, 3 lacunas de precisão de teste. Rodada 2 (escopada, `standard`): PASS, 53/53, 10 faltas injetadas e mortas, `validate_verification.py` exit 0. Conferido também com o Playwright (login, criar usuário, menu por papel, troca de senha, desativar/reativar)
 **In progress**: nada
-**Next step**: o usuário decide sobre o commit (o `AGENTS.md` pede pedido explícito). Depois, Fase 4 - usuários e papéis
+**Next step**: o usuário decide sobre o commit (o `AGENTS.md` pede pedido explícito). O Verifier notou que `auth.e2e-spec.ts` (código da Fase 3, não tocado aqui) fica instável sob carga da máquina com o `testTimeout` de 30s atual - vale considerar subir esse limite numa próxima fase
 **Blockers**: nenhum
-**Uncommitted**: toda a Fase 3 (API, web, migration, specs, ROADMAP, STATE, `docker-compose.yml`, `.env.example`)
+**Uncommitted**: toda a Fase 4 (API, web, `.specs/features/phase-4-users-roles/`, `ROADMAP.md`, este `STATE.md`)
 **Branch**: main

@@ -40,7 +40,7 @@ As fases seguem os quatro marcos do `CONTEXT.md` (MVP → Operação diária →
 | 1 | Motor de preço (`pricing`) | Serviço puro com custo detalhado e preço por canal, bem testado | ✅ |
 | 2 | Dados de impressão pela URL do MakerWorld | Obter tempo, gramas por filamento, cores, AMS e impressora a partir da URL do perfil, sem processar arquivos | ✅ |
 | 3 | Autenticação | Login, sessão, proteção de rotas na API e no web | ✅ |
-| 4 | Usuários e papéis | CRUD de usuários e autorização por papel (admin, produção, vendas) | ⬜ |
+| 4 | Usuários e papéis | CRUD de usuários e autorização por papel (admin, produção, vendas) | ✅ |
 | 5 | Configurações globais e canais | Tarifas, hora de trabalho, margens, % falha/purga, custos fixos, taxas por canal | ⬜ |
 | 6 | Materiais | Cadastro de materiais e padrão de CRUD reutilizável (API + web) | ⬜ |
 | 7 | Impressoras | Cadastro de impressoras com dados de custo, horímetro e AMS | ⬜ |
@@ -212,17 +212,47 @@ As fases seguem os quatro marcos do `CONTEXT.md` (MVP → Operação diária →
 **Dependências:** Fase 3.
 
 **Tarefas:**
-- [ ] Decorator `@Roles()` + guard de autorização
-- [ ] CRUD de usuários só para admin: listar, criar, editar papel e ativar/desativar (sem apagar fisicamente)
-- [ ] Trocar a própria senha
-- [ ] Documentar no ROADMAP a matriz de permissões por módulo, que será preenchida fase a fase
-- [ ] Web: tela de usuários (admin) com estados de carregamento, erro e lista vazia; menu escondendo o que o papel não pode acessar
-- [ ] Testes e2e: vendas e produção recebem 403 nas rotas de admin
+- [x] Decorator `@Roles()` + guard de autorização
+- [x] CRUD de usuários só para admin: listar, criar, editar papel e ativar/desativar (sem apagar fisicamente)
+- [x] Trocar a própria senha
+- [x] Documentar no ROADMAP a matriz de permissões por módulo, que será preenchida fase a fase
+- [x] Web: tela de usuários (admin) com estados de carregamento, erro e lista vazia; menu escondendo o que o papel não pode acessar
+- [x] Testes e2e: vendas e produção recebem 403 nas rotas de admin
 
 **Critérios de aceite:**
 - Um admin cria um usuário "vendas", que consegue logar e recebe 403 em `/users`
 - Um usuário desativado não consegue logar
 - As telas foram validadas com Playwright
+
+#### Matriz de permissões
+
+Uma linha por módulo, preenchida fase a fase conforme cada um nasce. "x" = o papel chama toda
+rota do módulo. Um módulo sem preenchimento nasce fechado ao admin até a fase dele decidir os
+outros papéis (door 1, Fase 4: uma rota sem `@Roles()` é só de admin).
+
+| Módulo | admin | production | sales |
+| --- | --- | --- | --- |
+| `auth` | x | x | x |
+| `users` | x | - | - |
+| `settings` | a definir na Fase 5 | a definir na Fase 5 | a definir na Fase 5 |
+| `materials` | a definir na Fase 6 | a definir na Fase 6 | a definir na Fase 6 |
+| `printers` | a definir na Fase 7 | a definir na Fase 7 | a definir na Fase 7 |
+| `customers` | a definir na Fase 8 | a definir na Fase 8 | a definir na Fase 8 |
+| `suppliers` | a definir na Fase 8 | a definir na Fase 8 | a definir na Fase 8 |
+| `inventory` | a definir na Fase 9 | a definir na Fase 9 | a definir na Fase 9 |
+| `purchasing` | a definir na Fase 21 | a definir na Fase 21 | a definir na Fase 21 |
+| `products` | a definir na Fase 13 | a definir na Fase 13 | a definir na Fase 13 |
+| `pricing` | x | x | x |
+| `quotes` | a definir na Fase 16 | a definir na Fase 16 | a definir na Fase 16 |
+| `orders` | a definir na Fase 18 | a definir na Fase 18 | a definir na Fase 18 |
+| `production` | a definir na Fase 19 | a definir na Fase 19 | a definir na Fase 19 |
+| `maintenance` | a definir na Fase 22 | a definir na Fase 22 | a definir na Fase 22 |
+| `finance` | a definir na Fase 24 | a definir na Fase 24 | a definir na Fase 24 |
+| `reports` | a definir na Fase 26 | a definir na Fase 26 | a definir na Fase 26 |
+
+`health` e `print-profiles` não são um dos 17 módulos da lista da seção 2 (o primeiro é infra, o
+segundo entra no catálogo/calculadora das Fases 12-14), mas seguem a mesma regra: `GET /health` é
+público, e `POST /print-profiles/import` está aberto aos três papéis desde esta fase.
 
 ---
 
@@ -776,7 +806,7 @@ As fases seguem os quatro marcos do `CONTEXT.md` (MVP → Operação diária →
 
 **Autenticação e permissões**
 3. **Estratégia de sessão:** JWT em cookie httpOnly, bearer token ou sessão no servidor? *Respondida (2026-09-21):* sessão no servidor, com token opaco em cookie httpOnly `SameSite=Lax` e o hash do token numa tabela `sessions`. O login tem limite de tentativas por e-mail. Detalhes em `.specs/features/phase-3-auth/plan.md`.
-4. **Matriz de permissões:** o CONTEXT só lista os papéis (admin, produção, vendas). Quem vê custos e margens? Quem mexe no estoque?
+4. **Matriz de permissões:** o CONTEXT só lista os papéis (admin, produção, vendas). Quem vê custos e margens? Quem mexe no estoque? *Parcialmente respondida (Fase 4):* o mecanismo está pronto (`@Roles()`, rota sem decorator é só de admin) e a tabela em "Matriz de permissões" está preenchida para `auth`, `users` e `pricing` - os três papéis chegam à calculadora, então vendas e produção veem o preço calculado desde já. Falta decidir, módulo a módulo, quem vê custo e margem versus só o preço final, e quem mexe no estoque (Fases 5-27).
 
 **Calculadora**
 5. **Manutenção R$/hora:** é global ou por impressora? É um valor manual ou derivado dos custos reais de manutenção (Fase 22)?
