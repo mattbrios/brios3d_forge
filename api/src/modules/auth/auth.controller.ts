@@ -3,9 +3,12 @@ import { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service.js';
 import type { AuthUser } from './auth.types.js';
+import { CurrentSession } from './current-session.decorator.js';
 import { CurrentUser } from './current-user.decorator.js';
+import { ChangePasswordDto } from './dto/change-password.dto.js';
 import { LoginAuthDto } from './dto/login-auth.dto.js';
 import { Public } from './public.decorator.js';
+import { Roles } from './roles.decorator.js';
 import {
   SESSION_COOKIE,
   clearSessionCookieOptions,
@@ -47,9 +50,23 @@ export class AuthController {
     response.clearCookie(SESSION_COOKIE, clearSessionCookieOptions(this.env));
   }
 
+  // Todo papel chega aqui (Fase 4, door 1).
+  @Roles('production', 'sales')
   @Get('me')
   me(@CurrentUser() user: AuthUser): AuthUser {
     return user;
+  }
+
+  // Troca a própria senha (S4). Todo papel chega aqui.
+  @Roles('production', 'sales')
+  @Post('password')
+  @HttpCode(204)
+  async changePassword(
+    @Body() dto: ChangePasswordDto,
+    @CurrentUser() user: AuthUser,
+    @CurrentSession() sessionId: string,
+  ): Promise<void> {
+    await this.auth.changePassword(user.id, sessionId, dto.currentPassword, dto.newPassword);
   }
 
   private readonly env = (key: string): string | undefined => this.config.get<string>(key);

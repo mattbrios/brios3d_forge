@@ -29,11 +29,12 @@ export class AuthGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const token = readSessionToken(request.headers.cookie);
-    const user = token ? await this.auth.userForToken(token) : null;
-    if (!user) {
+    const session = token ? await this.auth.sessionForToken(token) : null;
+    if (!session) {
       throw new UnauthorizedException(SESSION_REQUIRED);
     }
-    request.user = user;
+    request.user = session.user;
+    request.sessionId = session.sessionId;
     return true;
   }
 }

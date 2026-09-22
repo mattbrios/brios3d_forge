@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   HttpException,
   HttpStatus,
   Injectable,
@@ -7,10 +8,15 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomBytes } from 'node:crypto';
-import { LessThan, MoreThan, Repository } from 'typeorm';
+import { LessThan, MoreThan, Not, Repository } from 'typeorm';
 import { User } from '../users/entities/user.entity.js';
 import { normalizeEmail } from '../users/normalize-email.js';
-import { INVALID_CREDENTIALS, TOO_MANY_ATTEMPTS, type AuthUser } from './auth.types.js';
+import {
+  INVALID_CREDENTIALS,
+  TOO_MANY_ATTEMPTS,
+  WRONG_CURRENT_PASSWORD,
+  type AuthUser,
+} from './auth.types.js';
 import { Session } from './entities/session.entity.js';
 import { LoginAttempts } from './login-attempts.js';
 import { PasswordHasher } from './password.js';
@@ -68,7 +74,7 @@ export class AuthService {
     return { user: toAuthUser(user), token };
   }
 
-  async userForToken(token: string): Promise<AuthUser | null> {
+  async sessionForToken(token: string): Promise<{ user: AuthUser; sessionId: string } | null> {
     const session = await this.sessions.findOne({
       where: { tokenHash: hashSessionToken(token), expiresAt: MoreThan(new Date()) },
       relations: { user: true },
@@ -76,11 +82,27 @@ export class AuthService {
     if (!session?.user.active) {
       return null;
     }
-    return toAuthUser(session.user);
+    return { user: toAuthUser(session.user), sessionId: session.id };
   }
 
   async logout(token: string): Promise<void> {
     await this.sessions.delete({ tokenHash: hashSessionToken(token) });
+  }
+
+  // Troca a própria senha (S4): exige a senha atual e encerra as outras sessões do usuário,
+  // mantendo a sessão que fez a chamada.
+  async changePassword(
+    userId: string,
+    currentSessionId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void> {
+    const user = await this.users.findOneOrFail({ where: { id: userId } });
+    if (!(await this.hasher.verify(currentPassword, user.passwordHash))) {
+      throw new BadRequestException(WRONG_CURRENT_PASSWORD);
+    }
+    await this.users.update(userId, { passwordHash: await this.hasher.hash(newPassword) });
+    await this.sessions.delete({ userId, id: Not(currentSessionId) });
   }
 
   // A falha já foi contada no início do login.

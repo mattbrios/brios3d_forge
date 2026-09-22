@@ -8,6 +8,7 @@ import { AuthService } from './auth.service.js';
 import { Session } from './entities/session.entity.js';
 import { LoginAttempts } from './login-attempts.js';
 import { PasswordHasher } from './password.js';
+import { RolesGuard } from './roles.guard.js';
 
 @Module({
   imports: [TypeOrmModule.forFeature([User, Session])],
@@ -16,7 +17,10 @@ import { PasswordHasher } from './password.js';
     AuthService,
     PasswordHasher,
     { provide: LoginAttempts, useFactory: () => new LoginAttempts() },
+    // A ordem importa: sem sessão, o AuthGuard responde 401 antes do RolesGuard poder
+    // responder 403 (door 1, AC 5).
     { provide: APP_GUARD, useClass: AuthGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
   ],
 })
 export class AuthModule {}

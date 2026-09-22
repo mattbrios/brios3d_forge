@@ -8,6 +8,7 @@ import {
   NotFoundException,
   Post,
 } from '@nestjs/common';
+import { Roles } from '../auth/roles.decorator.js';
 import { ImportPrintProfileDto } from './dto/import-print-profile.dto.js';
 import { PrintProfileError } from './print-profile.error.js';
 import { PrintProfilesService } from './print-profiles.service.js';
@@ -18,6 +19,8 @@ export class PrintProfilesController {
   constructor(private readonly printProfilesService: PrintProfilesService) {}
 
   // Só lê o MakerWorld e devolve os dados, sem criar recurso: responde 200.
+  // Todo papel chega aqui (Fase 4, door 1): produção confere os dados de impressão.
+  @Roles('production', 'sales')
   @Post('import')
   @HttpCode(200)
   async import(@Body() dto: ImportPrintProfileDto): Promise<PrintProfileImport> {

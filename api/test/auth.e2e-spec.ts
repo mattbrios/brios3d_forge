@@ -36,6 +36,10 @@ const EMAILS = [
   'c57@test.local',
   'c57b@test.local',
   'c58@test.local',
+  's4-change@test.local',
+  's4-sessions@test.local',
+  's4-wrong@test.local',
+  's4-validation@test.local',
 ];
 const INVALID = { error: 'E-mail ou senha inválidos' };
 const SESSION_REQUIRED = { error: 'Sessão expirada ou inexistente. Entre novamente' };
@@ -343,5 +347,76 @@ describe('Auth (e2e)', () => {
       expect((await login({ email: 'naoexiste-c29@test.local', password: PASSWORD })).status).toBe(401);
     }
     expect((await login({ email: 'naoexiste-c29@test.local', password: PASSWORD })).status).toBe(429);
+  });
+
+  it('changes own password', async () => {
+    await createUser(dataSource, { email: 's4-change@test.local', role: 'sales', password: 'senha-antiga-1' });
+    const cookie = await loginCookie(app.getHttpServer(), 's4-change@test.local', 'senha-antiga-1');
+    const change = await request(server())
+      .post('/auth/password')
+      .set('Cookie', cookie)
+      .send({ currentPassword: 'senha-antiga-1', newPassword: 'senha-nova-99' });
+    expect(change.status).toBe(204);
+
+    expect(
+      (await login({ email: 's4-change@test.local', password: 'senha-antiga-1' })).status,
+    ).toBe(401);
+    expect(
+      (await login({ email: 's4-change@test.local', password: 'senha-nova-99' })).status,
+    ).toBe(200);
+  });
+
+  it('password change revokes other sessions, keeps the current one', async () => {
+    await createUser(dataSource, { email: 's4-sessions@test.local' });
+    const older = await loginCookie(app.getHttpServer(), 's4-sessions@test.local');
+    const current = await loginCookie(app.getHttpServer(), 's4-sessions@test.local');
+    const change = await request(server())
+      .post('/auth/password')
+      .set('Cookie', current)
+      .send({ currentPassword: PASSWORD, newPassword: 'senha-nova-outra-1' });
+    expect(change.status).toBe(204);
+
+    expect((await me(current)).status).toBe(200);
+    expect((await me(older)).status).toBe(401);
+  });
+
+  it('wrong current password is 400, not 401', async () => {
+    await createUser(dataSource, { email: 's4-wrong@test.local' });
+    const cookie = await loginCookie(app.getHttpServer(), 's4-wrong@test.local');
+    const change = await request(server())
+      .post('/auth/password')
+      .set('Cookie', cookie)
+      .send({ currentPassword: 'senha-errada-12', newPassword: 'senha-nova-77' });
+    expect(change.status).toBe(400);
+    expect(change.body).toEqual({ error: 'Senha atual incorreta' });
+
+    expect((await login({ email: 's4-wrong@test.local', password: PASSWORD })).status).toBe(200);
+    expect((await me(cookie)).status).toBe(200);
+  });
+
+  it('password change body validation', async () => {
+    await createUser(dataSource, { email: 's4-validation@test.local' });
+    const cookie = await loginCookie(app.getHttpServer(), 's4-validation@test.local');
+    const cases = [
+      { currentPassword: PASSWORD, newPassword: 'onze-chars1' },
+      { currentPassword: PASSWORD, newPassword: 'x'.repeat(257) },
+      { currentPassword: 123, newPassword: 'senha-valida-12' },
+      { newPassword: 'senha-valida-12' },
+      { currentPassword: PASSWORD, newPassword: 'senha-valida-12', extra: true },
+    ];
+    for (const body of cases) {
+      const response = await request(server()).post('/auth/password').set('Cookie', cookie).send(body);
+      expect(response.status).toBe(400);
+      expect(typeof (response.body as { error: unknown }).error).toBe('string');
+    }
+    expect((await login({ email: 's4-validation@test.local', password: PASSWORD })).status).toBe(200);
+  });
+
+  it('changing password without a session is 401', async () => {
+    const response = await request(server())
+      .post('/auth/password')
+      .send({ currentPassword: PASSWORD, newPassword: 'senha-nova-12' });
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual(SESSION_REQUIRED);
   });
 });
