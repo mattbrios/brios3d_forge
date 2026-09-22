@@ -234,7 +234,7 @@ outros papéis (door 1, Fase 4: uma rota sem `@Roles()` é só de admin).
 | --- | --- | --- | --- |
 | `auth` | x | x | x |
 | `users` | x | - | - |
-| `settings` | a definir na Fase 5 | a definir na Fase 5 | a definir na Fase 5 |
+| `settings` | x | leitura | leitura |
 | `materials` | a definir na Fase 6 | a definir na Fase 6 | a definir na Fase 6 |
 | `printers` | a definir na Fase 7 | a definir na Fase 7 | a definir na Fase 7 |
 | `customers` | a definir na Fase 8 | a definir na Fase 8 | a definir na Fase 8 |
@@ -263,12 +263,12 @@ público, e `POST /print-profiles/import` está aberto aos três papéis desde e
 **Dependências:** Fase 4.
 
 **Tarefas:**
-- [ ] Módulo `settings` com: tarifa de energia (R$/kWh), hora de trabalho (R$/h), margem padrão, % falha, % purga/perda, custo de manutenção R$/h (veja "Questões em aberto"), custos fixos mensais (itens como aluguel, software e internet) e horas produtivas/mês
-- [ ] Entidade `SalesChannel`: nome (balcão, Instagram/WhatsApp, Mercado Livre, Shopee, loja própria), % imposto, % taxa, ativo
-- [ ] Seed dos canais citados no CONTEXT
-- [ ] Endpoints de leitura para todos os papéis autenticados e edição só para admin
-- [ ] Validar faixas (percentuais entre 0 e 1; margem + imposto + taxa < 100% por canal)
-- [ ] Web: tela de configurações e tela de canais com os estados de carregamento, erro e vazio
+- [x] Módulo `settings` com: tarifa de energia (R$/kWh), hora de trabalho (R$/h), margem padrão, % falha, % purga/perda, custo de manutenção R$/h (veja "Questões em aberto"), custos fixos mensais (itens como aluguel, software e internet) e horas produtivas/mês
+- [x] Entidade `SalesChannel`: nome (balcão, Instagram/WhatsApp, Mercado Livre, Shopee, loja própria), % imposto, % taxa, ativo
+- [x] Seed dos canais citados no CONTEXT
+- [x] Endpoints de leitura para todos os papéis autenticados e edição só para admin
+- [x] Validar faixas (percentuais entre 0 e 1; margem + imposto + taxa < 100% por canal)
+- [x] Web: tela de configurações e tela de canais com os estados de carregamento, erro e vazio
 
 **Critérios de aceite:**
 - Um admin altera a tarifa kWh e o valor persiste
@@ -809,8 +809,8 @@ público, e `POST /print-profiles/import` está aberto aos três papéis desde e
 4. **Matriz de permissões:** o CONTEXT só lista os papéis (admin, produção, vendas). Quem vê custos e margens? Quem mexe no estoque? *Parcialmente respondida (Fase 4):* o mecanismo está pronto (`@Roles()`, rota sem decorator é só de admin) e a tabela em "Matriz de permissões" está preenchida para `auth`, `users` e `pricing` - os três papéis chegam à calculadora, então vendas e produção veem o preço calculado desde já. Falta decidir, módulo a módulo, quem vê custo e margem versus só o preço final, e quem mexe no estoque (Fases 5-27).
 
 **Calculadora**
-5. **Manutenção R$/hora:** é global ou por impressora? É um valor manual ou derivado dos custos reais de manutenção (Fase 22)?
-6. **Custos fixos:** quais itens entram e como se definem as "horas produtivas no mês" (valor manual ou calculado pelas impressoras)?
+5. **Manutenção R$/hora:** é global ou por impressora? É um valor manual ou derivado dos custos reais de manutenção (Fase 22)? *Parcialmente respondida (Fase 5):* `Settings.maintenanceCentsPerHour` é um valor único global e manual - por impressora só quando `printers` nascer (Fase 7); derivado de custos reais só na Fase 22.
+6. **Custos fixos:** quais itens entram e como se definem as "horas produtivas no mês" (valor manual ou calculado pelas impressoras)? *Parcialmente respondida (Fase 5):* `fixedCostItems` aceita qualquer item nomeado (nome + valor mensal), sem lista fechada; `productiveHoursPerMonth` é manual até as impressoras (posterior à Fase 7) permitirem calculá-lo.
 7. **Desconto por quantidade:** é só a diluição de preparo e fatiamento, ou também há faixas de desconto percentual?
 8. **Preço mínimo por pedido:** é um valor global ou por canal?
 9. **Taxa do canal:** é só percentual? Marketplaces como o Mercado Livre também cobram uma tarifa fixa por venda, que a fórmula não contempla.
