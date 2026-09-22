@@ -1,7 +1,19 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import type { UserRole } from "@/lib/auth";
 
-export function AppShell({ children, account }: { children: ReactNode; account?: ReactNode }) {
+const LINK_CLASS = "block rounded px-2 py-1 hover:bg-zinc-200 dark:hover:bg-zinc-800";
+
+export function AppShell({
+  children,
+  account,
+  role,
+}: {
+  children: ReactNode;
+  account?: ReactNode;
+  // Decide o que o menu mostra (AC 44, AC 45). Sem `role`, só os itens de todo papel aparecem.
+  role?: UserRole;
+}) {
   return (
     <div className="flex min-h-full flex-1 flex-col">
       <header className="flex items-center justify-between border-b border-zinc-200 bg-white px-6 py-4 dark:border-zinc-800 dark:bg-zinc-950">
@@ -15,11 +27,20 @@ export function AppShell({ children, account }: { children: ReactNode; account?:
         >
           <ul className="flex flex-col gap-1 text-sm">
             <li>
-              <Link
-                href="/print-profiles"
-                className="block rounded px-2 py-1 hover:bg-zinc-200 dark:hover:bg-zinc-800"
-              >
+              <Link href="/print-profiles" className={LINK_CLASS}>
                 Importar do MakerWorld
+              </Link>
+            </li>
+            {role === "admin" && (
+              <li>
+                <Link href="/users" className={LINK_CLASS}>
+                  Usuários
+                </Link>
+              </li>
+            )}
+            <li>
+              <Link href="/account" className={LINK_CLASS}>
+                Minha conta
               </Link>
             </li>
           </ul>

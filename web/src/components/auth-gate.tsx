@@ -91,6 +91,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
   return (
     <AppShell
+      role={state.user.role}
       account={
         <div className="flex items-center gap-3 text-sm">
           {signOutError && (

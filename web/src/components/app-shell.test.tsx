@@ -31,4 +31,41 @@ describe("AppShell", () => {
     const link = within(nav).getByRole("link", { name: "Importar do MakerWorld" });
     expect(link.getAttribute("href")).toBe("/print-profiles");
   });
+
+  it("admin sees every menu item in order", () => {
+    render(
+      <AppShell role="admin">
+        <p>conteúdo</p>
+      </AppShell>,
+    );
+    const nav = screen.getByRole("navigation");
+    const links = within(nav).getAllByRole("link");
+    expect(links.map((link) => link.textContent)).toEqual([
+      "Importar do MakerWorld",
+      "Usuários",
+      "Minha conta",
+    ]);
+    expect(links.map((link) => link.getAttribute("href"))).toEqual([
+      "/print-profiles",
+      "/users",
+      "/account",
+    ]);
+  });
+
+  it("production and sales do not see users", () => {
+    for (const role of ["production", "sales"] as const) {
+      render(
+        <AppShell role={role}>
+          <p>conteúdo</p>
+        </AppShell>,
+      );
+      const nav = screen.getByRole("navigation");
+      expect(within(nav).getAllByRole("link").map((link) => link.textContent)).toEqual([
+        "Importar do MakerWorld",
+        "Minha conta",
+      ]);
+      expect(within(nav).queryByRole("link", { name: "Usuários" })).toBeNull();
+      cleanup();
+    }
+  });
 });
