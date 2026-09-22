@@ -17,6 +17,10 @@ const EMAILS = ['sc-admin@test.local', 'sc-production@test.local', 'sc-sales@tes
 const CHANNEL_NAMES = [
   'sc3-inativo',
   'Loja física 2',
+  'sc-dto-tax-neg',
+  'sc-dto-tax-one',
+  'sc-dto-fee-neg',
+  'sc-dto-fee-one',
   'sc15-exata',
   'sc15-acima',
   'sc19-canal',
@@ -152,6 +156,36 @@ describe('Sales channels (e2e)', () => {
     expect(reset.status).toBe(200);
   });
 
+  it('DTO validation rejects invalid taxRate, feeRate and name on create and patch', async () => {
+    const invalidCreates = [
+      { name: '', taxRate: 0.05, feeRate: 0.05 },
+      { name: 'x'.repeat(101), taxRate: 0.05, feeRate: 0.05 },
+      { name: 'sc-dto-tax-neg', taxRate: -0.01, feeRate: 0.05 },
+      { name: 'sc-dto-tax-one', taxRate: 1, feeRate: 0.05 },
+      { name: 'sc-dto-fee-neg', taxRate: 0.05, feeRate: -0.01 },
+      { name: 'sc-dto-fee-one', taxRate: 0.05, feeRate: 1 },
+    ];
+    for (const body of invalidCreates) {
+      const response = await createChannel(body, adminCookie);
+      expect(response.status).toBe(400);
+    }
+    for (const name of ['sc-dto-tax-neg', 'sc-dto-tax-one', 'sc-dto-fee-neg', 'sc-dto-fee-one']) {
+      expect(await countChannels(name)).toBe(0);
+    }
+
+    const id = await idOf('Loja física 2');
+    const invalidPatches = [{ name: '' }, { taxRate: -0.01 }, { taxRate: 1 }, { feeRate: -0.01 }, { feeRate: 1 }];
+    for (const body of invalidPatches) {
+      const response = await patchChannel(id, body, adminCookie);
+      expect(response.status).toBe(400);
+    }
+    const [row]: Array<{ name: string; tax_rate: number; fee_rate: number }> = await dataSource.query(
+      'SELECT name, tax_rate, fee_rate FROM sales_channels WHERE id = $1',
+      [id],
+    );
+    expect(row).toEqual({ name: 'Loja física 2', tax_rate: 0.06, fee_rate: 0.02 });
+  });
+
   it('duplicate channel name is 409', async () => {
     const response = await createChannel(
       { name: '  Loja física 2  ', taxRate: 0.01, feeRate: 0.01 },
@@ -215,8 +249,12 @@ describe('Sales channels (e2e)', () => {
       .send({ defaultMarginRate: 0.5 });
     expect(marginChange.status).toBe(200);
 
-    const response = await patchChannel(id, { feeRate: 0.31 }, adminCookie);
-    expect(response.status).toBe(400);
+    // 0.5 + 0.2 + 0.3 == 1 (fronteira exata) e 0.5 + 0.2 + 0.31 == 1.01 (acima): os dois 400,
+    // usando o taxRate antigo (não enviado no PATCH).
+    for (const feeRate of [0.3, 0.31]) {
+      const response = await patchChannel(id, { feeRate }, adminCookie);
+      expect(response.status).toBe(400);
+    }
 
     const [row]: Array<{ fee_rate: number }> = await dataSource.query(
       'SELECT fee_rate FROM sales_channels WHERE id = $1',
