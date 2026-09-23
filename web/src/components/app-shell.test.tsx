@@ -46,6 +46,7 @@ describe("AppShell", () => {
       "Impressoras",
       "Clientes",
       "Fornecedores",
+      "Estoque",
       "Usuários",
       "Configurações",
       "Canais de venda",
@@ -57,6 +58,7 @@ describe("AppShell", () => {
       "/printers",
       "/customers",
       "/suppliers",
+      "/inventory",
       "/users",
       "/settings",
       "/sales-channels",
@@ -78,6 +80,7 @@ describe("AppShell", () => {
         "Impressoras",
         "Clientes",
         "Fornecedores",
+        "Estoque",
         "Minha conta",
       ]);
       expect(within(nav).queryByRole("link", { name: "Usuários" })).toBeNull();
@@ -127,6 +130,20 @@ describe("AppShell", () => {
       expect(customersLink.getAttribute("href")).toBe("/customers");
       const suppliersLink = within(nav).getByRole("link", { name: "Fornecedores" });
       expect(suppliersLink.getAttribute("href")).toBe("/suppliers");
+      cleanup();
+    }
+  });
+
+  it("inventory appears for every role", () => {
+    for (const role of ["admin", "production", "sales"] as const) {
+      render(
+        <AppShell role={role}>
+          <p>conteúdo</p>
+        </AppShell>,
+      );
+      const nav = screen.getByRole("navigation");
+      const link = within(nav).getByRole("link", { name: "Estoque" });
+      expect(link.getAttribute("href")).toBe("/inventory");
       cleanup();
     }
   });
