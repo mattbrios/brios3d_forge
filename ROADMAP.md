@@ -46,7 +46,7 @@ As fases seguem os quatro marcos do `CONTEXT.md` (MVP → Operação diária →
 | 7 | Impressoras | Cadastro de impressoras com dados de custo, horímetro e AMS | ✅ |
 | 8 | Clientes e fornecedores | Cadastros de clientes e fornecedores | ✅ |
 | 9 | Estoque de filamento por rolo | Rolos, movimentações, pesagem com tara, custo médio ponderado | ✅ |
-| 10 | Insumos e peças de reposição | Itens controlados por quantidade, com movimentações e custo médio | ⬜ |
+| 10 | Insumos e peças de reposição | Itens controlados por quantidade, com movimentações e custo médio | ✅ |
 | 11 | Estoque mínimo, alertas e etiqueta QR | Alertas de reposição e etiqueta com QR code para o rolo | ⬜ |
 | 12 | Calculadora integrada | Tela de precificação usando cadastros, estoque e os dados importados pela URL do MakerWorld | ⬜ |
 | **Marco 2** | | *Operação diária no sistema* | |
@@ -239,7 +239,7 @@ outros papéis (door 1, Fase 4: uma rota sem `@Roles()` é só de admin).
 | `printers` | x | leitura + `PATCH /printers/:id/hourmeter` | leitura |
 | `customers` | x | leitura | x |
 | `suppliers` | x | leitura | leitura |
-| `inventory` | x | leitura + pesagem/baixa/descarte/abertura/secagem | leitura |
+| `inventory` | x | leitura + pesagem/baixa/descarte/abertura/secagem do rolo, e consumo/perda/contagem do item (a entrada do item é admin, porque carrega custo) | leitura |
 | `purchasing` | a definir na Fase 21 | a definir na Fase 21 | a definir na Fase 21 |
 | `products` | a definir na Fase 13 | a definir na Fase 13 | a definir na Fase 13 |
 | `pricing` | x | x | x |
@@ -368,16 +368,16 @@ público, e `POST /print-profiles/import` está aberto aos três papéis desde e
 **Dependências:** Fase 9 (reaproveita o ledger).
 
 **Tarefas:**
-- [ ] Entidade `StockItem`: categoria (insumo, peça de reposição), nome/SKU, unidade de medida, fornecedor preferencial, localização, saldo e custo médio ponderado
-- [ ] Movimentações de entrada, consumo, perda e ajuste, no mesmo ledger da Fase 9
-- [ ] Marcar a peça de reposição como compatível com impressoras (vínculo usado na Fase 22)
-- [ ] Web: lista por categoria, detalhe com histórico e formulários de movimentação
-- [ ] Testes de custo médio e saldo para itens por quantidade
+- [x] Entidade `StockItem`: categoria (insumo, peça de reposição), nome/SKU, unidade de medida, fornecedor preferencial, localização, saldo e custo médio ponderado
+- [x] Movimentações de entrada, consumo, perda e ajuste, no mesmo ledger da Fase 9
+- [x] Marcar a peça de reposição como compatível com impressoras (vínculo usado na Fase 22)
+- [x] Web: lista por categoria, detalhe com histórico e formulários de movimentação
+- [x] Testes de custo médio e saldo para itens por quantidade
 
 **Critérios de aceite:**
-- Entrada e consumo de um insumo atualizam o saldo e o custo médio corretamente
-- O histórico de movimentações aparece unificado com os rolos
-- As telas foram validadas com Playwright
+- [x] Entrada e consumo de um insumo atualizam o saldo e o custo médio corretamente
+- [x] O histórico de movimentações aparece unificado com os rolos
+- [x] As telas foram validadas com Playwright
 
 ---
 

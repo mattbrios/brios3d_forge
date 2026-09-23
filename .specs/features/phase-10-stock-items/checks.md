@@ -491,3 +491,15 @@ teste ≈ 40 KB. Web existente tocado: `lib/inventory.ts` (1,3 KB),
   detalhe, e o estado vazio filtrando por uma categoria sem itens; abrir `/inventory/movements` e
   ver movimento de rolo e de item na mesma tabela; reabrir o detalhe de um rolo e confirmar que o
   histórico não regrediu com a renomeação
+
+- **Boundary:** C1-C57 fechados em `375e3e8` (artefatos), `4b07126` (API) e `53ad563` (web).
+  Um builder só, como a aritmética previu; nenhuma fatia precisou de corte
+- **Settled mid-build:** nada - nenhuma pergunta nova apareceu. A precedência de segmento
+  estático sobre dinâmico no App Router (assunção do plano) foi confirmada no `next build`, que
+  lista `/inventory/items` e `/inventory/movements` como rotas estáticas ao lado do
+  `/inventory/[id]` dinâmico, e confirmada em runtime abrindo `/inventory/items` no navegador
+- **Abandoned:** o `migration:generate` do TypeORM, como fonte da migration do door 3: ele emite
+  `DROP COLUMN` + `ADD COLUMN` no lugar de `RENAME COLUMN` (perderia o valor das linhas
+  existentes) e arrasta ruído não relacionado (um `DROP CONSTRAINT` da FK de `fixed_cost_items` e
+  a recriação de dois enums com os mesmos valores). A saída dele foi usada como ponto de partida e
+  as duas migrations foram escritas à mão com o shape literal do `Landing`

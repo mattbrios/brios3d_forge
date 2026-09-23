@@ -31,6 +31,30 @@
 
 ## Handoff
 
+**Feature**: phase-10-stock-items - construída, aguardando o Verifier
+**Where**: C1-C57 construídos em 3 commits (`375e3e8` artefatos, `4b07126` API, `53ad563` web),
+um builder só (estimativa de 37k, abaixo do orçamento de 150k). API: `StockItem` +
+`StockItemPrinter`, 8 rotas novas em `inventory`, fold `computeStockItemAverageCost` (PMP por
+replay do ledger), e o ledger `inventory_movements` passou a ter dono único
+(`roll_id` XOR `stock_item_id`) com as colunas renomeadas para `quantity`/`unit_cost_cents` em
+duas migrations (`CreateStockItems`, `AlterInventoryMovementsOwner`, esta última com
+`RENAME COLUMN` e sem backfill). Web: telas `/inventory/items`, `/inventory/items/[id]` e
+`/inventory/movements`, menu com "Filamento"/"Insumos e peças"/"Movimentações", e o detalhe do
+rolo lendo as chaves novas. `lint`, `test`, `test:e2e` e `build` verdes nas duas pastas (107 unit
++ 299 e2e na API, 118 no web). Validado também no navegador contra o app rodando: custo médio
+0,60/un depois de 100@50 e 100@70, consumo de 150 sem mexer na média, perda e contagem por
+produção (ajuste de -5 no histórico), papéis (admin cadastra e dá entrada; produção só movimenta;
+vendas só lê), estados de carregando/erro/vazio das duas telas novas, e o histórico do rolo
+íntegro depois da renomeação (1000 g a 0,12/g, baixa -100)
+**In progress**: nada
+**Next step**: despachar o Verifier (sub-agente novo, perfil `standard`) sobre `5aa8cda..HEAD`
+com os 57 checks, e rodar `validate_verification.py phase-10-stock-items`
+**Blockers**: nenhum
+**Uncommitted**: nada além deste `STATE.md` e do `ROADMAP.md` desta mesma mudança
+**Branch**: main
+
+## Handoff anterior
+
 **Feature**: phase-9-filament-inventory - concluída
 **Where**: C1-C35 verificados (C33-C35 nasceram na rodada 1 fechando lacunas de cobertura).
 Rodada 1 (`standard`): FAIL - 2 mutantes sobreviventes (a pré-checagem em JS de saldo deixava o
