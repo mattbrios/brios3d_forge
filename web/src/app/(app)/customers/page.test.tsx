@@ -145,10 +145,12 @@ describe("Customers page", () => {
           active: true,
         }),
       );
+    const patched: Route = () => Promise.resolve(jsonResponse(200, { ...CUSTOMER_1, phone: "11999990000" }));
     const fetchMock = stubApi({
       "/auth/me": () => Promise.resolve(jsonResponse(200, ADMIN_ME)),
       "/customers?pageSize=100": () => Promise.resolve(jsonResponse(200, page([CUSTOMER_1]))),
       "/customers": (init) => (init?.method === "POST" ? created() : Promise.reject(new Error("rota inesperada"))),
+      "/customers/c1": () => patched(),
     });
     render(<CustomersPage />);
     await screen.findByText("Ana Silva");
@@ -159,5 +161,14 @@ describe("Customers page", () => {
     await screen.findByText("Novo Cliente");
     expect(callsTo(fetchMock, "/customers").filter(([, init]) => init?.method === "POST")).toHaveLength(1);
     expect(screen.queryByText("Não foi possível conectar à API")).toBeNull();
+
+    const row = screen.getByText("Ana Silva").closest("tr")!;
+    fireEvent.click(within(row).getByRole("button", { name: "Editar" }));
+    fireEvent.change(screen.getByLabelText("Telefone"), { target: { value: "11999990000" } });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+    await within(row).findByText("11999990000");
+    expect(callsTo(fetchMock, "/customers/c1")).toHaveLength(1);
+    expect(bodyOf(callsTo(fetchMock, "/customers/c1")[0][1])).toEqual({ name: "Ana Silva", phone: "11999990000" });
   });
 });

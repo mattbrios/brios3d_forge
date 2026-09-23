@@ -11,6 +11,8 @@ import { createSupplier } from './suppliers-helper.js';
 const SESSION_REQUIRED = { error: 'Sessão expirada ou inexistente. Entre novamente' };
 const PERMISSION_DENIED = { error: 'Você não tem permissão para esta ação' };
 const NOT_FOUND = { error: 'Fornecedor não encontrado' };
+const INVALID_DOCUMENT = { error: 'document inválido: informe um CPF ou CNPJ com dígito verificador correto' };
+const DUPLICATE_DOCUMENT = { error: 'Já existe um fornecedor com este document' };
 
 const EMAILS = ['supl-admin@test.local', 'supl-production@test.local', 'supl-sales@test.local'];
 
@@ -85,6 +87,24 @@ describe('Suppliers (e2e)', () => {
     expect(response.body.id.length).toBeGreaterThan(0);
   });
 
+  it('lets a second supplier without a document coexist with the first', async () => {
+    const first = await createReq({ name: 'Sem documento 1' }, adminCookie);
+    expect(first.status).toBe(201);
+    const second = await createReq({ name: 'Sem documento 2' }, adminCookie);
+    expect(second.status).toBe(201);
+    // document opcional convive: os dois fornecedores acima, sem document, coexistem (door 1 do plano).
+    expect(await countAll()).toBe(2);
+  });
+
+  it('trims address before measuring its length, accepting it at the 300-character bound', async () => {
+    const response = await createReq(
+      { name: 'Fornecedor com endereço', address: `  ${'r'.repeat(300)}  ` },
+      adminCookie,
+    );
+    expect(response.status).toBe(201);
+    expect(response.body.address).toBe('r'.repeat(300));
+  });
+
   it('stores supplier document as digits only for a valid CPF and CNPJ', async () => {
     const cases = [
       { document: '123.456.789-09', digits: '12345678909' },
@@ -110,6 +130,7 @@ describe('Suppliers (e2e)', () => {
     for (const document of cases) {
       const response = await createReq({ name: 'Fornecedor inválido', document }, adminCookie);
       expect(response.status).toBe(400);
+      expect(response.body).toEqual(INVALID_DOCUMENT);
     }
     expect(await countAll()).toBe(0);
   });
@@ -122,6 +143,7 @@ describe('Suppliers (e2e)', () => {
     for (const document of cases) {
       const response = await createReq({ name: 'Segundo', document }, adminCookie);
       expect(response.status).toBe(409);
+      expect(response.body).toEqual(DUPLICATE_DOCUMENT);
     }
     expect(await countAll()).toBe(1);
   });
@@ -135,6 +157,7 @@ describe('Suppliers (e2e)', () => {
     for (const body of cases) {
       const response = await createReq(body, adminCookie);
       expect(response.status).toBe(400);
+      expect(response.body).toEqual({ error: expect.any(String) });
     }
     expect(await countAll()).toBe(0);
   });
@@ -144,6 +167,7 @@ describe('Suppliers (e2e)', () => {
     for (const body of cases) {
       const response = await createReq(body, adminCookie);
       expect(response.status).toBe(400);
+      expect(response.body).toEqual({ error: expect.any(String) });
     }
     expect(await countAll()).toBe(0);
   });
@@ -223,6 +247,7 @@ describe('Suppliers (e2e)', () => {
     for (const query of cases) {
       const response = await listReq(query, adminCookie);
       expect(response.status).toBe(400);
+      expect(response.body).toEqual({ error: expect.any(String) });
     }
   });
 
@@ -245,12 +270,14 @@ describe('Suppliers (e2e)', () => {
 
     const response = await patchReq(id, { phone: '1144440000' }, adminCookie);
     expect(response.status).toBe(200);
-    expect(response.body).toMatchObject({
+    expect(response.body).toEqual({
+      id,
       name: 'f36-original',
       document: null,
       phone: '1144440000',
       email: 'f36@test.local',
       address: 'Rua Dois, 200',
+      active: true,
     });
   });
 
@@ -267,6 +294,7 @@ describe('Suppliers (e2e)', () => {
     for (const body of cases) {
       const response = await patchReq(id, body, adminCookie);
       expect(response.status).toBe(400);
+      expect(response.body).toEqual({ error: expect.any(String) });
     }
 
     const [row]: Array<{ name: string; email: string }> = await dataSource.query(
@@ -282,6 +310,7 @@ describe('Suppliers (e2e)', () => {
 
     const response = await patchReq(id, { document: '11.222.333/0001-81' }, adminCookie);
     expect(response.status).toBe(409);
+    expect(response.body).toEqual(DUPLICATE_DOCUMENT);
 
     const [row]: Array<{ document: string | null }> = await dataSource.query(
       'SELECT document FROM suppliers WHERE id = $1',

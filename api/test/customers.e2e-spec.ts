@@ -11,6 +11,8 @@ import { createCustomer } from './customers-helper.js';
 const SESSION_REQUIRED = { error: 'Sessão expirada ou inexistente. Entre novamente' };
 const PERMISSION_DENIED = { error: 'Você não tem permissão para esta ação' };
 const NOT_FOUND = { error: 'Cliente não encontrado' };
+const INVALID_DOCUMENT = { error: 'document inválido: informe um CPF ou CNPJ com dígito verificador correto' };
+const DUPLICATE_DOCUMENT = { error: 'Já existe um cliente com este document' };
 
 const EMAILS = ['cust-admin@test.local', 'cust-production@test.local', 'cust-sales@test.local'];
 
@@ -84,8 +86,15 @@ describe('Customers (e2e)', () => {
       });
       expect(typeof response.body.id).toBe('string');
       expect(response.body.id.length).toBeGreaterThan(0);
-      await dataSource.query('DELETE FROM customers');
     }
+    // document opcional convive: os dois clientes acima, sem document, coexistem (door 1 do plano).
+    expect(await countAll()).toBe(2);
+  });
+
+  it('trims phone before measuring its length, accepting it at the 30-character bound', async () => {
+    const response = await createReq({ name: 'Cliente com telefone', phone: `  ${'9'.repeat(30)}  ` }, adminCookie);
+    expect(response.status).toBe(201);
+    expect(response.body.phone).toBe('9'.repeat(30));
   });
 
   it('stores document as digits only for a valid CPF and CNPJ', async () => {
@@ -113,6 +122,7 @@ describe('Customers (e2e)', () => {
     for (const document of cases) {
       const response = await createReq({ name: 'Cliente inválido', document }, adminCookie);
       expect(response.status).toBe(400);
+      expect(response.body).toEqual(INVALID_DOCUMENT);
     }
     expect(await countAll()).toBe(0);
   });
@@ -125,6 +135,7 @@ describe('Customers (e2e)', () => {
     for (const document of cases) {
       const response = await createReq({ name: 'Segundo', document }, adminCookie);
       expect(response.status).toBe(409);
+      expect(response.body).toEqual(DUPLICATE_DOCUMENT);
     }
     expect(await countAll()).toBe(1);
   });
@@ -138,6 +149,7 @@ describe('Customers (e2e)', () => {
     for (const body of cases) {
       const response = await createReq(body, adminCookie);
       expect(response.status).toBe(400);
+      expect(response.body).toEqual({ error: expect.any(String) });
     }
     expect(await countAll()).toBe(0);
   });
@@ -147,6 +159,7 @@ describe('Customers (e2e)', () => {
     for (const body of cases) {
       const response = await createReq(body, adminCookie);
       expect(response.status).toBe(400);
+      expect(response.body).toEqual({ error: expect.any(String) });
     }
     expect(await countAll()).toBe(0);
   });
@@ -224,6 +237,7 @@ describe('Customers (e2e)', () => {
     for (const query of cases) {
       const response = await listReq(query, adminCookie);
       expect(response.status).toBe(400);
+      expect(response.body).toEqual({ error: expect.any(String) });
     }
   });
 
@@ -247,12 +261,14 @@ describe('Customers (e2e)', () => {
 
       const response = await patchReq(id, { phone: '11888880000' }, cookie);
       expect(response.status).toBe(200);
-      expect(response.body).toMatchObject({
+      expect(response.body).toEqual({
+        id,
         name: 'c14-original',
         document: null,
         phone: '11888880000',
         email: 'c14@test.local',
         address: 'Rua Um, 100',
+        active: true,
       });
       await dataSource.query('DELETE FROM customers');
     }
@@ -271,6 +287,7 @@ describe('Customers (e2e)', () => {
     for (const body of cases) {
       const response = await patchReq(id, body, adminCookie);
       expect(response.status).toBe(400);
+      expect(response.body).toEqual({ error: expect.any(String) });
     }
 
     const [row]: Array<{ name: string; email: string }> = await dataSource.query(
@@ -286,6 +303,7 @@ describe('Customers (e2e)', () => {
 
     const response = await patchReq(id, { document: '123.456.789-09' }, adminCookie);
     expect(response.status).toBe(409);
+    expect(response.body).toEqual(DUPLICATE_DOCUMENT);
 
     const [row]: Array<{ document: string | null }> = await dataSource.query(
       'SELECT document FROM customers WHERE id = $1',

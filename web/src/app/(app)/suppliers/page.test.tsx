@@ -145,10 +145,12 @@ describe("Suppliers page", () => {
           active: true,
         }),
       );
+    const patched: Route = () => Promise.resolve(jsonResponse(200, { ...SUPPLIER_1, phone: "1133330000" }));
     const fetchMock = stubApi({
       "/auth/me": () => Promise.resolve(jsonResponse(200, ADMIN_ME)),
       "/suppliers?pageSize=100": () => Promise.resolve(jsonResponse(200, page([SUPPLIER_1]))),
       "/suppliers": (init) => (init?.method === "POST" ? created() : Promise.reject(new Error("rota inesperada"))),
+      "/suppliers/s1": () => patched(),
     });
     render(<SuppliersPage />);
     await screen.findByText("Filamentos ABC");
@@ -159,5 +161,17 @@ describe("Suppliers page", () => {
     await screen.findByText("Novo Fornecedor");
     expect(callsTo(fetchMock, "/suppliers").filter(([, init]) => init?.method === "POST")).toHaveLength(1);
     expect(screen.queryByText("Não foi possível conectar à API")).toBeNull();
+
+    const row = screen.getByText("Filamentos ABC").closest("tr")!;
+    fireEvent.click(within(row).getByRole("button", { name: "Editar" }));
+    fireEvent.change(screen.getByLabelText("Telefone"), { target: { value: "1133330000" } });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+    await within(row).findByText("1133330000");
+    expect(callsTo(fetchMock, "/suppliers/s1")).toHaveLength(1);
+    expect(bodyOf(callsTo(fetchMock, "/suppliers/s1")[0][1])).toEqual({
+      name: "Filamentos ABC",
+      phone: "1133330000",
+    });
   });
 });
