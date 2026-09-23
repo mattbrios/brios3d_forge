@@ -43,7 +43,7 @@ As fases seguem os quatro marcos do `CONTEXT.md` (MVP → Operação diária →
 | 4 | Usuários e papéis | CRUD de usuários e autorização por papel (admin, produção, vendas) | ✅ |
 | 5 | Configurações globais e canais | Tarifas, hora de trabalho, margens, % falha/purga, custos fixos, taxas por canal | ⬜ |
 | 6 | Materiais | Cadastro de materiais e padrão de CRUD reutilizável (API + web) | ⬜ |
-| 7 | Impressoras | Cadastro de impressoras com dados de custo, horímetro e AMS | ⬜ |
+| 7 | Impressoras | Cadastro de impressoras com dados de custo, horímetro e AMS | ✅ |
 | 8 | Clientes e fornecedores | Cadastros de clientes e fornecedores | ⬜ |
 | 9 | Estoque de filamento por rolo | Rolos, movimentações, pesagem com tara, custo médio ponderado | ⬜ |
 | 10 | Insumos e peças de reposição | Itens controlados por quantidade, com movimentações e custo médio | ⬜ |
@@ -236,7 +236,7 @@ outros papéis (door 1, Fase 4: uma rota sem `@Roles()` é só de admin).
 | `users` | x | - | - |
 | `settings` | x | leitura | leitura |
 | `materials` | x | leitura | leitura |
-| `printers` | a definir na Fase 7 | a definir na Fase 7 | a definir na Fase 7 |
+| `printers` | x | leitura + `PATCH /printers/:id/hourmeter` | leitura |
 | `customers` | a definir na Fase 8 | a definir na Fase 8 | a definir na Fase 8 |
 | `suppliers` | a definir na Fase 8 | a definir na Fase 8 | a definir na Fase 8 |
 | `inventory` | a definir na Fase 9 | a definir na Fase 9 | a definir na Fase 9 |
@@ -304,10 +304,10 @@ público, e `POST /print-profiles/import` está aberto aos três papéis desde e
 **Dependências:** Fase 6 (padrão de CRUD).
 
 **Tarefas:**
-- [ ] Entidade `Printer`: nome/modelo, custo de aquisição, vida útil estimada (h), potência média (W), horímetro (h), bicos instalados (diâmetro e tipo), AMS/multicor (sim/não, nº de slots), ativa
-- [ ] CRUD e tela no padrão da Fase 6
-- [ ] Endpoint de ajuste manual do horímetro (a atualização automática vem na Fase 19)
-- [ ] Testes unitários e e2e
+- [x] Entidade `Printer`: nome/modelo, custo de aquisição, vida útil estimada (h), potência média (W), horímetro (h), bicos instalados (diâmetro e tipo), AMS/multicor (sim/não, nº de slots), ativa
+- [x] CRUD e tela no padrão da Fase 6
+- [x] Endpoint de ajuste manual do horímetro (a atualização automática vem na Fase 19)
+- [x] Testes unitários e e2e
 
 **Critérios de aceite:**
 - CRUD completo na API e no web (Playwright)
