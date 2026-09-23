@@ -28,21 +28,26 @@
 
 ## Handoff
 
-**Feature**: phase-6-materials - concluída
-**Where**: C1-C37 verificados (33 na derivação inicial, C34-C37 acrescentados depois da rodada 1).
-Rodada 1 (`standard`): FAIL - mutante sobrevivente na revalidação de secagem do `PATCH`
-(`materials.service.ts:87-94`, segunda implementação independente da regra do AC 4, sem nenhuma
-prova), mais 3 lacunas (10/11 membros do AC 16 sem prova no `PATCH`, `Test policy` dos DTOs não
-cumprida, precision gap sobre id malformado). Fix só em `api/test/materials.e2e-spec.ts` (C16
-ampliado para tabela-driven, C34-C37 novos). Rodada 2 (escopada, `standard`): PASS, 37/37, 5
-faltas injetadas e mortas, `validate_checks.py` e `validate_verification.py` exit 0. Validado
-também com o Playwright MCP: admin cadastra material com secagem, edita a densidade, desativa
-com confirmação e reativa, filtra por tipo inexistente (estado vazio); vendas só lê e vê
-"Materiais" no menu
+**Feature**: phase-8-customers-suppliers - concluída
+**Where**: C1-C53 verificados. Rodada 1 (`standard`): FAIL - mutante sobrevivente no fluxo
+"Editar" das telas `/customers` e `/suppliers` (nenhum teste clicava "Editar", então `submitEdit`
+tinha cobertura zero), corpo `{ error }` não asserido em 12 combinações rota×status `400`/`409`
+novas (AD-001 e o critério do ROADMAP "409 { error }" descobertos sem prova), e o `Test policy`
+row da convivência de `document` nulo não provado pelos checks que ele nomeava (C1 apagava a
+tabela entre as iterações, C23 criava um único fornecedor), mais 2 precision gaps (C14/C36 sem
+`active`/`id`; C5/C27 sem espaço em volta para exercitar o trim). Fix em 4 arquivos de teste
+(`api/test/customers.e2e-spec.ts`, `api/test/suppliers.e2e-spec.ts`,
+`web/.../customers/page.test.tsx`, `web/.../suppliers/page.test.tsx`), nada em código de
+produção - a mutação do fluxo "Editar" foi confirmada morta manualmente antes da rodada 2. Rodada
+2 (escopada, `standard`): PASS, `validate_verification.py` exit 0. Validado também com o
+Playwright MCP: vendas cadastra cliente só com nome, completa o CPF por edição, desativa com
+confirmação, busca sem resultado mostra o vazio, e vê "Fornecedores" leitura-only; admin cadastra
+e desativa fornecedor; produção confirma leitura-only nas duas telas
 **In progress**: nada
-**Next step**: nenhum bloqueio. Fase 7 (Impressoras) é a próxima a copiar o padrão de CRUD
-reutilizável (`AD-020`, `AD-021`) fixado nesta fase
+**Next step**: nenhum bloqueio. Fases 9 (estoque de rolo), 16 (orçamentos) e 21 (compras) passam
+a referenciar `Customer`/`Supplier` por FK, ainda inexistente hoje (`## Relations` do plano)
 **Blockers**: nenhum
-**Uncommitted**: `.specs/lessons.json`, `.specs/LESSONS.md` (lição L-013, candidate) e este
-`STATE.md` - o resto da Fase 6 já está commitado (ver `git log`)
+**Uncommitted**: `.specs/features/phase-8-customers-suppliers/verification.md`,
+`.specs/lessons.json`, `.specs/LESSONS.md` (lições L-014 a L-016, candidate) e este `STATE.md` -
+o resto da Fase 8 já está commitado (ver `git log`)
 **Branch**: main

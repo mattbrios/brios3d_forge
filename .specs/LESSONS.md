@@ -92,6 +92,24 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: materials.service.ts:90 (round 1 mutant: finalDryingHours > 0 -> >= 0) (validation)
 - last seen: 2026-09-23T02:03:59Z
 
+### L-014 - When a CRUD screen has create, edit and toggle flows copied from an existing pattern, write a test for every flow (including edit) before declaring the screen covered — a suite that only exercises create/toggle leaves the edit submit handler with zero coverage.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `web-crud-screens` · harmful: 0
+- features: phase-8-customers-suppliers
+- evidence: web/src/app/(app)/customers/page.tsx:152-154 (F6, verification.md 67785ec round 1) (web-crud-screens)
+- last seen: 2026-09-23T13:29:00Z
+
+### L-015 - When an AC or ADR fixes an error response shape like { error }, assert the response body on every status code path that returns it, not only on the ones convenient to check (e.g. 401/403) — 400 and 409 need the same body assertion.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `api-error-contract` · harmful: 0
+- features: phase-8-customers-suppliers
+- evidence: api/test/customers.e2e-spec.ts:115,127 (round 1, before e0dfb4c) (api-error-contract)
+- last seen: 2026-09-23T13:29:00Z
+
+### L-016 - When a check claims two records coexist under a relaxed uniqueness constraint (e.g. a unique-when-present column), assert the coexistence within the same test before any cleanup runs — a loop that deletes rows between iterations, or that only ever creates one record, never actually proves coexistence even though it looks like it does.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `api-uniqueness-constraints` · harmful: 0
+- features: phase-8-customers-suppliers
+- evidence: checks.md Test policy row 2 / api/test/customers.e2e-spec.ts:87 (round 1, before e0dfb4c) (api-uniqueness-constraints)
+- last seen: 2026-09-23T13:29:01Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
