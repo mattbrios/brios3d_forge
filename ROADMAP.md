@@ -237,8 +237,8 @@ outros papéis (door 1, Fase 4: uma rota sem `@Roles()` é só de admin).
 | `settings` | x | leitura | leitura |
 | `materials` | x | leitura | leitura |
 | `printers` | x | leitura + `PATCH /printers/:id/hourmeter` | leitura |
-| `customers` | a definir na Fase 8 | a definir na Fase 8 | a definir na Fase 8 |
-| `suppliers` | a definir na Fase 8 | a definir na Fase 8 | a definir na Fase 8 |
+| `customers` | x | leitura | x |
+| `suppliers` | x | leitura | leitura |
 | `inventory` | a definir na Fase 9 | a definir na Fase 9 | a definir na Fase 9 |
 | `purchasing` | a definir na Fase 21 | a definir na Fase 21 | a definir na Fase 21 |
 | `products` | a definir na Fase 13 | a definir na Fase 13 | a definir na Fase 13 |
@@ -322,10 +322,10 @@ público, e `POST /print-profiles/import` está aberto aos três papéis desde e
 **Dependências:** Fase 6.
 
 **Tarefas:**
-- [ ] Entidade `Customer` com campos mínimos a confirmar (veja "Questões em aberto")
-- [ ] Entidade `Supplier` com campos mínimos a confirmar
-- [ ] CRUD e telas no padrão da Fase 6
-- [ ] Testes unitários e e2e
+- [x] Entidade `Customer` com campos mínimos a confirmar (veja "Questões em aberto")
+- [x] Entidade `Supplier` com campos mínimos a confirmar
+- [x] CRUD e telas no padrão da Fase 6
+- [x] Testes unitários e e2e
 
 **Critérios de aceite:**
 - CRUD completo dos dois cadastros na API e no web (Playwright, com os três estados)
@@ -830,6 +830,11 @@ público, e `POST /print-profiles/import` está aberto aos três papéis desde e
 19. **Kanban × jobs:** o status do pedido muda sozinho conforme os jobs (ex.: primeiro job iniciado → "Imprimindo"), ou só manualmente?
 20. **Previsão da fila:** considera operação 24/7 ou um horário de trabalho (para troca de placa)?
 21. **Clientes e fornecedores:** quais campos são obrigatórios (CPF/CNPJ, endereço, contato)?
+    *Respondida (Fase 8):* só `name` é obrigatório (até 150 caracteres); `document` (CPF/CNPJ,
+    com dígito verificador validado), `phone`, `email` e `address` (texto livre) ficam opcionais.
+    `document` é único quando informado, mas vários registros sem `document` convivem. Decisão do
+    usuário ao revisar o plano da Fase 8: cliente de balcão/Instagram raramente tem CPF à mão no
+    primeiro contato, e exigi-lo bloquearia o cadastro rápido.
 22. **Modelos próprios:** o catálogo aceita só URLs do Printables, do MakerWorld e do Thingiverse. Um modelo criado pela própria empresa precisa ser publicado numa dessas plataformas para entrar no catálogo, ou deve haver uma exceção?
 23. **Imagem do produto:** exibir direto da URL da plataforma ou guardar uma cópia (a imagem some se o modelo for removido)? A ficha técnica pode ser pré-preenchida pela URL do MakerWorld (Fase 2); falta decidir se ela deve ser atualizada quando o autor mudar o perfil publicado.
 24. **Dados do job de impressão:** o `PrintJob` da Fase 19 guarda só os dados da placa (tempo e gramas por filamento), sem arquivo. Ele deve guardar também uma cópia dos dados do perfil do MakerWorld no momento da importação, para não mudar se o autor atualizar o perfil?
