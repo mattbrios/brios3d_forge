@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 23,
+  "next_id": 28,
   "lessons": [
     {
       "id": "L-001",
@@ -400,6 +400,96 @@
       ],
       "created": "2026-09-23T16:24:42Z",
       "last_seen": "2026-09-23T16:24:42Z"
+    },
+    {
+      "id": "L-023",
+      "key": "surviving_mutant::for every optional foreign key a route accepts assert the accepted side too one test that sends an existing id and reads the id back from the response not only the 400 for an unknown id",
+      "text": "For every optional foreign key a route accepts, assert the accepted side too: one test that sends an existing id and reads the id back from the response, not only the 400 for an unknown id",
+      "signal": "surviving_mutant",
+      "scope": "api-routes",
+      "status": "candidate",
+      "features": [
+        "phase-10-stock-items"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "verification.md fault #5 - api/src/modules/inventory/inventory.service.ts:572-580 (api-routes)"
+      ],
+      "created": "2026-09-23T22:00:28Z",
+      "last_seen": "2026-09-23T22:00:28Z"
+    },
+    {
+      "id": "L-024",
+      "key": "surviving_mutant::a concurrency proof built on promise all over two http requests is non deterministic make the interleaving forced or the test passes under an in memory pre check most of the time",
+      "text": "A concurrency proof built on Promise.all over two HTTP requests is non-deterministic: make the interleaving forced, or the test passes under an in-memory pre-check most of the time",
+      "signal": "surviving_mutant",
+      "scope": "concurrency",
+      "status": "candidate",
+      "features": [
+        "phase-10-stock-items"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "verification.md fault #4 - api/test/stock-items.e2e-spec.ts:415-426 (concurrency)"
+      ],
+      "created": "2026-09-23T22:00:41Z",
+      "last_seen": "2026-09-23T22:00:41Z"
+    },
+    {
+      "id": "L-025",
+      "key": "ac_gap::give every optional field named in the plan surface or relations its own coverage row so the accepted side cannot be left out of the join",
+      "text": "Give every optional field named in the plan Surface or Relations its own Coverage row, so the accepted side cannot be left out of the join",
+      "signal": "ac_gap",
+      "scope": "checks",
+      "status": "candidate",
+      "features": [
+        "phase-10-stock-items"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "verification.md Coverage - StockItem.preferredSupplierId FK opcional (3) (checks)"
+      ],
+      "created": "2026-09-23T22:00:41Z",
+      "last_seen": "2026-09-23T22:00:41Z"
+    },
+    {
+      "id": "L-026",
+      "key": "spec_precision_gap::a claim that names the mechanism deciding an outcome needs a proof that distinguishes that mechanism not only one that observes the same status code",
+      "text": "A claim that names the mechanism deciding an outcome needs a proof that distinguishes that mechanism, not only one that observes the same status code",
+      "signal": "spec_precision_gap",
+      "scope": "checks",
+      "status": "candidate",
+      "features": [
+        "phase-10-stock-items"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "verification.md precision gap 1 - C23 (checks)"
+      ],
+      "created": "2026-09-23T22:00:42Z",
+      "last_seen": "2026-09-23T22:00:42Z"
+    },
+    {
+      "id": "L-027",
+      "key": "spec_precision_gap::enumerate each length and format validator of a dto as its own refused case instead of closing the coverage column on the enum and empty string cases",
+      "text": "Enumerate each length and format validator of a DTO as its own refused case, instead of closing the coverage column on the enum and empty-string cases",
+      "signal": "spec_precision_gap",
+      "scope": "api-routes",
+      "status": "candidate",
+      "features": [
+        "phase-10-stock-items"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "verification.md precision gap 2 - api/src/modules/inventory/dto/create-stock-item.dto.ts (api-routes)"
+      ],
+      "created": "2026-09-23T22:00:42Z",
+      "last_seen": "2026-09-23T22:00:42Z"
     }
   ]
 }

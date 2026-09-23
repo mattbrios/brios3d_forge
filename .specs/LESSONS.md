@@ -146,6 +146,36 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: .specs/features/phase-9-filament-inventory/verification.md (validate_verification exit 1) (process)
 - last seen: 2026-09-23T16:24:42Z
 
+### L-023 - For every optional foreign key a route accepts, assert the accepted side too: one test that sends an existing id and reads the id back from the response, not only the 400 for an unknown id
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `api-routes` · harmful: 0
+- features: phase-10-stock-items
+- evidence: verification.md fault #5 - api/src/modules/inventory/inventory.service.ts:572-580 (api-routes)
+- last seen: 2026-09-23T22:00:28Z
+
+### L-024 - A concurrency proof built on Promise.all over two HTTP requests is non-deterministic: make the interleaving forced, or the test passes under an in-memory pre-check most of the time
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `concurrency` · harmful: 0
+- features: phase-10-stock-items
+- evidence: verification.md fault #4 - api/test/stock-items.e2e-spec.ts:415-426 (concurrency)
+- last seen: 2026-09-23T22:00:41Z
+
+### L-025 - Give every optional field named in the plan Surface or Relations its own Coverage row, so the accepted side cannot be left out of the join
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `checks` · harmful: 0
+- features: phase-10-stock-items
+- evidence: verification.md Coverage - StockItem.preferredSupplierId FK opcional (3) (checks)
+- last seen: 2026-09-23T22:00:41Z
+
+### L-026 - A claim that names the mechanism deciding an outcome needs a proof that distinguishes that mechanism, not only one that observes the same status code
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `checks` · harmful: 0
+- features: phase-10-stock-items
+- evidence: verification.md precision gap 1 - C23 (checks)
+- last seen: 2026-09-23T22:00:42Z
+
+### L-027 - Enumerate each length and format validator of a DTO as its own refused case, instead of closing the coverage column on the enum and empty-string cases
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `api-routes` · harmful: 0
+- features: phase-10-stock-items
+- evidence: verification.md precision gap 2 - api/src/modules/inventory/dto/create-stock-item.dto.ts (api-routes)
+- last seen: 2026-09-23T22:00:42Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

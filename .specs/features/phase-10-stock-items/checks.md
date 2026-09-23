@@ -3,7 +3,12 @@
 Profile: standard
 Plan: `.specs/features/phase-10-stock-items/plan.md`
 
-57 checks em 8 fatias · 6 one-way doors · nenhuma questão aberta
+59 checks em 8 fatias · 6 one-way doors · nenhuma questão aberta
+
+(C58 e C59 nasceram na rodada 1 da verificação, fechando as duas lacunas que ela achou: o lado
+aceito de `preferredSupplierId` não tinha prova em lugar nenhum, e os limites de tamanho e formato
+dos DTOs de item não eram nomeados por check algum. C24 também foi endurecido na mesma rodada -
+a intercalação concorrente passou a ser forçada por um lock no teste, em vez de esperada.)
 
 O `AGENTS.md` não declara perfil (`light` seria o padrão). Uso `standard`, como as Fases 8 e 9,
 por quatro formas que o repositório não tem análogo para:
@@ -99,6 +104,18 @@ Proof: `npm --prefix api run test:e2e -- test/stock-items.e2e-spec.ts -t "produc
 **C12** - Tabela sobre `GET /inventory/items?pageSize=101` e `GET /inventory/movements?pageSize=101`
 (2 casos): cada um responde `400` (limite `Max(100)` do AD-020)
 Proof: `npm --prefix api run test:e2e -- test/stock-items.e2e-spec.ts -t "rejects a pageSize above the AD-020 maximum"`
+
+**C58** - (nascido na rodada 1 da verificação) `POST /inventory/items` com um `preferredSupplierId`
+que existe e um `location` responde `201` devolvendo os dois valores, os dois ficam gravados na
+linha, `GET /inventory/items/:id` e `GET /inventory/items` devolvem os dois, e um `PATCH` troca o
+fornecedor por outro existente (AC 1, AC 5 pelo lado aceito - o lado recusado é C5)
+Proof: `npm --prefix api run test:e2e -- test/stock-items.e2e-spec.ts -t "accepts an existing preferredSupplierId, echoes it back and lets the PATCH replace it"`
+
+**C59** - (nascido na rodada 1 da verificação) Tabela sobre `POST /inventory/items` com `name` de
+151, `sku` de 61, `location` de 101 e `unitOfMeasure` de 21 caracteres, `preferredSupplierId` que
+não é uuid, `compatiblePrinterIds` com um id que não é uuid, e `compatiblePrinterIds` com o mesmo id
+repetido (7 casos): cada um responde `400`, e nem item nem vínculo é persistido (AC 2)
+Proof: `npm --prefix api run test:e2e -- test/stock-items.e2e-spec.ts -t "rejects a field beyond its maximum length and a malformed id inside the payload"`
 
 ### S2 - Entrada com custo e custo médio ponderado · 5 files · 26 KB · ~7k
 
@@ -363,6 +380,9 @@ Proof: `npm --prefix api run test:e2e -- test/inventory.e2e-spec.ts -t "the roll
 | papel barrado nas ações operacionais (1) | `sales` C26, C30 | - |
 | papéis que leem, lado positivo (3 rotas) | `GET /inventory/items` C11 · `GET /inventory/items/:id` C11 · `GET /inventory/movements` C11 | - |
 | filtros de `GET /inventory/items` (3) | `category` C9 · `search` em `name` C10 · `search` em `sku` C10 | - |
+| `StockItem.preferredSupplierId`, FK opcional (3) | omitido C1 · id inexistente recusado C5 · id existente aceito, gravado e devolvido C58 | - |
+| campos de texto do item com limite declarado (4) | `name` C59 · `sku` C59 · `location` C59 · `unitOfMeasure` C59 | - |
+| formato de id dentro do corpo (3) | `preferredSupplierId` não-uuid C59 · `compatiblePrinterIds` não-uuid C59 · `compatiblePrinterIds` repetido C59 | - |
 | estados da tela `/inventory/items` (3) | carregando C44 · erro C46 · vazio C47 | - |
 | estados da tela `/inventory/movements` (3) | carregando C52 · erro C52 · vazio C52 | - |
 | UI por papel nas telas de item (2) | lista esconde criar/entrada para production e sales C48 · detalhe só leitura para sales C49 | - |
