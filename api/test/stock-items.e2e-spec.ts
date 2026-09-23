@@ -10,6 +10,7 @@ import { createMaterial } from './materials-helper.js';
 import { createRoll } from './inventory-helper.js';
 import { createPrinter } from './printers-helper.js';
 import { createStockItem, createItemMovement, linkPrinter, userIdOf } from './stock-items-helper.js';
+import { createSupplier } from './suppliers-helper.js';
 
 const SESSION_REQUIRED = { error: 'Sessão expirada ou inexistente. Entre novamente' };
 const PERMISSION_DENIED = { error: 'Você não tem permissão para esta ação' };
@@ -206,6 +207,66 @@ describe('Stock items (e2e)', () => {
     );
     expect(response.status).toBe(400);
     expect(await countItems()).toBe(0);
+  });
+
+  it('accepts an existing preferredSupplierId, echoes it back and lets the PATCH replace it', async () => {
+    // O lado aceito do fornecedor preferencial e do `location`: sem ele, um `assertSupplierExists`
+    // que recusasse TODO fornecedor válido, ou um mapper que largasse os dois campos, passaria
+    // verde (achado da verificação, rodada 1).
+    const firstSupplierId = await createSupplier(dataSource, { name: 'Fornecedor A' });
+    const secondSupplierId = await createSupplier(dataSource, { name: 'Fornecedor B' });
+
+    const created = await createItemReq(
+      { ...VALID_ITEM, preferredSupplierId: firstSupplierId, location: 'gaveta 3' },
+      adminCookie,
+    );
+    expect(created.status).toBe(201);
+    expect(created.body).toMatchObject({ preferredSupplierId: firstSupplierId, location: 'gaveta 3' });
+    const itemId = created.body.id as string;
+
+    const rows: Array<{ preferred_supplier_id: string; location: string }> = await dataSource.query(
+      'SELECT preferred_supplier_id, location FROM stock_items WHERE id = $1',
+      [itemId],
+    );
+    expect(rows[0]).toMatchObject({ preferred_supplier_id: firstSupplierId, location: 'gaveta 3' });
+
+    const detail = await getItemReq(itemId, adminCookie);
+    expect(detail.body).toMatchObject({ preferredSupplierId: firstSupplierId, location: 'gaveta 3' });
+
+    const updated = await updateItemReq(itemId, { preferredSupplierId: secondSupplierId }, adminCookie);
+    expect(updated.status).toBe(200);
+    expect(updated.body.preferredSupplierId).toBe(secondSupplierId);
+
+    const listed = await listItemsReq('', adminCookie);
+    expect((listed.body.items as Array<Record<string, unknown>>)[0]).toMatchObject({
+      preferredSupplierId: secondSupplierId,
+      location: 'gaveta 3',
+    });
+  });
+
+  it('rejects a field beyond its maximum length and a malformed id inside the payload', async () => {
+    const printerId = await createPrinter(dataSource, { name: 'X1C' });
+    const cases = [
+      { ...VALID_ITEM, name: 'n'.repeat(151) },
+      { ...VALID_ITEM, sku: 's'.repeat(61) },
+      { ...VALID_ITEM, location: 'l'.repeat(101) },
+      { ...VALID_ITEM, unitOfMeasure: 'u'.repeat(21) },
+      { ...VALID_ITEM, preferredSupplierId: 'nao-e-uuid' },
+      { category: 'peca_reposicao', name: 'Bico', unitOfMeasure: 'un', compatiblePrinterIds: ['nao-e-uuid'] },
+      {
+        category: 'peca_reposicao',
+        name: 'Bico',
+        unitOfMeasure: 'un',
+        compatiblePrinterIds: [printerId, printerId],
+      },
+    ];
+    expect(cases).toHaveLength(7);
+    for (const body of cases) {
+      const response = await createItemReq(body, adminCookie);
+      expect(response.status).toBe(400);
+    }
+    expect(await countItems()).toBe(0);
+    expect(await countAllLinks()).toBe(0);
   });
 
   it('deactivating an item keeps the row and its history', async () => {
@@ -415,11 +476,32 @@ describe('Stock items (e2e)', () => {
   it('only one of two concurrent item movements that would exceed the balance succeeds', async () => {
     const itemId = await createStockItem(dataSource, { balanceQuantity: 100 });
 
-    const [first, second] = await Promise.all([
-      itemMovementReq(itemId, { type: 'consumo', quantity: 70 }, productionCookie),
-      itemMovementReq(itemId, { type: 'consumo', quantity: 70 }, productionCookie),
-    ]);
-    const statuses = [first.status, second.status].sort((a, b) => a - b);
+    // A intercalação é forçada, não esperada: o teste tranca a linha do item numa transação
+    // própria, dispara as duas baixas, espera as duas passarem pela leitura do item e ficarem na
+    // fila do UPDATE, e só então solta o lock. Sem isso, o teste depende de o SELECT da segunda
+    // requisição chegar antes do COMMIT da primeira, e uma pré-checagem em memória com UPDATE
+    // absoluto (o que o AD-023 proíbe) responderia 201 nas duas e passaria na maioria das rodadas.
+    const locker = dataSource.createQueryRunner();
+    await locker.connect();
+    await locker.startTransaction();
+    let statuses: number[];
+    try {
+      await locker.query('SELECT balance_quantity FROM stock_items WHERE id = $1 FOR UPDATE', [itemId]);
+      const both = Promise.all([
+        itemMovementReq(itemId, { type: 'consumo', quantity: 70 }, productionCookie),
+        itemMovementReq(itemId, { type: 'consumo', quantity: 70 }, productionCookie),
+      ]);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      await locker.commitTransaction();
+      const [first, second] = await both;
+      statuses = [first.status, second.status].sort((a, b) => a - b);
+    } finally {
+      if (locker.isTransactionActive) {
+        await locker.rollbackTransaction();
+      }
+      await locker.release();
+    }
+
     expect(statuses).toEqual([201, 400]);
     expect(await balanceOfItem(itemId)).toBe(30);
     expect(await movementsOfItem(itemId)).toHaveLength(1);
