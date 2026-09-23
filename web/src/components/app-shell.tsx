@@ -59,10 +59,26 @@ export function AppShell({
                 </Link>
               </li>
             )}
+            {/* Com dois tipos de estoque (Fase 10), "Estoque" abrindo só filamento passaria a
+                mentir: cada tipo ganha o próprio item, e o ledger unificado, o seu. */}
             {(role === "admin" || role === "production" || role === "sales") && (
               <li>
                 <Link href="/inventory" className={LINK_CLASS}>
-                  Estoque
+                  Filamento
+                </Link>
+              </li>
+            )}
+            {(role === "admin" || role === "production" || role === "sales") && (
+              <li>
+                <Link href="/inventory/items" className={LINK_CLASS}>
+                  Insumos e peças
+                </Link>
+              </li>
+            )}
+            {(role === "admin" || role === "production" || role === "sales") && (
+              <li>
+                <Link href="/inventory/movements" className={LINK_CLASS}>
+                  Movimentações
                 </Link>
               </li>
             )}

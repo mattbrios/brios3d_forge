@@ -50,11 +50,13 @@ const ROLL: RollDetail = {
     {
       id: "mv1",
       type: "entrada",
-      quantityGrams: 1000,
-      unitCostCentsPerGram: 12,
+      quantity: 1000,
+      unitCostCents: 12,
       reason: null,
       userId: "u1",
       createdAt: "2026-01-01T00:00:00.000Z",
+      rollId: "r1",
+      stockItemId: null,
     },
   ],
 };
@@ -102,6 +104,43 @@ describe("Roll detail page", () => {
     expect(screen.queryByRole("button", { name: "Abrir rolo" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Registrar secagem" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Descartar" })).toBeNull();
+  });
+
+  it("renders the movement history from the renamed keys", async () => {
+    // Fase 10, door 4: a tela do rolo lê `quantity`/`unitCostCents`. Sem esta prova, a renomeação
+    // deixaria as duas colunas vazias com a suíte verde.
+    const withTwoMovements = {
+      ...ROLL,
+      movements: [
+        ...ROLL.movements,
+        {
+          id: "mv2",
+          type: "consumo" as const,
+          quantity: -200,
+          unitCostCents: null,
+          reason: null,
+          userId: "u2",
+          createdAt: "2026-01-02T00:00:00.000Z",
+          rollId: "r1",
+          stockItemId: null,
+        },
+      ],
+    };
+    stubApi({
+      "/auth/me": () => Promise.resolve(jsonResponse(200, PRODUCTION_ME)),
+      "/inventory/rolls/r1": () => Promise.resolve(jsonResponse(200, withTwoMovements)),
+      "/materials?pageSize=100": () => Promise.resolve(jsonResponse(200, materialsPage([MATERIAL_1]))),
+    });
+    render(<RollDetailPage params={Promise.resolve({ id: "r1" })} />);
+
+    const entryRow = (await screen.findByText("entrada")).closest("tr") as HTMLTableRowElement;
+    const entryCells = within(entryRow).getAllByRole("cell").map((cell) => cell.textContent);
+    expect(entryCells).toEqual(["entrada", "1000", "0.12", new Date("2026-01-01T00:00:00.000Z").toLocaleString("pt-BR")]);
+
+    const consumoRow = screen.getByText("consumo").closest("tr") as HTMLTableRowElement;
+    const consumoCells = within(consumoRow).getAllByRole("cell").map((cell) => cell.textContent);
+    expect(consumoCells[1]).toBe("-200");
+    expect(consumoCells[2]).toBe("—");
   });
 
   it("confirms before discarding", async () => {

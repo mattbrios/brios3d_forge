@@ -46,7 +46,9 @@ describe("AppShell", () => {
       "Impressoras",
       "Clientes",
       "Fornecedores",
-      "Estoque",
+      "Filamento",
+      "Insumos e peças",
+      "Movimentações",
       "Usuários",
       "Configurações",
       "Canais de venda",
@@ -59,6 +61,8 @@ describe("AppShell", () => {
       "/customers",
       "/suppliers",
       "/inventory",
+      "/inventory/items",
+      "/inventory/movements",
       "/users",
       "/settings",
       "/sales-channels",
@@ -80,7 +84,9 @@ describe("AppShell", () => {
         "Impressoras",
         "Clientes",
         "Fornecedores",
-        "Estoque",
+        "Filamento",
+        "Insumos e peças",
+        "Movimentações",
         "Minha conta",
       ]);
       expect(within(nav).queryByRole("link", { name: "Usuários" })).toBeNull();
@@ -134,7 +140,7 @@ describe("AppShell", () => {
     }
   });
 
-  it("inventory appears for every role", () => {
+  it("the three inventory entries appear for every role", () => {
     for (const role of ["admin", "production", "sales"] as const) {
       render(
         <AppShell role={role}>
@@ -142,8 +148,15 @@ describe("AppShell", () => {
         </AppShell>,
       );
       const nav = screen.getByRole("navigation");
-      const link = within(nav).getByRole("link", { name: "Estoque" });
-      expect(link.getAttribute("href")).toBe("/inventory");
+      // Fase 10: "Estoque" virou "Filamento", e entraram os itens e o ledger unificado.
+      expect(within(nav).getByRole("link", { name: "Filamento" }).getAttribute("href")).toBe("/inventory");
+      expect(within(nav).getByRole("link", { name: "Insumos e peças" }).getAttribute("href")).toBe(
+        "/inventory/items",
+      );
+      expect(within(nav).getByRole("link", { name: "Movimentações" }).getAttribute("href")).toBe(
+        "/inventory/movements",
+      );
+      expect(within(nav).queryByRole("link", { name: "Estoque" })).toBeNull();
       cleanup();
     }
   });

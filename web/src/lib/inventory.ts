@@ -23,14 +23,18 @@ export interface FilamentRoll {
 
 export type MovementType = "entrada" | "consumo" | "perda" | "ajuste";
 
+// Fase 10, door 3 e door 4: o movimento tem exatamente um dono (`rollId` ou `stockItemId`), e a
+// quantidade não se chama mais em gramas - a unidade vem do dono.
 export interface InventoryMovement {
   id: string;
   type: MovementType;
-  quantityGrams: number;
-  unitCostCentsPerGram: number | null;
+  quantity: number;
+  unitCostCents: number | null;
   reason: string | null;
   userId: string;
   createdAt: string;
+  rollId: string | null;
+  stockItemId: string | null;
 }
 
 export interface RollDetail extends FilamentRoll {

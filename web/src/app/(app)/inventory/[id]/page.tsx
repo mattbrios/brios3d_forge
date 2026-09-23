@@ -119,7 +119,7 @@ function RollDetailContent({ id }: { id: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type: movementType,
-          quantityGrams: Number(movementQuantity),
+          quantity: Number(movementQuantity),
           reason: movementReason || undefined,
         }),
       });
@@ -312,11 +312,13 @@ function RollDetailContent({ id }: { id: string }) {
               </tr>
             </thead>
             <tbody>
+              {/* Chaves renomeadas na Fase 10 (door 4): a unidade do rolo continua sendo grama,
+                  mas o nome do campo no contrato não fala mais de grama. */}
               {roll.movements.map((movement) => (
                 <tr key={movement.id}>
                   <td>{movement.type}</td>
-                  <td>{movement.quantityGrams}</td>
-                  <td>{movement.unitCostCentsPerGram !== null ? (movement.unitCostCentsPerGram / 100).toFixed(2) : "—"}</td>
+                  <td>{movement.quantity}</td>
+                  <td>{movement.unitCostCents !== null ? (movement.unitCostCents / 100).toFixed(2) : "—"}</td>
                   <td>{new Date(movement.createdAt).toLocaleString("pt-BR")}</td>
                 </tr>
               ))}
