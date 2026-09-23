@@ -241,6 +241,14 @@ describe('Materials (e2e)', () => {
     expect(response.body).toEqual(SESSION_REQUIRED);
   });
 
+  it('rejects a non-integer page or pageSize', async () => {
+    const cases = ['?page=1.5', '?page=abc', '?pageSize=abc'];
+    for (const query of cases) {
+      const response = await listReq(query, adminCookie);
+      expect(response.status).toBe(400);
+    }
+  });
+
   // S3 - Editar material, só admin
 
   it('PATCH persists only the sent fields', async () => {
@@ -272,16 +280,82 @@ describe('Materials (e2e)', () => {
   });
 
   it('rejects invalid fields on PATCH without changing the record', async () => {
-    const id = await createMaterial(dataSource, { type: 'm16-original', densityGCm3: 1.24 });
+    const id = await createMaterial(dataSource, {
+      type: 'm16-original',
+      densityGCm3: 1.24,
+      nozzleTempC: 200,
+      bedTempC: 60,
+      needsDrying: false,
+    });
 
-    const response = await patchReq(id, { densityGCm3: 15 }, adminCookie);
-    expect(response.status).toBe(400);
+    // As mesmas faixas do AC 2 (densidade/temperaturas) e do AC 4 (secagem condicional),
+    // agora pelo PATCH (AC 16).
+    const cases = [
+      { densityGCm3: 15 },
+      { densityGCm3: 0 },
+      { nozzleTempC: -1 },
+      { nozzleTempC: 501 },
+      { bedTempC: -1 },
+      { bedTempC: 151 },
+      { needsDrying: true, dryingHours: 4 },
+      { needsDrying: true, dryingTemperatureC: -1, dryingHours: 4 },
+      { needsDrying: true, dryingTemperatureC: 121, dryingHours: 4 },
+      { needsDrying: true, dryingTemperatureC: 60 },
+    ];
+    for (const body of cases) {
+      const response = await patchReq(id, body, adminCookie);
+      expect(response.status).toBe(400);
+    }
 
-    const [row]: Array<{ density_g_cm3: number }> = await dataSource.query(
-      'SELECT density_g_cm3 FROM materials WHERE id = $1',
+    const [row]: Array<{
+      density_g_cm3: number;
+      nozzle_temp_c: number;
+      bed_temp_c: number;
+      needs_drying: boolean;
+    }> = await dataSource.query(
+      'SELECT density_g_cm3, nozzle_temp_c, bed_temp_c, needs_drying FROM materials WHERE id = $1',
       [id],
     );
-    expect(row.density_g_cm3).toBe(1.24);
+    expect(row).toEqual({ density_g_cm3: 1.24, nozzle_temp_c: 200, bed_temp_c: 60, needs_drying: false });
+  });
+
+  it('rejects a PATCH that leaves needsDrying true with an existing dryingHours of zero', async () => {
+    // dryingHours: 0 só existe gravado direto (o DTO recusa 0 na entrada); confere que o
+    // serviço revalida o valor final mesmo quando ele vem do registro, não do corpo do PATCH.
+    const id = await createMaterial(dataSource, {
+      type: 'm16b-edge',
+      needsDrying: true,
+      dryingTemperatureC: 60,
+      dryingHours: 0,
+    });
+
+    const response = await patchReq(id, { color: 'Nova Cor' }, adminCookie);
+    expect(response.status).toBe(400);
+
+    const [row]: Array<{ color: string }> = await dataSource.query(
+      'SELECT color FROM materials WHERE id = $1',
+      [id],
+    );
+    expect(row.color).not.toBe('Nova Cor');
+  });
+
+  it('rejects out-of-bounds string lengths and a non-boolean needsDrying', async () => {
+    const cases = [
+      { ...VALID_PLA, type: 'x'.repeat(41) },
+      { ...VALID_PLA, brand: 'x'.repeat(101) },
+      { ...VALID_PLA, color: 'x'.repeat(101) },
+      { ...VALID_PLA, needsDrying: 'sim' as unknown as boolean },
+    ];
+    for (const body of cases) {
+      const response = await createReq(body, adminCookie);
+      expect(response.status).toBe(400);
+    }
+    expect(await countAll()).toBe(0);
+  });
+
+  it('PATCH with a non-uuid id is 400', async () => {
+    const response = await patchReq('nao-e-uuid', { color: 'X' }, adminCookie);
+    expect(response.status).toBe(400);
   });
 
   it('non-admin roles get 403 on PATCH /materials', async () => {
