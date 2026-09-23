@@ -45,7 +45,7 @@ As fases seguem os quatro marcos do `CONTEXT.md` (MVP → Operação diária →
 | 6 | Materiais | Cadastro de materiais e padrão de CRUD reutilizável (API + web) | ✅ |
 | 7 | Impressoras | Cadastro de impressoras com dados de custo, horímetro e AMS | ✅ |
 | 8 | Clientes e fornecedores | Cadastros de clientes e fornecedores | ✅ |
-| 9 | Estoque de filamento por rolo | Rolos, movimentações, pesagem com tara, custo médio ponderado | ⬜ |
+| 9 | Estoque de filamento por rolo | Rolos, movimentações, pesagem com tara, custo médio ponderado | ✅ |
 | 10 | Insumos e peças de reposição | Itens controlados por quantidade, com movimentações e custo médio | ⬜ |
 | 11 | Estoque mínimo, alertas e etiqueta QR | Alertas de reposição e etiqueta com QR code para o rolo | ⬜ |
 | 12 | Calculadora integrada | Tela de precificação usando cadastros, estoque e os dados importados pela URL do MakerWorld | ⬜ |
@@ -239,7 +239,7 @@ outros papéis (door 1, Fase 4: uma rota sem `@Roles()` é só de admin).
 | `printers` | x | leitura + `PATCH /printers/:id/hourmeter` | leitura |
 | `customers` | x | leitura | x |
 | `suppliers` | x | leitura | leitura |
-| `inventory` | a definir na Fase 9 | a definir na Fase 9 | a definir na Fase 9 |
+| `inventory` | x | leitura + pesagem/baixa/descarte/abertura/secagem | leitura |
 | `purchasing` | a definir na Fase 21 | a definir na Fase 21 | a definir na Fase 21 |
 | `products` | a definir na Fase 13 | a definir na Fase 13 | a definir na Fase 13 |
 | `pricing` | x | x | x |
@@ -340,22 +340,22 @@ público, e `POST /print-profiles/import` está aberto aos três papéis desde e
 **Dependências:** Fases 6 e 8.
 
 **Tarefas:**
-- [ ] Entidade `FilamentRoll`: material, fornecedor, peso nominal (1 kg, 250 g, 3 kg…), peso inicial, tara do carretel, lote, data de compra, data de abertura, última secagem, localização, custo de aquisição, status (fechado, aberto, vazio, descartado)
-- [ ] Entidade `InventoryMovement` (ledger imutável): tipo (entrada, consumo, perda, ajuste de inventário), gramas ou quantidade, custo unitário, referência de origem (job, falha, compra, manual), usuário e data
-- [ ] Entrada manual de rolo (a entrada por compra vem na Fase 21)
-- [ ] Pesagem: informar o peso bruto na balança, calcular `saldo = bruto − tara` e gerar um movimento de ajuste com a diferença
-- [ ] Baixa manual de consumo, perda e descarte
-- [ ] Registrar abertura e secagem do rolo
-- [ ] Custo médio ponderado por material, recalculado a cada entrada e exposto em R$/g
-- [ ] Impedir saldo negativo
-- [ ] Web: lista de rolos por material (com saldo e filtros), detalhe do rolo com histórico, formulários de entrada, pesagem e baixa
-- [ ] Testes: custo médio (várias entradas com preços diferentes), pesagem, ledger, auditoria (usuário gravado)
+- [x] Entidade `FilamentRoll`: material, fornecedor, peso nominal (1 kg, 250 g, 3 kg…), peso inicial, tara do carretel, lote, data de compra, data de abertura, última secagem, localização, custo de aquisição, status (fechado, aberto, vazio, descartado)
+- [x] Entidade `InventoryMovement` (ledger imutável): tipo (entrada, consumo, perda, ajuste de inventário), gramas ou quantidade, custo unitário, referência de origem (job, falha, compra, manual), usuário e data
+- [x] Entrada manual de rolo (a entrada por compra vem na Fase 21)
+- [x] Pesagem: informar o peso bruto na balança, calcular `saldo = bruto − tara` e gerar um movimento de ajuste com a diferença
+- [x] Baixa manual de consumo, perda e descarte
+- [x] Registrar abertura e secagem do rolo
+- [x] Custo médio ponderado por material, recalculado a cada entrada e exposto em R$/g
+- [x] Impedir saldo negativo
+- [x] Web: lista de rolos por material (com saldo e filtros), detalhe do rolo com histórico, formulários de entrada, pesagem e baixa
+- [x] Testes: custo médio (várias entradas com preços diferentes), pesagem, ledger, auditoria (usuário gravado)
 
 **Critérios de aceite:**
-- Entrar 2 rolos com custos diferentes resulta no custo médio correto (teste)
-- Pesar um rolo com 812 g brutos e tara de 250 g deixa o saldo em 562 g, com um movimento de ajuste no histórico
-- Todo movimento mostra quem fez e quando
-- As telas foram validadas com Playwright, com os três estados
+- [x] Entrar 2 rolos com custos diferentes resulta no custo médio correto (teste)
+- [x] Pesar um rolo com 812 g brutos e tara de 250 g deixa o saldo em 562 g, com um movimento de ajuste no histórico
+- [x] Todo movimento mostra quem fez e quando
+- [x] As telas foram validadas com Playwright, com os três estados
 
 **Riscos ou observações:** a definição de "material" para o custo médio (tipo + marca + cor, ou só tipo) afeta o cálculo. Veja "Questões em aberto".
 
@@ -819,6 +819,9 @@ público, e `POST /print-profiles/import` está aberto aos três papéis desde e
 
 **Estoque**
 12. **"Material" no custo médio:** a chave é tipo + marca + cor (cada cor é um material) ou só tipo + marca?
+    *Respondida (Fase 9):* agrupa por `materialId` - o FK de `FilamentRoll` aponta para uma
+    linha específica de `Material`, e essa linha já é a combinação tipo+marca+cor da Fase 6; não
+    há como um rolo "ser" só o tipo sem já carregar marca e cor da linha referenciada.
 13. **Baixa no fim do job:** o operador escolhe o rolo, ou o sistema sugere (rolo aberto primeiro / FIFO)? E quando um rolo acaba no meio da impressão?
 14. **Etiqueta QR:** qual o formato (impressora térmica ou A4) e quais dados vão impressos?
 15. **Estoque mínimo de filamento:** vale por material (soma dos rolos) ou por número de rolos fechados?
