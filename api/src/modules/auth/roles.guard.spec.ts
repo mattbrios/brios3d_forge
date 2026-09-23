@@ -6,12 +6,14 @@ const SRC_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 // A matriz do ROADMAP.md preenche @Roles() só nestes controllers (door 1).
 const EXPECTED = new Set([
   'auth.controller.ts',
+  'customers.controller.ts',
   'materials.controller.ts',
   'pricing.controller.ts',
   'printers.controller.ts',
   'print-profiles.controller.ts',
   'sales-channels.controller.ts',
   'settings.controller.ts',
+  'suppliers.controller.ts',
 ]);
 
 function controllerFilesWithRolesDecorator(dir: string): string[] {
