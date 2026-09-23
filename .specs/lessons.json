@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 28,
+  "next_id": 30,
   "lessons": [
     {
       "id": "L-001",
@@ -490,6 +490,42 @@
       ],
       "created": "2026-09-23T22:00:42Z",
       "last_seen": "2026-09-23T22:00:42Z"
+    },
+    {
+      "id": "L-028",
+      "key": "surviving_mutant::when a patch dto re declares the same validators as the post dto instead of extending it prove the refused side on both routes covering only the post leaves every bound and format rule on the patch unproven",
+      "text": "When a PATCH DTO re-declares the same validators as the POST DTO instead of extending it, prove the refused side on both routes: covering only the POST leaves every bound and format rule on the PATCH unproven",
+      "signal": "surviving_mutant",
+      "scope": "dto",
+      "status": "candidate",
+      "features": [
+        "phase-10-stock-items"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "verification.md fault #5 - api/src/modules/inventory/dto/update-stock-item.dto.ts:30 (dto)"
+      ],
+      "created": "2026-09-23T23:20:45Z",
+      "last_seen": "2026-09-23T23:20:45Z"
+    },
+    {
+      "id": "L-029",
+      "key": "gate_fail::repeat a directed e2e run before recording it green a check that passes alone and fails once inside the batched run is a state leak in the shared test database not noise",
+      "text": "Repeat a directed e2e run before recording it green: a check that passes alone and fails once inside the batched run is a state leak in the shared test database, not noise",
+      "signal": "gate_fail",
+      "scope": "e2e",
+      "status": "candidate",
+      "features": [
+        "phase-10-stock-items"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "verification.md Gate - api/test/stock-items.e2e-spec.ts:717 (C37, red 1 of 6 runs) (e2e)"
+      ],
+      "created": "2026-09-23T23:20:53Z",
+      "last_seen": "2026-09-23T23:20:53Z"
     }
   ]
 }

@@ -3,12 +3,14 @@
 Profile: standard
 Plan: `.specs/features/phase-10-stock-items/plan.md`
 
-59 checks em 8 fatias · 6 one-way doors · nenhuma questão aberta
+60 checks em 8 fatias · 6 one-way doors · nenhuma questão aberta
 
 (C58 e C59 nasceram na rodada 1 da verificação, fechando as duas lacunas que ela achou: o lado
 aceito de `preferredSupplierId` não tinha prova em lugar nenhum, e os limites de tamanho e formato
 dos DTOs de item não eram nomeados por check algum. C24 também foi endurecido na mesma rodada -
-a intercalação concorrente passou a ser forçada por um lock no teste, em vez de esperada.)
+a intercalação concorrente passou a ser forçada por um lock no teste, em vez de esperada. C60 nasceu
+na rodada 2: o `UpdateStockItemDto` redeclara os validadores do `POST` em vez de estender, então C59
+não alcançava nenhum lado recusado do `PATCH`.)
 
 O `AGENTS.md` não declara perfil (`light` seria o padrão). Uso `standard`, como as Fases 8 e 9,
 por quatro formas que o repositório não tem análogo para:
@@ -116,6 +118,13 @@ Proof: `npm --prefix api run test:e2e -- test/stock-items.e2e-spec.ts -t "accept
 não é uuid, `compatiblePrinterIds` com um id que não é uuid, e `compatiblePrinterIds` com o mesmo id
 repetido (7 casos): cada um responde `400`, e nem item nem vínculo é persistido (AC 2)
 Proof: `npm --prefix api run test:e2e -- test/stock-items.e2e-spec.ts -t "rejects a field beyond its maximum length and a malformed id inside the payload"`
+
+**C60** - (nascido na rodada 2 da verificação) Tabela sobre `PATCH /inventory/items/:id` com os
+mesmos 7 casos de C59 mais `category` fora do enum e `active` não booleano (9 casos): cada um
+responde `400`, a linha do item continua com os valores originais e nenhum vínculo é persistido. O
+`UpdateStockItemDto` redeclara os 8 validadores em vez de estender o do `POST`, então relaxar
+qualquer um deles não é alcançado por C59 (AC 2, AC 6)
+Proof: `npm --prefix api run test:e2e -- test/stock-items.e2e-spec.ts -t "rejects the same invalid values on the PATCH, whose dto redeclares every validator"`
 
 ### S2 - Entrada com custo e custo médio ponderado · 5 files · 26 KB · ~7k
 
@@ -381,8 +390,9 @@ Proof: `npm --prefix api run test:e2e -- test/inventory.e2e-spec.ts -t "the roll
 | papéis que leem, lado positivo (3 rotas) | `GET /inventory/items` C11 · `GET /inventory/items/:id` C11 · `GET /inventory/movements` C11 | - |
 | filtros de `GET /inventory/items` (3) | `category` C9 · `search` em `name` C10 · `search` em `sku` C10 | - |
 | `StockItem.preferredSupplierId`, FK opcional (3) | omitido C1 · id inexistente recusado C5 · id existente aceito, gravado e devolvido C58 | - |
-| campos de texto do item com limite declarado (4) | `name` C59 · `sku` C59 · `location` C59 · `unitOfMeasure` C59 | - |
-| formato de id dentro do corpo (3) | `preferredSupplierId` não-uuid C59 · `compatiblePrinterIds` não-uuid C59 · `compatiblePrinterIds` repetido C59 | - |
+| campos de texto com limite declarado, os dois DTOs (8) | `POST`: `name` C59 · `sku` C59 · `location` C59 · `unitOfMeasure` C59 · `PATCH`: `name` C60 · `sku` C60 · `location` C60 · `unitOfMeasure` C60 | - |
+| formato de id dentro do corpo, os dois DTOs (6) | `POST`: `preferredSupplierId` não-uuid C59 · `compatiblePrinterIds` não-uuid C59 · repetido C59 · `PATCH`: `preferredSupplierId` não-uuid C60 · `compatiblePrinterIds` não-uuid C60 · repetido C60 | - |
+| validadores exclusivos do `UpdateStockItemDto` (2) | `category` fora do enum C60 · `active` não booleano C60 | - |
 | estados da tela `/inventory/items` (3) | carregando C44 · erro C46 · vazio C47 | - |
 | estados da tela `/inventory/movements` (3) | carregando C52 · erro C52 · vazio C52 | - |
 | UI por papel nas telas de item (2) | lista esconde criar/entrada para production e sales C48 · detalhe só leitura para sales C49 | - |

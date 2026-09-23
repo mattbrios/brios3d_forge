@@ -244,6 +244,35 @@ describe('Stock items (e2e)', () => {
     });
   });
 
+  it('rejects the same invalid values on the PATCH, whose dto redeclares every validator', async () => {
+    // O `UpdateStockItemDto` não é um `PartialType` do create: ele redeclara os 8 validadores, e
+    // relaxar qualquer um deles lá passava pela suíte inteira (achado da verificação, rodada 2).
+    const printerId = await createPrinter(dataSource, { name: 'X1C' });
+    const itemId = await createStockItem(dataSource, { name: 'Cola CA', location: 'gaveta 1' });
+    const cases = [
+      { name: 'n'.repeat(151) },
+      { sku: 's'.repeat(61) },
+      { location: 'l'.repeat(101) },
+      { unitOfMeasure: 'u'.repeat(21) },
+      { preferredSupplierId: 'nao-e-uuid' },
+      { compatiblePrinterIds: ['nao-e-uuid'] },
+      { compatiblePrinterIds: [printerId, printerId] },
+      { category: 'consumivel' },
+      { active: 'sim' },
+    ];
+    expect(cases).toHaveLength(9);
+    for (const body of cases) {
+      const response = await updateItemReq(itemId, body, adminCookie);
+      expect(response.status).toBe(400);
+    }
+
+    // Nenhuma das 9 tentativas mexeu na linha nem criou vínculo.
+    const rows: Array<{ name: string; location: string; category: string; active: boolean }> =
+      await dataSource.query('SELECT name, location, category, active FROM stock_items WHERE id = $1', [itemId]);
+    expect(rows[0]).toMatchObject({ name: 'Cola CA', location: 'gaveta 1', category: 'insumo', active: true });
+    expect(await countAllLinks()).toBe(0);
+  });
+
   it('rejects a field beyond its maximum length and a malformed id inside the payload', async () => {
     const printerId = await createPrinter(dataSource, { name: 'X1C' });
     const cases = [

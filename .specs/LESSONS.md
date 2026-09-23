@@ -176,6 +176,18 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: verification.md precision gap 2 - api/src/modules/inventory/dto/create-stock-item.dto.ts (api-routes)
 - last seen: 2026-09-23T22:00:42Z
 
+### L-028 - When a PATCH DTO re-declares the same validators as the POST DTO instead of extending it, prove the refused side on both routes: covering only the POST leaves every bound and format rule on the PATCH unproven
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `dto` · harmful: 0
+- features: phase-10-stock-items
+- evidence: verification.md fault #5 - api/src/modules/inventory/dto/update-stock-item.dto.ts:30 (dto)
+- last seen: 2026-09-23T23:20:45Z
+
+### L-029 - Repeat a directed e2e run before recording it green: a check that passes alone and fails once inside the batched run is a state leak in the shared test database, not noise
+- signal: `gate_fail` · recurrence: 1 feature(s) · scope: `e2e` · harmful: 0
+- features: phase-10-stock-items
+- evidence: verification.md Gate - api/test/stock-items.e2e-spec.ts:717 (C37, red 1 of 6 runs) (e2e)
+- last seen: 2026-09-23T23:20:53Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
