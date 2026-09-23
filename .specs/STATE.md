@@ -23,13 +23,26 @@
 | AD-017 | Senhas com `scrypt` do `node:crypto`, no formato `scrypt$N=131072,r=8,p=1$<salt>$<hash>` (parâmetros dentro da string) | mínimo da OWASP sem dependência nativa; os parâmetros podem subir sem invalidar hashes antigos | active | 2026-09-21 |
 | AD-018 | Autorização por padrão: `RolesGuard` (`APP_GUARD`, depois do `AuthGuard`) exige `admin` em toda rota protegida sem `@Roles()`; `@Roles(...)` libera outros papéis, e `admin` passa sempre sem precisar ser listado | uma rota nova esquecida nasce só de admin, nunca aberta a todo mundo; mesmo raciocínio do AD-015. Decisão do usuário na Fase 4 | active | 2026-09-22 |
 | AD-019 | Contrato do usuário na administração (`PublicUser`): `{ id, name, email, role, active }` em `GET /users`, `POST /users` e `PATCH /users/:id`, sem `password_hash` nem datas | é o `AuthUser` da Fase 3 mais `active`; as fases seguintes que listam ou editam usuários reusam o mesmo formato | active | 2026-09-22 |
+| AD-020 | Contrato de paginação/busca/filtro de toda lista futura: query `page` (1-based, default `1`), `pageSize` (default `20`, máx `100`), `search` (substring case-insensitive nos campos de texto do recurso), um filtro exato case-insensitive por campo (ex.: `type`); resposta `{ items, total, page, pageSize }` | primeira lista paginada do sistema (Fase 6, `GET /materials`); o ROADMAP nomeia esta fase como a que fixa o padrão que as Fases 7-10 copiam | active | 2026-09-22 |
+| AD-021 | Componentes web reutilizáveis de CRUD em `web/src/components/crud/`: `DataTable<T>({ columns: { key, label, render? }[], rows, getRowId, renderActions? })`, `EntityForm<V>({ fields, values, onChange, onSubmit, submitting, error })`, `ConfirmDialog({ message, confirmLabel, onConfirm, onCancel, pending })` | Fase 6 introduz o padrão nomeado pelo ROADMAP ("padrão de CRUD reutilizável") que as Fases 7-10 devem copiar em vez de duplicar markup por tela | active | 2026-09-22 |
 
 ## Handoff
 
-**Feature**: phase-4-users-roles - concluída
-**Where**: C1-C53 verificados. Rodada 1 (`standard`): FAIL - 49/53, mutante F4 sobrevivente, 3 lacunas de precisão de teste. Rodada 2 (escopada, `standard`): PASS, 53/53, 10 faltas injetadas e mortas, `validate_verification.py` exit 0. Conferido também com o Playwright (login, criar usuário, menu por papel, troca de senha, desativar/reativar)
+**Feature**: phase-6-materials - concluída
+**Where**: C1-C37 verificados (33 na derivação inicial, C34-C37 acrescentados depois da rodada 1).
+Rodada 1 (`standard`): FAIL - mutante sobrevivente na revalidação de secagem do `PATCH`
+(`materials.service.ts:87-94`, segunda implementação independente da regra do AC 4, sem nenhuma
+prova), mais 3 lacunas (10/11 membros do AC 16 sem prova no `PATCH`, `Test policy` dos DTOs não
+cumprida, precision gap sobre id malformado). Fix só em `api/test/materials.e2e-spec.ts` (C16
+ampliado para tabela-driven, C34-C37 novos). Rodada 2 (escopada, `standard`): PASS, 37/37, 5
+faltas injetadas e mortas, `validate_checks.py` e `validate_verification.py` exit 0. Validado
+também com o Playwright MCP: admin cadastra material com secagem, edita a densidade, desativa
+com confirmação e reativa, filtra por tipo inexistente (estado vazio); vendas só lê e vê
+"Materiais" no menu
 **In progress**: nada
-**Next step**: o usuário decide sobre o commit (o `AGENTS.md` pede pedido explícito). O Verifier notou que `auth.e2e-spec.ts` (código da Fase 3, não tocado aqui) fica instável sob carga da máquina com o `testTimeout` de 30s atual - vale considerar subir esse limite numa próxima fase
+**Next step**: nenhum bloqueio. Fase 7 (Impressoras) é a próxima a copiar o padrão de CRUD
+reutilizável (`AD-020`, `AD-021`) fixado nesta fase
 **Blockers**: nenhum
-**Uncommitted**: toda a Fase 4 (API, web, `.specs/features/phase-4-users-roles/`, `ROADMAP.md`, este `STATE.md`)
+**Uncommitted**: `.specs/lessons.json`, `.specs/LESSONS.md` (lição L-013, candidate) e este
+`STATE.md` - o resto da Fase 6 já está commitado (ver `git log`)
 **Branch**: main

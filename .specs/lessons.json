@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 13,
+  "next_id": 14,
   "lessons": [
     {
       "id": "L-001",
@@ -220,6 +220,24 @@
       ],
       "created": "2026-09-22T02:45:02Z",
       "last_seen": "2026-09-22T02:45:02Z"
+    },
+    {
+      "id": "L-013",
+      "key": "surviving_mutant::when a business rule is implemented independently in two code paths e g dto validation on create service level revalidation on update each path needs its own proof a green suite covering only the first leaves the second unprotected",
+      "text": "When a business rule is implemented independently in two code paths (e.g. DTO validation on create, service-level revalidation on update), each path needs its own proof; a green suite covering only the first leaves the second unprotected",
+      "signal": "surviving_mutant",
+      "scope": "validation",
+      "status": "candidate",
+      "features": [
+        "phase-6-materials"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "materials.service.ts:90 (round 1 mutant: finalDryingHours > 0 -> >= 0) (validation)"
+      ],
+      "created": "2026-09-23T02:03:59Z",
+      "last_seen": "2026-09-23T02:03:59Z"
     }
   ]
 }

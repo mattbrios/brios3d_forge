@@ -86,6 +86,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: verification.md round 3 gap 4, auth.e2e-spec.ts:305 C57 timeout at 5000 ms (api)
 - last seen: 2026-09-22T02:45:02Z
 
+### L-013 - When a business rule is implemented independently in two code paths (e.g. DTO validation on create, service-level revalidation on update), each path needs its own proof; a green suite covering only the first leaves the second unprotected
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `validation` · harmful: 0
+- features: phase-6-materials
+- evidence: materials.service.ts:90 (round 1 mutant: finalDryingHours > 0 -> >= 0) (validation)
+- last seen: 2026-09-23T02:03:59Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
