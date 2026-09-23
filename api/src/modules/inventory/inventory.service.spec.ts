@@ -3,6 +3,7 @@ import { CreateRollDto } from './dto/create-roll.dto.js';
 import { FilamentRoll } from './entities/filament-roll.entity.js';
 import { InventoryMovement } from './entities/inventory-movement.entity.js';
 import { InventoryService } from './inventory.service.js';
+import { StockItem } from './entities/stock-item.entity.js';
 import { Material } from '../materials/entities/material.entity.js';
 
 const VALID_DTO: CreateRollDto = {
@@ -34,9 +35,11 @@ function setup() {
   const transaction = vi.fn((callback: (m: unknown) => unknown) => callback(manager));
   const rolls = { manager: { transaction } };
   const movements = {};
+  const stockItems = {};
   const service = new InventoryService(
     rolls as unknown as Repository<FilamentRoll>,
     movements as unknown as Repository<InventoryMovement>,
+    stockItems as unknown as Repository<StockItem>,
   );
   return { service, rollsRepoMock, movementsRepoMock, transaction };
 }

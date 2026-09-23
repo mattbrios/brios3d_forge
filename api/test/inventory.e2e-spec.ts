@@ -130,8 +130,8 @@ describe('Inventory (e2e)', () => {
 
     const movements = await movementsOf(response.body.id as string);
     expect(movements).toHaveLength(1);
-    expect(movements[0]).toMatchObject({ type: 'entrada', quantity_grams: 1000 });
-    expect(Number(movements[0].unit_cost_cents_per_gram)).toBe(12);
+    expect(movements[0]).toMatchObject({ type: 'entrada', quantity: 1000 });
+    expect(Number(movements[0].unit_cost_cents)).toBe(12);
   });
 
   it('rejects an unknown or inactive materialId', async () => {
@@ -236,8 +236,8 @@ describe('Inventory (e2e)', () => {
     await createMovement(dataSource, {
       rollId,
       type: 'entrada',
-      quantityGrams: 1000,
-      unitCostCentsPerGram: 12,
+      quantity: 1000,
+      unitCostCents: 12,
       userId: (await loginUserId(dataSource, EMAILS[0])) as string,
     });
 
@@ -261,7 +261,7 @@ describe('Inventory (e2e)', () => {
 
     const movements = await movementsOf(rollId);
     expect(movements).toHaveLength(1);
-    expect(movements[0]).toMatchObject({ type: 'ajuste', quantity_grams: -38 });
+    expect(movements[0]).toMatchObject({ type: 'ajuste', quantity: -38 });
   });
 
   it("rejects a gross weight below the roll's tare", async () => {
@@ -278,19 +278,19 @@ describe('Inventory (e2e)', () => {
   it('consumo and perda movements decrement the balance', async () => {
     for (const type of ['consumo', 'perda']) {
       const rollId = await createRoll(dataSource, { materialId, balanceGrams: 500 });
-      const response = await movementReq(rollId, { type, quantityGrams: 200 }, productionCookie);
+      const response = await movementReq(rollId, { type, quantity: 200 }, productionCookie);
       expect(response.status).toBe(201);
       expect(response.body.balanceGrams).toBe(300);
       const movements = await movementsOf(rollId);
       expect(movements).toHaveLength(1);
-      expect(movements[0]).toMatchObject({ type, quantity_grams: -200 });
+      expect(movements[0]).toMatchObject({ type, quantity: -200 });
     }
   });
 
   it('a movement that consumes the whole balance without discarding derives status vazio', async () => {
     const rollId = await createRoll(dataSource, { materialId, balanceGrams: 200 });
 
-    const response = await movementReq(rollId, { type: 'consumo', quantityGrams: 200 }, productionCookie);
+    const response = await movementReq(rollId, { type: 'consumo', quantity: 200 }, productionCookie);
     expect(response.status).toBe(201);
     expect(response.body.balanceGrams).toBe(0);
     expect(response.body.status).toBe('vazio');
@@ -300,7 +300,7 @@ describe('Inventory (e2e)', () => {
   it("rejects a movement quantity greater than the roll's balance", async () => {
     const rollId = await createRoll(dataSource, { materialId, balanceGrams: 100 });
 
-    const response = await movementReq(rollId, { type: 'consumo', quantityGrams: 150 }, productionCookie);
+    const response = await movementReq(rollId, { type: 'consumo', quantity: 150 }, productionCookie);
     expect(response.status).toBe(400);
     expect(await balanceOf(rollId)).toBe(100);
     expect(await movementsOf(rollId)).toHaveLength(0);
@@ -310,8 +310,8 @@ describe('Inventory (e2e)', () => {
     const rollId = await createRoll(dataSource, { materialId, balanceGrams: 100 });
 
     const [first, second] = await Promise.all([
-      movementReq(rollId, { type: 'consumo', quantityGrams: 70 }, productionCookie),
-      movementReq(rollId, { type: 'consumo', quantityGrams: 70 }, productionCookie),
+      movementReq(rollId, { type: 'consumo', quantity: 70 }, productionCookie),
+      movementReq(rollId, { type: 'consumo', quantity: 70 }, productionCookie),
     ]);
     const statuses = [first.status, second.status].sort((a, b) => a - b);
     expect(statuses).toEqual([201, 400]);
@@ -329,7 +329,7 @@ describe('Inventory (e2e)', () => {
 
     const movements = await movementsOf(rollId);
     expect(movements).toHaveLength(1);
-    expect(movements[0]).toMatchObject({ type: 'perda', quantity_grams: -200 });
+    expect(movements[0]).toMatchObject({ type: 'perda', quantity: -200 });
   });
 
   // S5 - Abertura e secagem
@@ -371,7 +371,7 @@ describe('Inventory (e2e)', () => {
     const create = await createRollReq({ ...VALID_ROLL, materialId }, adminCookie);
     const rollId = create.body.id as string;
     await weighReq(rollId, { grossWeightGrams: 1100 }, productionCookie);
-    await movementReq(rollId, { type: 'consumo', quantityGrams: 100 }, productionCookie);
+    await movementReq(rollId, { type: 'consumo', quantity: 100 }, productionCookie);
 
     const movements = await movementsOf(rollId);
     expect(movements).toHaveLength(3);
@@ -384,7 +384,7 @@ describe('Inventory (e2e)', () => {
     const create = await createRollReq({ ...VALID_ROLL, materialId }, adminCookie);
     const rollId = create.body.id as string;
     await weighReq(rollId, { grossWeightGrams: 1100 }, productionCookie);
-    await movementReq(rollId, { type: 'consumo', quantityGrams: 100 }, productionCookie);
+    await movementReq(rollId, { type: 'consumo', quantity: 100 }, productionCookie);
 
     const response = await getByIdReq(rollId, adminCookie);
     expect(response.status).toBe(200);
@@ -395,12 +395,66 @@ describe('Inventory (e2e)', () => {
     expect(timestamps).toEqual([...timestamps].sort((a, b) => a - b));
     for (const movement of movements) {
       expect(movement).toHaveProperty('type');
-      expect(movement).toHaveProperty('quantityGrams');
-      expect(movement).toHaveProperty('unitCostCentsPerGram');
+      expect(movement).toHaveProperty('quantity');
+      expect(movement).toHaveProperty('unitCostCents');
       expect(movement).toHaveProperty('reason');
       expect(movement).toHaveProperty('userId');
       expect(movement).toHaveProperty('createdAt');
     }
+  });
+
+  // Fase 10, door 4 - o contrato do movimento passou a se chamar quantity/unitCostCents em toda
+  // rota, e o risco de regressão está justamente aqui, em código que a Fase 10 não mudaria por
+  // outro motivo.
+
+  it('the roll movement history uses the renamed quantity and unitCostCents keys', async () => {
+    const create = await createRollReq({ ...VALID_ROLL, materialId }, adminCookie);
+    const rollId = create.body.id as string;
+    await movementReq(rollId, { type: 'consumo', quantity: 100 }, productionCookie);
+
+    const response = await getByIdReq(rollId, adminCookie);
+    expect(response.status).toBe(200);
+    const movements = response.body.movements as Array<Record<string, unknown>>;
+    expect(movements).toHaveLength(2);
+    for (const movement of movements) {
+      expect(movement).toHaveProperty('quantity');
+      expect(movement).toHaveProperty('unitCostCents');
+      expect(movement).not.toHaveProperty('quantityGrams');
+      expect(movement).not.toHaveProperty('unitCostCentsPerGram');
+    }
+    expect(movements[0]).toMatchObject({ type: 'entrada', quantity: 1000, unitCostCents: 12 });
+    expect(movements[1]).toMatchObject({ type: 'consumo', quantity: -100, unitCostCents: null });
+  });
+
+  it('roll entrada, ajuste and consumo keep the same ledger values after the rename', async () => {
+    // Mesmo caso de referência da Fase 9 (1000 g a 12000 centavos, pesagem 812 g com tara 250 g,
+    // baixa de 100 g): a renomeação mudou o nome da coluna, nunca o valor gravado.
+    const create = await createRollReq({ ...VALID_ROLL, materialId }, adminCookie);
+    const rollId = create.body.id as string;
+    await weighReq(rollId, { grossWeightGrams: 812 }, productionCookie);
+    await movementReq(rollId, { type: 'consumo', quantity: 100 }, productionCookie);
+
+    const movements = await movementsOf(rollId);
+    expect(movements.map((movement) => movement.type)).toEqual(['entrada', 'ajuste', 'consumo']);
+    expect(movements.map((movement) => Number(movement.quantity))).toEqual([1000, -438, -100]);
+    expect(Number(movements[0].unit_cost_cents)).toBe(12);
+    expect(movements[1].unit_cost_cents).toBeNull();
+    expect(movements[2].unit_cost_cents).toBeNull();
+    // Dono único (door 3): o movimento de rolo continua sem `stock_item_id`.
+    expect(movements.every((movement) => movement.stock_item_id === null)).toBe(true);
+  });
+
+  it('the roll movement route takes quantity and rejects the old quantityGrams key', async () => {
+    const rollId = await createRoll(dataSource, { materialId, balanceGrams: 500 });
+
+    const renamed = await movementReq(rollId, { type: 'consumo', quantity: 50 }, productionCookie);
+    expect(renamed.status).toBe(201);
+    expect(renamed.body.balanceGrams).toBe(450);
+
+    // A chave antiga passa a ser propriedade não declarada, recusada pelo ValidationPipe (AD-003).
+    const oldKey = await movementReq(rollId, { type: 'consumo', quantityGrams: 50 }, productionCookie);
+    expect(oldKey.status).toBe(400);
+    expect(await balanceOf(rollId)).toBe(450);
   });
 
   it('no route exists to edit or delete an inventory movement', async () => {
@@ -408,7 +462,7 @@ describe('Inventory (e2e)', () => {
     const movementId = await createMovement(dataSource, {
       rollId,
       type: 'entrada',
-      quantityGrams: 1000,
+      quantity: 1000,
       userId: (await loginUserId(dataSource, EMAILS[0])) as string,
     });
 
@@ -431,7 +485,7 @@ describe('Inventory (e2e)', () => {
       () => listReq(''),
       () => getByIdReq(UNKNOWN_ROLL_ID),
       () => weighReq(UNKNOWN_ROLL_ID, { grossWeightGrams: 100 }),
-      () => movementReq(UNKNOWN_ROLL_ID, { type: 'consumo', quantityGrams: 1 }),
+      () => movementReq(UNKNOWN_ROLL_ID, { type: 'consumo', quantity: 1 }),
       () => discardReq(UNKNOWN_ROLL_ID),
       () => openReq(UNKNOWN_ROLL_ID),
       () => dryReq(UNKNOWN_ROLL_ID),
@@ -448,7 +502,7 @@ describe('Inventory (e2e)', () => {
     const routes: Array<() => Promise<{ status: number }>> = [
       () => getByIdReq(UNKNOWN_ROLL_ID, adminCookie),
       () => weighReq(UNKNOWN_ROLL_ID, { grossWeightGrams: 100 }, productionCookie),
-      () => movementReq(UNKNOWN_ROLL_ID, { type: 'consumo', quantityGrams: 1 }, productionCookie),
+      () => movementReq(UNKNOWN_ROLL_ID, { type: 'consumo', quantity: 1 }, productionCookie),
       () => discardReq(UNKNOWN_ROLL_ID, productionCookie),
       () => openReq(UNKNOWN_ROLL_ID, productionCookie),
       () => dryReq(UNKNOWN_ROLL_ID, productionCookie),
@@ -464,7 +518,7 @@ describe('Inventory (e2e)', () => {
     const rollId = await createRoll(dataSource, { materialId, balanceGrams: 200 });
     const routes: Array<() => Promise<{ status: number }>> = [
       () => weighReq(rollId, { grossWeightGrams: 100 }, salesCookie),
-      () => movementReq(rollId, { type: 'consumo', quantityGrams: 1 }, salesCookie),
+      () => movementReq(rollId, { type: 'consumo', quantity: 1 }, salesCookie),
       () => discardReq(rollId, salesCookie),
       () => openReq(rollId, salesCookie),
       () => dryReq(rollId, salesCookie),
@@ -481,7 +535,7 @@ describe('Inventory (e2e)', () => {
     const rollId = await createRoll(dataSource, { materialId, balanceGrams: 0, discardedAt: new Date() });
     const routes: Array<() => Promise<{ status: number }>> = [
       () => weighReq(rollId, { grossWeightGrams: 100 }, productionCookie),
-      () => movementReq(rollId, { type: 'consumo', quantityGrams: 1 }, productionCookie),
+      () => movementReq(rollId, { type: 'consumo', quantity: 1 }, productionCookie),
       () => discardReq(rollId, productionCookie),
     ];
     for (const route of routes) {

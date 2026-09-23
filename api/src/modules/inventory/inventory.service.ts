@@ -1,33 +1,55 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, In, Repository } from 'typeorm';
 import { computeAverageCostCentsPerGram } from './average-cost.js';
+import { CountItemDto } from './dto/count-item.dto.js';
+import { CreateEntryDto } from './dto/create-entry.dto.js';
+import { CreateItemMovementDto } from './dto/create-item-movement.dto.js';
 import { CreateMovementDto } from './dto/create-movement.dto.js';
 import { CreateRollDto } from './dto/create-roll.dto.js';
+import { CreateStockItemDto } from './dto/create-stock-item.dto.js';
+import { ListMovementsDto } from './dto/list-movements.dto.js';
 import { ListRollsDto } from './dto/list-rolls.dto.js';
+import { ListStockItemsDto } from './dto/list-stock-items.dto.js';
 import { MaterialsSummaryDto } from './dto/materials-summary.dto.js';
+import { UpdateStockItemDto } from './dto/update-stock-item.dto.js';
 import { WeighRollDto } from './dto/weigh-roll.dto.js';
 import { FilamentRoll } from './entities/filament-roll.entity.js';
 import { InventoryMovement } from './entities/inventory-movement.entity.js';
+import { StockItemPrinter } from './entities/stock-item-printer.entity.js';
+import { StockItem } from './entities/stock-item.entity.js';
 import { isCheckViolation } from './is-check-violation.js';
 import {
+  COMPATIBILITY_ONLY_FOR_SPARE_PART,
   DEFAULT_PAGE,
   DEFAULT_PAGE_SIZE,
+  DUPLICATE_SKU,
   INSUFFICIENT_BALANCE,
+  type ListMovementsResponse,
   type ListRollsResponse,
+  type ListStockItemsResponse,
   MATERIAL_NOT_FOUND,
   type MaterialsSummaryResponse,
+  PRINTER_NOT_FOUND,
   ROLL_DISCARDED,
   ROLL_NOT_FOUND,
   type RollDetailResponse,
   type RollResponse,
+  STOCK_ITEM_INACTIVE,
+  STOCK_ITEM_NOT_FOUND,
   SUPPLIER_NOT_FOUND,
+  type StockItemDetailResponse,
+  type StockItemResponse,
   WEIGHT_BELOW_TARE,
   toMovementResponse,
   toRollResponse,
+  toStockItemResponse,
 } from './inventory.types.js';
+import { computeStockItemAverageCost } from './stock-item-average-cost.js';
 import { Material } from '../materials/entities/material.entity.js';
+import { Printer } from '../printers/entities/printer.entity.js';
 import { Supplier } from '../suppliers/entities/supplier.entity.js';
+import { isUniqueViolation } from '../users/is-unique-violation.js';
 
 // Escapa os curingas do ILIKE para o texto do usuário virar uma substring literal.
 function escapeLike(value: string): string {
@@ -46,6 +68,7 @@ export class InventoryService {
   constructor(
     @InjectRepository(FilamentRoll) private readonly rolls: Repository<FilamentRoll>,
     @InjectRepository(InventoryMovement) private readonly movements: Repository<InventoryMovement>,
+    @InjectRepository(StockItem) private readonly stockItems: Repository<StockItem>,
   ) {}
 
   async createRoll(dto: CreateRollDto, userId: string): Promise<RollResponse> {
@@ -84,9 +107,10 @@ export class InventoryService {
       await movementsRepo.save(
         movementsRepo.create({
           rollId: roll.id,
+          stockItemId: null,
           type: 'entrada',
-          quantityGrams: dto.initialWeightGrams,
-          unitCostCentsPerGram: dto.acquisitionCostCents / dto.initialWeightGrams,
+          quantity: dto.initialWeightGrams,
+          unitCostCents: dto.acquisitionCostCents / dto.initialWeightGrams,
           reason: null,
           userId,
         }),
@@ -155,9 +179,10 @@ export class InventoryService {
       await movementsRepo.save(
         movementsRepo.create({
           rollId: roll.id,
+          stockItemId: null,
           type: 'ajuste',
-          quantityGrams: delta,
-          unitCostCentsPerGram: null,
+          quantity: delta,
+          unitCostCents: null,
           reason: null,
           userId,
         }),
@@ -191,7 +216,7 @@ export class InventoryService {
           .createQueryBuilder()
           .update(FilamentRoll)
           .set({ balanceGrams: () => 'balance_grams - :qty' })
-          .where('id = :id', { id, qty: dto.quantityGrams })
+          .where('id = :id', { id, qty: dto.quantity })
           .execute();
       } catch (error) {
         if (isCheckViolation(error)) {
@@ -203,9 +228,10 @@ export class InventoryService {
       await movementsRepo.save(
         movementsRepo.create({
           rollId: roll.id,
+          stockItemId: null,
           type: dto.type,
-          quantityGrams: -dto.quantityGrams,
-          unitCostCentsPerGram: null,
+          quantity: -dto.quantity,
+          unitCostCents: null,
           reason: dto.reason ?? null,
           userId,
         }),
@@ -238,9 +264,10 @@ export class InventoryService {
         await movementsRepo.save(
           movementsRepo.create({
             rollId: roll.id,
+            stockItemId: null,
             type: 'perda',
-            quantityGrams: -remaining,
-            unitCostCentsPerGram: null,
+            quantity: -remaining,
+            unitCostCents: null,
             reason: null,
             userId,
           }),
@@ -308,5 +335,354 @@ export class InventoryService {
     }));
 
     return { items };
+  }
+
+  // --- Itens de estoque (insumos e peças de reposição) ---
+
+  async createItem(dto: CreateStockItemDto): Promise<StockItemResponse> {
+    return this.stockItems.manager.transaction(async (manager) => {
+      await this.assertCompatibilityAllowed(manager, dto.category, dto.compatiblePrinterIds);
+      await this.assertSupplierExists(manager, dto.preferredSupplierId);
+
+      const itemsRepo = manager.getRepository(StockItem);
+      // Saldo 0 e nenhum movimento (door 6): quem carrega quantidade e custo é a entrada.
+      const item = await this.saveItem(
+        itemsRepo,
+        itemsRepo.create({
+          category: dto.category,
+          name: dto.name,
+          sku: dto.sku ?? null,
+          unitOfMeasure: dto.unitOfMeasure,
+          location: dto.location ?? null,
+          preferredSupplierId: dto.preferredSupplierId ?? null,
+          balanceQuantity: 0,
+          active: true,
+        }),
+      );
+
+      const printerIds = await this.replaceCompatibility(manager, item.id, dto.compatiblePrinterIds);
+      return toStockItemResponse(item, null, printerIds);
+    });
+  }
+
+  async updateItem(id: string, dto: UpdateStockItemDto): Promise<StockItemResponse> {
+    return this.stockItems.manager.transaction(async (manager) => {
+      const itemsRepo = manager.getRepository(StockItem);
+      const item = await itemsRepo.findOne({ where: { id } });
+      if (!item) {
+        throw new NotFoundException(STOCK_ITEM_NOT_FOUND);
+      }
+
+      const category = dto.category ?? item.category;
+      await this.assertCompatibilityAllowed(manager, category, dto.compatiblePrinterIds);
+      await this.assertSupplierExists(manager, dto.preferredSupplierId);
+
+      if (dto.category !== undefined) item.category = dto.category;
+      if (dto.name !== undefined) item.name = dto.name;
+      if (dto.sku !== undefined) item.sku = dto.sku;
+      if (dto.unitOfMeasure !== undefined) item.unitOfMeasure = dto.unitOfMeasure;
+      if (dto.location !== undefined) item.location = dto.location;
+      if (dto.preferredSupplierId !== undefined) item.preferredSupplierId = dto.preferredSupplierId;
+      if (dto.active !== undefined) item.active = dto.active;
+      await this.saveItem(itemsRepo, item);
+
+      // Omitir o campo preserva os vínculos (AC 33); enviá-lo substitui o conjunto (AC 32).
+      const printerIds =
+        dto.compatiblePrinterIds === undefined
+          ? await this.compatibilityOf(manager, id)
+          : await this.replaceCompatibility(manager, id, dto.compatiblePrinterIds);
+
+      const { avgCostCents } = await this.ledgerStateOf(manager, id);
+      return toStockItemResponse(item, avgCostCents, printerIds);
+    });
+  }
+
+  async listItems(query: ListStockItemsDto): Promise<ListStockItemsResponse> {
+    const page = query.page ?? DEFAULT_PAGE;
+    const pageSize = query.pageSize ?? DEFAULT_PAGE_SIZE;
+
+    const qb = this.stockItems
+      .createQueryBuilder('item')
+      .orderBy('item.name', 'ASC')
+      .skip((page - 1) * pageSize)
+      .take(pageSize);
+
+    if (query.category !== undefined) {
+      qb.andWhere('item.category = :category', { category: query.category });
+    }
+    if (query.search !== undefined) {
+      qb.andWhere('(item.name ILIKE :search OR item.sku ILIKE :search)', {
+        search: `%${escapeLike(query.search)}%`,
+      });
+    }
+
+    const [rows, total] = await qb.getManyAndCount();
+    const ids = rows.map((row) => row.id);
+    const ledgerByItem = await this.ledgerStateOfMany(this.stockItems.manager, ids);
+    const printersByItem = await this.compatibilityOfMany(this.stockItems.manager, ids);
+
+    const items = rows.map((row) =>
+      toStockItemResponse(row, ledgerByItem.get(row.id)?.avgCostCents ?? null, printersByItem.get(row.id) ?? []),
+    );
+    return { items, total, page, pageSize };
+  }
+
+  async getItemById(id: string): Promise<StockItemDetailResponse> {
+    const item = await this.stockItems.findOne({ where: { id } });
+    if (!item) {
+      throw new NotFoundException(STOCK_ITEM_NOT_FOUND);
+    }
+    const movements = await this.movements.find({
+      where: { stockItemId: id },
+      order: { createdAt: 'ASC', id: 'ASC' },
+    });
+    const { avgCostCents } = computeStockItemAverageCost(movements);
+    const printerIds = await this.compatibilityOf(this.stockItems.manager, id);
+    return {
+      ...toStockItemResponse(item, avgCostCents, printerIds),
+      movements: movements.map(toMovementResponse),
+    };
+  }
+
+  async addEntry(id: string, dto: CreateEntryDto, userId: string): Promise<StockItemResponse> {
+    return this.stockItems.manager.transaction(async (manager) => {
+      const item = await manager.getRepository(StockItem).findOne({ where: { id } });
+      if (!item) {
+        throw new NotFoundException(STOCK_ITEM_NOT_FOUND);
+      }
+      // Desativar é "não comprar mais isto": a entrada para, as saídas continuam (AC 18).
+      if (!item.active) {
+        throw new BadRequestException(STOCK_ITEM_INACTIVE);
+      }
+
+      await this.shiftBalance(manager, id, dto.quantity);
+      await this.writeItemMovement(manager, {
+        stockItemId: id,
+        type: 'entrada',
+        quantity: dto.quantity,
+        unitCostCents: dto.unitCostCents,
+        reason: dto.reason ?? null,
+        userId,
+      });
+
+      return this.reloadItem(manager, id);
+    });
+  }
+
+  async addItemMovement(id: string, dto: CreateItemMovementDto, userId: string): Promise<StockItemResponse> {
+    return this.stockItems.manager.transaction(async (manager) => {
+      const item = await manager.getRepository(StockItem).findOne({ where: { id } });
+      if (!item) {
+        throw new NotFoundException(STOCK_ITEM_NOT_FOUND);
+      }
+
+      // Mesmo caminho do rolo (AD-023): decremento relativo em SQL, e quem estoura o saldo é
+      // rejeitado pelo CHECK do banco, nunca por uma pré-checagem em memória.
+      await this.shiftBalance(manager, id, -dto.quantity);
+      await this.writeItemMovement(manager, {
+        stockItemId: id,
+        type: dto.type,
+        quantity: -dto.quantity,
+        unitCostCents: null,
+        reason: dto.reason ?? null,
+        userId,
+      });
+
+      return this.reloadItem(manager, id);
+    });
+  }
+
+  async countItem(id: string, dto: CountItemDto, userId: string): Promise<StockItemResponse> {
+    return this.stockItems.manager.transaction(async (manager) => {
+      const itemsRepo = manager.getRepository(StockItem);
+      // A contagem grava um valor absoluto, então a linha é travada para o delta do `ajuste`
+      // casar com o saldo que de fato foi substituído.
+      const item = await itemsRepo.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
+      if (!item) {
+        throw new NotFoundException(STOCK_ITEM_NOT_FOUND);
+      }
+
+      const delta = dto.countedQuantity - item.balanceQuantity;
+      item.balanceQuantity = dto.countedQuantity;
+      await itemsRepo.save(item);
+
+      // Grava o ajuste mesmo com delta 0 (AC 26): a contagem em si é o fato auditável.
+      await this.writeItemMovement(manager, {
+        stockItemId: id,
+        type: 'ajuste',
+        quantity: delta,
+        unitCostCents: null,
+        reason: dto.reason ?? null,
+        userId,
+      });
+
+      return this.reloadItem(manager, id);
+    });
+  }
+
+  async listMovements(query: ListMovementsDto): Promise<ListMovementsResponse> {
+    const page = query.page ?? DEFAULT_PAGE;
+    const pageSize = query.pageSize ?? DEFAULT_PAGE_SIZE;
+
+    // Lista unificada (door 3): rolo e item na mesma tabela, então na mesma página.
+    const [rows, total] = await this.movements
+      .createQueryBuilder('movement')
+      .orderBy('movement.createdAt', 'DESC')
+      .addOrderBy('movement.id', 'DESC')
+      .skip((page - 1) * pageSize)
+      .take(pageSize)
+      .getManyAndCount();
+
+    return { items: rows.map(toMovementResponse), total, page, pageSize };
+  }
+
+  private async saveItem(itemsRepo: Repository<StockItem>, item: StockItem): Promise<StockItem> {
+    try {
+      return await itemsRepo.save(item);
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        throw new ConflictException(DUPLICATE_SKU);
+      }
+      throw error;
+    }
+  }
+
+  private async assertCompatibilityAllowed(
+    manager: EntityManager,
+    category: StockItem['category'],
+    printerIds: string[] | undefined,
+  ): Promise<void> {
+    if (printerIds === undefined) {
+      return;
+    }
+    if (category !== 'peca_reposicao') {
+      throw new BadRequestException(COMPATIBILITY_ONLY_FOR_SPARE_PART);
+    }
+    if (printerIds.length === 0) {
+      return;
+    }
+    const found = await manager.getRepository(Printer).count({ where: { id: In(printerIds) } });
+    // Um id desconhecido derruba o conjunto inteiro (AC 31): a transação não persiste vínculo
+    // nenhum, nem os válidos.
+    if (found !== printerIds.length) {
+      throw new BadRequestException(PRINTER_NOT_FOUND);
+    }
+  }
+
+  private async assertSupplierExists(manager: EntityManager, supplierId: string | undefined): Promise<void> {
+    if (supplierId === undefined) {
+      return;
+    }
+    const supplier = await manager.getRepository(Supplier).findOne({ where: { id: supplierId } });
+    if (!supplier) {
+      throw new BadRequestException(SUPPLIER_NOT_FOUND);
+    }
+  }
+
+  private async replaceCompatibility(
+    manager: EntityManager,
+    stockItemId: string,
+    printerIds: string[] | undefined,
+  ): Promise<string[]> {
+    if (printerIds === undefined) {
+      return [];
+    }
+    const linksRepo = manager.getRepository(StockItemPrinter);
+    await linksRepo.delete({ stockItemId });
+    if (printerIds.length > 0) {
+      await linksRepo.insert(printerIds.map((printerId) => ({ stockItemId, printerId })));
+    }
+    return this.compatibilityOf(manager, stockItemId);
+  }
+
+  private async compatibilityOf(manager: EntityManager, stockItemId: string): Promise<string[]> {
+    const links = await manager.getRepository(StockItemPrinter).find({ where: { stockItemId } });
+    return links.map((link) => link.printerId).sort();
+  }
+
+  private async compatibilityOfMany(
+    manager: EntityManager,
+    stockItemIds: string[],
+  ): Promise<Map<string, string[]>> {
+    const byItem = new Map<string, string[]>();
+    if (stockItemIds.length === 0) {
+      return byItem;
+    }
+    const links = await manager
+      .getRepository(StockItemPrinter)
+      .find({ where: { stockItemId: In(stockItemIds) } });
+    for (const link of links) {
+      const current = byItem.get(link.stockItemId) ?? [];
+      current.push(link.printerId);
+      byItem.set(link.stockItemId, current);
+    }
+    for (const ids of byItem.values()) {
+      ids.sort();
+    }
+    return byItem;
+  }
+
+  private async ledgerStateOf(manager: EntityManager, stockItemId: string) {
+    const movements = await manager
+      .getRepository(InventoryMovement)
+      .find({ where: { stockItemId }, order: { createdAt: 'ASC', id: 'ASC' } });
+    return computeStockItemAverageCost(movements);
+  }
+
+  private async ledgerStateOfMany(manager: EntityManager, stockItemIds: string[]) {
+    const byItem = new Map<string, ReturnType<typeof computeStockItemAverageCost>>();
+    if (stockItemIds.length === 0) {
+      return byItem;
+    }
+    const movements = await manager
+      .getRepository(InventoryMovement)
+      .find({ where: { stockItemId: In(stockItemIds) }, order: { createdAt: 'ASC', id: 'ASC' } });
+    for (const id of stockItemIds) {
+      byItem.set(
+        id,
+        computeStockItemAverageCost(movements.filter((movement) => movement.stockItemId === id)),
+      );
+    }
+    return byItem;
+  }
+
+  // Decremento/incremento relativo em SQL (AD-023): o CHECK (balance_quantity >= 0) é o único
+  // backstop contra saldo negativo, inclusive sob duas baixas concorrentes.
+  private async shiftBalance(manager: EntityManager, id: string, delta: number): Promise<void> {
+    try {
+      await manager
+        .createQueryBuilder()
+        .update(StockItem)
+        .set({ balanceQuantity: () => 'balance_quantity + :delta' })
+        .where('id = :id', { id, delta })
+        .execute();
+    } catch (error) {
+      if (isCheckViolation(error)) {
+        throw new BadRequestException(INSUFFICIENT_BALANCE);
+      }
+      throw error;
+    }
+  }
+
+  private async writeItemMovement(
+    manager: EntityManager,
+    movement: {
+      stockItemId: string;
+      type: InventoryMovement['type'];
+      quantity: number;
+      unitCostCents: number | null;
+      reason: string | null;
+      userId: string;
+    },
+  ): Promise<void> {
+    const movementsRepo = manager.getRepository(InventoryMovement);
+    await movementsRepo.save(movementsRepo.create({ ...movement, rollId: null }));
+  }
+
+  private async reloadItem(manager: EntityManager, id: string): Promise<StockItemResponse> {
+    const item = await manager.getRepository(StockItem).findOneOrFail({ where: { id } });
+    const { avgCostCents } = await this.ledgerStateOf(manager, id);
+    const printerIds = await this.compatibilityOf(manager, id);
+    return toStockItemResponse(item, avgCostCents, printerIds);
   }
 }

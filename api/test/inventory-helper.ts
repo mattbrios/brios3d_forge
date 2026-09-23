@@ -48,22 +48,23 @@ export async function createRoll(dataSource: DataSource, roll: NewRoll): Promise
 interface NewMovement {
   rollId: string;
   type: MovementType;
-  quantityGrams: number;
-  unitCostCentsPerGram?: number | null;
+  quantity: number;
+  unitCostCents?: number | null;
   reason?: string | null;
   userId: string;
 }
 
-// Grava a movimentação direto no banco, sem passar pela rota, para preparar o estado de um teste.
+// Grava a movimentação de rolo direto no banco, sem passar pela rota, para preparar o estado de
+// um teste. As colunas são as renomeadas da Fase 10 (door 4), com `stock_item_id` nulo (door 3).
 export async function createMovement(dataSource: DataSource, movement: NewMovement): Promise<string> {
   const rows: Array<{ id: string }> = await dataSource.query(
-    `INSERT INTO inventory_movements (roll_id, type, quantity_grams, unit_cost_cents_per_gram, reason, user_id)
+    `INSERT INTO inventory_movements (roll_id, type, quantity, unit_cost_cents, reason, user_id)
      VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
     [
       movement.rollId,
       movement.type,
-      movement.quantityGrams,
-      movement.unitCostCentsPerGram ?? null,
+      movement.quantity,
+      movement.unitCostCents ?? null,
       movement.reason ?? null,
       movement.userId,
     ],
