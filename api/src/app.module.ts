@@ -5,6 +5,7 @@ import { buildTypeOrmOptions } from './database/typeorm-options.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { CustomersModule } from './modules/customers/customers.module.js';
 import { HealthModule } from './modules/health/health.module.js';
+import { InventoryModule } from './modules/inventory/inventory.module.js';
 import { MaterialsModule } from './modules/materials/materials.module.js';
 import { PricingModule } from './modules/pricing/pricing.module.js';
 import { PrintersModule } from './modules/printers/printers.module.js';
@@ -33,6 +34,7 @@ import { UsersModule } from './modules/users/users.module.js';
     SettingsModule,
     CustomersModule,
     SuppliersModule,
+    InventoryModule,
   ],
 })
 export class AppModule {}

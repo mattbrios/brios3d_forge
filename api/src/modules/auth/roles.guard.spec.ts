@@ -7,6 +7,7 @@ const SRC_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const EXPECTED = new Set([
   'auth.controller.ts',
   'customers.controller.ts',
+  'inventory.controller.ts',
   'materials.controller.ts',
   'pricing.controller.ts',
   'printers.controller.ts',
