@@ -41,8 +41,8 @@ As fases seguem os quatro marcos do `CONTEXT.md` (MVP → Operação diária →
 | 2 | Dados de impressão pela URL do MakerWorld | Obter tempo, gramas por filamento, cores, AMS e impressora a partir da URL do perfil, sem processar arquivos | ✅ |
 | 3 | Autenticação | Login, sessão, proteção de rotas na API e no web | ✅ |
 | 4 | Usuários e papéis | CRUD de usuários e autorização por papel (admin, produção, vendas) | ✅ |
-| 5 | Configurações globais e canais | Tarifas, hora de trabalho, margens, % falha/purga, custos fixos, taxas por canal | ⬜ |
-| 6 | Materiais | Cadastro de materiais e padrão de CRUD reutilizável (API + web) | ⬜ |
+| 5 | Configurações globais e canais | Tarifas, hora de trabalho, margens, % falha/purga, custos fixos, taxas por canal | ✅ |
+| 6 | Materiais | Cadastro de materiais e padrão de CRUD reutilizável (API + web) | ✅ |
 | 7 | Impressoras | Cadastro de impressoras com dados de custo, horímetro e AMS | ✅ |
 | 8 | Clientes e fornecedores | Cadastros de clientes e fornecedores | ⬜ |
 | 9 | Estoque de filamento por rolo | Rolos, movimentações, pesagem com tara, custo médio ponderado | ⬜ |
