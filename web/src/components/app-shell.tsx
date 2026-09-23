@@ -45,6 +45,20 @@ export function AppShell({
                 </Link>
               </li>
             )}
+            {(role === "admin" || role === "production" || role === "sales") && (
+              <li>
+                <Link href="/customers" className={LINK_CLASS}>
+                  Clientes
+                </Link>
+              </li>
+            )}
+            {(role === "admin" || role === "production" || role === "sales") && (
+              <li>
+                <Link href="/suppliers" className={LINK_CLASS}>
+                  Fornecedores
+                </Link>
+              </li>
+            )}
             {role === "admin" && (
               <>
                 <li>

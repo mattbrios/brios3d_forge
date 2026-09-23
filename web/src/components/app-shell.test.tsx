@@ -44,6 +44,8 @@ describe("AppShell", () => {
       "Importar do MakerWorld",
       "Materiais",
       "Impressoras",
+      "Clientes",
+      "Fornecedores",
       "Usuários",
       "Configurações",
       "Canais de venda",
@@ -53,6 +55,8 @@ describe("AppShell", () => {
       "/print-profiles",
       "/materials",
       "/printers",
+      "/customers",
+      "/suppliers",
       "/users",
       "/settings",
       "/sales-channels",
@@ -72,6 +76,8 @@ describe("AppShell", () => {
         "Importar do MakerWorld",
         "Materiais",
         "Impressoras",
+        "Clientes",
+        "Fornecedores",
         "Minha conta",
       ]);
       expect(within(nav).queryByRole("link", { name: "Usuários" })).toBeNull();
@@ -105,6 +111,22 @@ describe("AppShell", () => {
       const nav = screen.getByRole("navigation");
       const link = within(nav).getByRole("link", { name: "Impressoras" });
       expect(link.getAttribute("href")).toBe("/printers");
+      cleanup();
+    }
+  });
+
+  it("customers and suppliers appear for every role", () => {
+    for (const role of ["admin", "production", "sales"] as const) {
+      render(
+        <AppShell role={role}>
+          <p>conteúdo</p>
+        </AppShell>,
+      );
+      const nav = screen.getByRole("navigation");
+      const customersLink = within(nav).getByRole("link", { name: "Clientes" });
+      expect(customersLink.getAttribute("href")).toBe("/customers");
+      const suppliersLink = within(nav).getByRole("link", { name: "Fornecedores" });
+      expect(suppliersLink.getAttribute("href")).toBe("/suppliers");
       cleanup();
     }
   });
