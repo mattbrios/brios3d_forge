@@ -31,21 +31,26 @@ function setup() {
       throw new Error('repositório inesperado na transação');
     }),
   };
-  const rolls = { manager: { transaction: vi.fn((callback: (m: unknown) => unknown) => callback(manager)) } };
+  const transaction = vi.fn((callback: (m: unknown) => unknown) => callback(manager));
+  const rolls = { manager: { transaction } };
   const movements = {};
   const service = new InventoryService(
     rolls as unknown as Repository<FilamentRoll>,
     movements as unknown as Repository<InventoryMovement>,
   );
-  return { service, rollsRepoMock, movementsRepoMock };
+  return { service, rollsRepoMock, movementsRepoMock, transaction };
 }
 
 describe('InventoryService', () => {
   it('rolls back the roll when the entrada movement fails to save', async () => {
-    const { service, rollsRepoMock, movementsRepoMock } = setup();
+    const { service, rollsRepoMock, movementsRepoMock, transaction } = setup();
 
     await expect(service.createRoll(VALID_DTO, 'user-1')).rejects.toThrow('conexão com o banco caiu');
 
+    // A escrita passou mesmo pela transação (AC 5) - sem isto, um `createRoll` que gravasse o
+    // rolo e a movimentação fora de `manager.transaction` também deixaria os dois `save` abaixo
+    // verdes, sem nenhuma garantia real de reversão.
+    expect(transaction).toHaveBeenCalledTimes(1);
     // O rolo foi montado e salvo dentro da mesma transação (AC 5: "já persistido em memória")...
     expect(rollsRepoMock.save).toHaveBeenCalledTimes(1);
     // ...mas nunca há uma segunda chamada compensatória fora da transação revertida: o único

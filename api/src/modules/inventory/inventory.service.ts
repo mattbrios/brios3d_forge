@@ -179,13 +179,13 @@ export class InventoryService {
       if (roll.discardedAt !== null) {
         throw new ConflictException(ROLL_DISCARDED);
       }
-      if (dto.quantityGrams > roll.balanceGrams) {
-        throw new BadRequestException(INSUFFICIENT_BALANCE);
-      }
 
-      // Decremento relativo em SQL, não a partir do valor já lido (door 3): sob duas baixas
-      // concorrentes, o segundo UPDATE espera o primeiro committar, recalcula sobre o saldo já
-      // atualizado, e o CHECK (balance_grams >= 0) do banco rejeita quem estourar o saldo real.
+      // Sem pré-checagem em memória: o saldo insuficiente, sequencial ou concorrente, é sempre
+      // decidido pelo mesmo caminho (door 3) - um decremento relativo em SQL, não a partir do
+      // valor já lido. Sob duas baixas concorrentes, o segundo UPDATE espera o primeiro
+      // committar, recalcula sobre o saldo já atualizado, e o CHECK (balance_grams >= 0) do
+      // banco rejeita quem estourar o saldo real; uma pré-checagem em JS aqui deixaria essa
+      // rejeição sem nenhuma prova (o caso sequencial nunca chegaria a exercitá-la).
       try {
         await manager
           .createQueryBuilder()

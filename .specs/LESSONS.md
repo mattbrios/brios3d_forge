@@ -110,6 +110,42 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: checks.md Test policy row 2 / api/test/customers.e2e-spec.ts:87 (round 1, before e0dfb4c) (api-uniqueness-constraints)
 - last seen: 2026-09-23T13:29:01Z
 
+### L-017 - Prove a database constraint used as a concurrency backstop by forcing the constraint violation itself, not by an application-level guard that answers first
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `persistence` · harmful: 0
+- features: phase-9-filament-inventory
+- evidence: api/src/modules/inventory/is-check-violation.ts:3 (fault 3, C16) (persistence)
+- last seen: 2026-09-23T16:24:41Z
+
+### L-018 - Assert every value of a runtime-derived response field explicitly, never by reusing a test that only asserts the columns it is derived from
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `api-contract` · harmful: 0
+- features: phase-9-filament-inventory
+- evidence: api/src/modules/inventory/inventory.types.ts:10,13 (fault 4, C16/C17) (api-contract)
+- last seen: 2026-09-23T16:24:41Z
+
+### L-019 - Never mock the transaction wrapper in a test whose claim is the rollback; assert the absence of the persisted row instead
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `persistence` · harmful: 0
+- features: phase-9-filament-inventory
+- evidence: api/src/modules/inventory/inventory.service.spec.ts:36 (C5) (persistence)
+- last seen: 2026-09-23T16:24:41Z
+
+### L-020 - Cover both sides of a role matrix: assert that each allowed role gets 200, not only that the denied role gets 403
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `authorization` · harmful: 0
+- features: phase-9-filament-inventory
+- evidence: api/src/modules/inventory/inventory.controller.ts:30,36,42 (Coverage: matriz de papéis) (authorization)
+- last seen: 2026-09-23T16:24:41Z
+
+### L-021 - Give every query filter declared in the plan's Surface its own proof, especially one whose SQL duplicates a rule already implemented in application code
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `routes` · harmful: 0
+- features: phase-9-filament-inventory
+- evidence: api/src/modules/inventory/inventory.service.ts:112-114 (Coverage: filtros de query) (routes)
+- last seen: 2026-09-23T16:24:41Z
+
+### L-022 - Check that each Coverage member's cited proof actually asserts that member before freezing the checks, since a wrong mapping passes every later step
+- signal: `gate_fail` · recurrence: 1 feature(s) · scope: `process` · harmful: 0
+- features: phase-9-filament-inventory
+- evidence: .specs/features/phase-9-filament-inventory/verification.md (validate_verification exit 1) (process)
+- last seen: 2026-09-23T16:24:42Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

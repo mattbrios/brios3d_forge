@@ -188,6 +188,30 @@ describe('Inventory (e2e)', () => {
     expect(response.body.items[0].id).toBe(rollId);
   });
 
+  it('production and sales get 200 on every read route', async () => {
+    const rollId = await createRoll(dataSource, { materialId });
+    for (const cookie of [productionCookie, salesCookie]) {
+      expect((await listReq('', cookie)).status).toBe(200);
+      expect((await getByIdReq(rollId, cookie)).status).toBe(200);
+      expect((await summaryReq('', cookie)).status).toBe(200);
+    }
+  });
+
+  it('GET /inventory/rolls filters by status and by search across batch and location', async () => {
+    const closedId = await createRoll(dataSource, { materialId, batch: 'lote-x' });
+    const openId = await createRoll(dataSource, { materialId, openedAt: new Date(), location: 'prateleira-x' });
+
+    const byStatus = await listReq('?status=aberto', adminCookie);
+    expect(byStatus.status).toBe(200);
+    expect((byStatus.body.items as Array<{ id: string }>).map((item) => item.id)).toEqual([openId]);
+
+    const byBatch = await listReq('?search=lote-x', adminCookie);
+    expect((byBatch.body.items as Array<{ id: string }>).map((item) => item.id)).toEqual([closedId]);
+
+    const byLocation = await listReq('?search=prateleira-x', adminCookie);
+    expect((byLocation.body.items as Array<{ id: string }>).map((item) => item.id)).toEqual([openId]);
+  });
+
   it('materials-summary averages two rolls of the same material weighted by balance', async () => {
     await createRoll(dataSource, { materialId, initialWeightGrams: 1000, balanceGrams: 1000, acquisitionCostCents: 10000 });
     await createRoll(dataSource, { materialId, initialWeightGrams: 1000, balanceGrams: 1000, acquisitionCostCents: 12000 });
@@ -195,7 +219,7 @@ describe('Inventory (e2e)', () => {
     const response = await summaryReq('', adminCookie);
     expect(response.status).toBe(200);
     const item = (response.body.items as Array<{ materialId: string }>).find((row) => row.materialId === materialId);
-    expect(item).toMatchObject({ totalBalanceGrams: 2000, avgCostCentsPerGram: 11 });
+    expect(item).toMatchObject({ totalBalanceGrams: 2000, avgCostCentsPerGram: 11, rollCount: 2 });
   });
 
   it('materials-summary reports null average cost when nothing is in stock', async () => {
@@ -204,7 +228,7 @@ describe('Inventory (e2e)', () => {
     const response = await summaryReq('', adminCookie);
     expect(response.status).toBe(200);
     const item = (response.body.items as Array<{ materialId: string }>).find((row) => row.materialId === materialId);
-    expect(item).toMatchObject({ totalBalanceGrams: 0, avgCostCentsPerGram: null });
+    expect(item).toMatchObject({ totalBalanceGrams: 0, avgCostCentsPerGram: null, rollCount: 1 });
   });
 
   it('does not add stock or cost fields to GET /materials', async () => {
@@ -263,6 +287,16 @@ describe('Inventory (e2e)', () => {
     }
   });
 
+  it('a movement that consumes the whole balance without discarding derives status vazio', async () => {
+    const rollId = await createRoll(dataSource, { materialId, balanceGrams: 200 });
+
+    const response = await movementReq(rollId, { type: 'consumo', quantityGrams: 200 }, productionCookie);
+    expect(response.status).toBe(201);
+    expect(response.body.balanceGrams).toBe(0);
+    expect(response.body.status).toBe('vazio');
+    expect(response.body.discardedAt).toBeNull();
+  });
+
   it("rejects a movement quantity greater than the roll's balance", async () => {
     const rollId = await createRoll(dataSource, { materialId, balanceGrams: 100 });
 
@@ -291,6 +325,7 @@ describe('Inventory (e2e)', () => {
     expect(response.status).toBe(200);
     expect(response.body.balanceGrams).toBe(0);
     expect(response.body.discardedAt).not.toBeNull();
+    expect(response.body.status).toBe('descartado');
 
     const movements = await movementsOf(rollId);
     expect(movements).toHaveLength(1);

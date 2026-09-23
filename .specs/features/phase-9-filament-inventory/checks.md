@@ -5,7 +5,8 @@ Plan: `.specs/features/phase-9-filament-inventory/plan.md`
 
 ## Intent
 
-33 checks em 8 fatias · 6 one-way doors · nenhuma questão aberta
+33 checks em 8 fatias, +3 (C33-C35) na fatia S9 fechando lacunas da verificação (Round 1 FAIL)
+· 6 one-way doors · nenhuma questão aberta
 
 O `AGENTS.md` não declara perfil (`light` seria o padrão do `tlc-spec-lean`). Uso `standard`,
 como a Fase 8: esta fase tem três formas genuinamente novas, sem análogo no repositório. Primeiro,
@@ -206,6 +207,25 @@ Proof: `npm --prefix web run test -- src/app/(app)/inventory/[id]/page.test.tsx 
 (mock) e atualiza a tela (AC 32)
 Proof: `npm --prefix web run test -- src/app/(app)/inventory/[id]/page.test.tsx -t "confirms before discarding"`
 
+### S9 - Lacunas fechadas na verificação (Round 1 FAIL)
+
+**C33** - Tabela sobre `production` e `sales`: `GET /inventory/rolls`, `GET /inventory/rolls/:id`
+e `GET /inventory/materials-summary` respondem `200` para os dois (lado positivo da matriz de
+papéis - as provas originais só chamavam as rotas de leitura com `adminCookie`, que sempre passa
+o `RolesGuard` independente de `@Roles()`, deixando o `@Roles('production', 'sales')` das 3 rotas
+sem nenhuma prova)
+Proof: `npm --prefix api run test:e2e -- test/inventory.e2e-spec.ts -t "production and sales get 200 on every read route"`
+
+**C34** - `GET /inventory/rolls?status=aberto` retorna só os rolos com aquele status derivado, e
+`GET /inventory/rolls?search=` casa contra `batch` e contra `location` (Surface, sem prova na
+rodada 1)
+Proof: `npm --prefix api run test:e2e -- test/inventory.e2e-spec.ts -t "GET /inventory/rolls filters by status and by search across batch and location"`
+
+**C35** - Uma baixa de consumo que zera o saldo sem descartar o rolo deriva `status: "vazio"`
+(door 6a - a atribuição original apontava C16 para este caso, mas C16 termina com saldo 30, nunca
+zero, então `vazio` nunca tinha sido exercitado)
+Proof: `npm --prefix api run test:e2e -- test/inventory.e2e-spec.ts -t "a movement that consumes the whole balance without discarding derives status vazio"`
+
 ## Coverage
 
 | Set (size) | Member -> proof | Unproven |
@@ -222,10 +242,10 @@ Proof: `npm --prefix web run test -- src/app/(app)/inventory/[id]/page.test.tsx 
 | `InventoryMovement.type` (4) | `entrada` C1 · `consumo` C14 · `perda` C14, C17 · `ajuste` C12 | - |
 | door 1: novas tabelas `filament_rolls`/`inventory_movements` (1) | criadas e populadas por C1 | - |
 | door 2: `balanceGrams`+movimento na mesma transação (2) | caminho feliz C1 · reversão na falha C5 | - |
-| door 3: saldo nunca negativo (2) | validação da API C15 · backstop do `CHECK` sob concorrência C16 | - |
+| door 3: saldo nunca negativo (2) | caso sequencial via `CHECK` C15 · caso concorrente via `CHECK` C16 (revisado após a verificação: a pré-checagem em JS foi removida do serviço porque deixava o `CHECK` sem nenhuma prova sob concorrência real - os dois casos passam pelo mesmo caminho) | - |
 | door 4: custo médio ponderado pelo saldo atual (3) | fórmula isolada C9 · caso de referência via API C8 · saldo zero -> `null` C10 | - |
 | door 5: `Material` sem coluna nova (1) | `GET /materials` inalterado C11 | - |
-| door 6a: `status` derivado, 4 valores (4) | `fechado` C1 · `aberto` C18 · `vazio` C16 (saldo zerado por baixa) · `descartado` C17 | - |
+| door 6a: `status` derivado, 4 valores (4) | `fechado` C1 · `aberto` C18 · `vazio` C35 (revisado: a atribuição original apontava C16, que termina com saldo 30, nunca zero) · `descartado` C17 (asserção de `status` adicionada após a verificação) | - |
 | door 6b: nenhuma rota edita/apaga `InventoryMovement` (1) | C22 | - |
 | papéis que criam rolo (1) | `admin` C1 | - |
 | papéis barrados em criar rolo (2) | `production` C6 · `sales` C6 | - |
@@ -236,6 +256,8 @@ Proof: `npm --prefix web run test -- src/app/(app)/inventory/[id]/page.test.tsx 
 | UI por papel na tela `/inventory` (1) | `production`/`sales` sem ação de criar C30 | - |
 | UI por papel no detalhe do rolo (1) | `sales` só leitura C31 | - |
 | ação destrutiva confirma antes (1 tela) | descarte C32 | - |
+| papéis que leem, lado positivo (3 rotas) | `GET /inventory/rolls` C33 · `GET /inventory/rolls/:id` C33 · `GET /inventory/materials-summary` C33 | - |
+| `GET /inventory/rolls` filtro `status`/`search` (2 filtros) | `status` C34 · `search` (batch e location) C34 | - |
 
 - Claims que citam um código de status, rota ou formato de resposta: C1-C26 - cada uma tem uma
   prova que cruza a fronteira HTTP (e2e real contra o `AppModule`)
@@ -248,8 +270,8 @@ Proof: `npm --prefix web run test -- src/app/(app)/inventory/[id]/page.test.tsx 
 | `average-cost.ts` - média ponderada pelo saldo atual (decide; forma nova - primeira agregação sobre estado mutável do sistema, sem analogê no `pricing` puro nem em nenhum `service.list()`) | unit test isolado da função pura, e um e2e cobrindo a fórmula pelo endpoint | 5 casos da função (C9) e o caso de referência pela API (C8, C10) |
 | `InventoryService.createRoll` - rolo + primeira movimentação na mesma transação (decide; forma nova - primeiro `create` do sistema com um efeito colateral em segunda tabela dentro da mesma transação) | e2e do caminho feliz e um teste unitário da reversão com o repositório mockado | caminho feliz (C1) e reversão na falha (C5) |
 | saldo nunca negativo sob concorrência, `CHECK` do banco (decide; forma nova - primeira invariante do sistema que depende de uma constraint de banco como backstop, e não só de índice único) | e2e de validação isolada e e2e com duas chamadas simultâneas reais | validação isolada (C15) e a corrida (C16) |
-| `status` derivado de `openedAt`/`balanceGrams`/`discardedAt` (decide; forma nova - primeiro campo de resposta que não é uma coluna) | os 4 valores cada um exercitado por um check que já prova a transição correspondente | `fechado` (C1), `aberto` (C18), `vazio` (C16), `descartado` (C17) - sem check dedicado extra, reaproveita a asserção do campo nesses quatro |
-| `InventoryController` - `RolesGuard` aplicado nas 9 rotas (decide, alcançado pela rota, mesma forma das Fases 4-8) | um e2e tabela-driven por conjunto de rotas × papel | criar (C6), ações operacionais (C25) |
+| `status` derivado de `openedAt`/`balanceGrams`/`discardedAt` (decide; forma nova - primeiro campo de resposta que não é uma coluna) | os 4 valores cada um exercitado por um teste que assert o campo `status` | `fechado` (C1), `aberto` (C18), `vazio` (C35, revisado após a verificação - a atribuição original apontava C16, que nunca zera o saldo), `descartado` (C17, asserção de `status` adicionada após a verificação) |
+| `InventoryController` - `RolesGuard` aplicado nas 9 rotas (decide, alcançado pela rota, mesma forma das Fases 4-8) | um e2e tabela-driven por conjunto de rotas × papel, os dois lados (quem passa e quem é barrado) | criar (C6), ações operacionais (C25), leitura - lado positivo (C33, revisado após a verificação) |
 
 Evidence:
 
