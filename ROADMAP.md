@@ -44,7 +44,7 @@ As fases seguem os quatro marcos do `CONTEXT.md` (MVP → Operação diária →
 | 5 | Configurações globais e canais | Tarifas, hora de trabalho, margens, % falha/purga, custos fixos, taxas por canal | ✅ |
 | 6 | Materiais | Cadastro de materiais e padrão de CRUD reutilizável (API + web) | ✅ |
 | 7 | Impressoras | Cadastro de impressoras com dados de custo, horímetro e AMS | ✅ |
-| 8 | Clientes e fornecedores | Cadastros de clientes e fornecedores | ⬜ |
+| 8 | Clientes e fornecedores | Cadastros de clientes e fornecedores | ✅ |
 | 9 | Estoque de filamento por rolo | Rolos, movimentações, pesagem com tara, custo médio ponderado | ⬜ |
 | 10 | Insumos e peças de reposição | Itens controlados por quantidade, com movimentações e custo médio | ⬜ |
 | 11 | Estoque mínimo, alertas e etiqueta QR | Alertas de reposição e etiqueta com QR code para o rolo | ⬜ |
