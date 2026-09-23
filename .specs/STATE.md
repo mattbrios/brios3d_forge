@@ -25,29 +25,36 @@
 | AD-019 | Contrato do usuário na administração (`PublicUser`): `{ id, name, email, role, active }` em `GET /users`, `POST /users` e `PATCH /users/:id`, sem `password_hash` nem datas | é o `AuthUser` da Fase 3 mais `active`; as fases seguintes que listam ou editam usuários reusam o mesmo formato | active | 2026-09-22 |
 | AD-020 | Contrato de paginação/busca/filtro de toda lista futura: query `page` (1-based, default `1`), `pageSize` (default `20`, máx `100`), `search` (substring case-insensitive nos campos de texto do recurso), um filtro exato case-insensitive por campo (ex.: `type`); resposta `{ items, total, page, pageSize }` | primeira lista paginada do sistema (Fase 6, `GET /materials`); o ROADMAP nomeia esta fase como a que fixa o padrão que as Fases 7-10 copiam | active | 2026-09-22 |
 | AD-021 | Componentes web reutilizáveis de CRUD em `web/src/components/crud/`: `DataTable<T>({ columns: { key, label, render? }[], rows, getRowId, renderActions? })`, `EntityForm<V>({ fields, values, onChange, onSubmit, submitting, error })`, `ConfirmDialog({ message, confirmLabel, onConfirm, onCancel, pending })` | Fase 6 introduz o padrão nomeado pelo ROADMAP ("padrão de CRUD reutilizável") que as Fases 7-10 devem copiar em vez de duplicar markup por tela | active | 2026-09-22 |
+| AD-022 | Ledger de movimentação imutável (`InventoryMovement`): coluna `type` como enum Postgres, `quantityGrams` assinado (positivo em entrada, negativo em saída), `userId` obrigatório, sem rota de update/delete; o saldo é uma coluna materializada (`balanceGrams`) escrita na mesma transação do movimento, nunca recalculada por `SUM()` a cada leitura | Fase 9 introduz o padrão; a Fase 10 (insumos e peças) reaproveita a mesma tabela/shape para um cadastro e uma tela separados | active | 2026-09-23 |
+| AD-023 | Decremento concorrente sobre uma coluna materializada: `UPDATE` relativo em SQL (`col = col - :delta`), nunca uma pré-checagem em JS a partir de um valor já lido; um `CHECK` de banco é o único backstop contra o valor ficar negativo, capturado pelo código de erro do Postgres (`isCheckViolation`, mesmo padrão de `isUniqueViolation` da Fase 4) e traduzido para `400` | Fase 9 é a primeira invariante numérica do sistema sob concorrência; uma pré-checagem em JS competindo com o `CHECK` deixa o `CHECK` sem nenhuma prova possível de exercitar (achado da verificação da Fase 9, rodada 1) | active | 2026-09-23 |
+| AD-024 | Custo médio ponderado nunca é armazenado: sempre recalculado sob demanda a partir do estado atual do ledger (rolos não descartados com saldo > 0), exposto só por `GET /inventory/materials-summary` | Fase 9 decide isso explicitamente; as Fases 12 (calculadora) e 25 (margem real) devem chamar este endpoint em vez de introduzir um campo cacheado em `Material` | active | 2026-09-23 |
 
 ## Handoff
 
-**Feature**: phase-8-customers-suppliers - concluída
-**Where**: C1-C53 verificados. Rodada 1 (`standard`): FAIL - mutante sobrevivente no fluxo
-"Editar" das telas `/customers` e `/suppliers` (nenhum teste clicava "Editar", então `submitEdit`
-tinha cobertura zero), corpo `{ error }` não asserido em 12 combinações rota×status `400`/`409`
-novas (AD-001 e o critério do ROADMAP "409 { error }" descobertos sem prova), e o `Test policy`
-row da convivência de `document` nulo não provado pelos checks que ele nomeava (C1 apagava a
-tabela entre as iterações, C23 criava um único fornecedor), mais 2 precision gaps (C14/C36 sem
-`active`/`id`; C5/C27 sem espaço em volta para exercitar o trim). Fix em 4 arquivos de teste
-(`api/test/customers.e2e-spec.ts`, `api/test/suppliers.e2e-spec.ts`,
-`web/.../customers/page.test.tsx`, `web/.../suppliers/page.test.tsx`), nada em código de
-produção - a mutação do fluxo "Editar" foi confirmada morta manualmente antes da rodada 2. Rodada
-2 (escopada, `standard`): PASS, `validate_verification.py` exit 0. Validado também com o
-Playwright MCP: vendas cadastra cliente só com nome, completa o CPF por edição, desativa com
-confirmação, busca sem resultado mostra o vazio, e vê "Fornecedores" leitura-only; admin cadastra
-e desativa fornecedor; produção confirma leitura-only nas duas telas
+**Feature**: phase-9-filament-inventory - concluída
+**Where**: C1-C35 verificados (C33-C35 nasceram na rodada 1 fechando lacunas de cobertura).
+Rodada 1 (`standard`): FAIL - 2 mutantes sobreviventes (a pré-checagem em JS de saldo deixava o
+`CHECK (balance_grams >= 0)` do banco sem nenhuma prova sob concorrência, door 3; os valores
+`vazio`/`descartado` de `status` nunca eram asserted, door 6a), mais 4 lacunas de cobertura (C5
+mockava `manager.transaction` como pass-through sem provar que a transação era usada; as 3 rotas
+de leitura só tinham prova do lado "barrado", nunca do lado "passa" para produção/vendas; os
+filtros `status`/`search` de `GET /inventory/rolls` sem prova; `rollCount` do resumo por material
+sem asserção). Fix em `inventory.service.ts` (removida a pré-checagem de `addMovement` - saldo
+insuficiente, sequencial ou concorrente, passa sempre pelo mesmo `UPDATE` relativo + `CHECK`,
+ver AD-023), `inventory.service.spec.ts` (assert que `manager.transaction` foi chamado) e
+`inventory.e2e-spec.ts` (C33-C35 novos + asserções de `status`/`rollCount` adicionadas nos checks
+existentes) - nada de código de produção além da remoção da pré-checagem. Rodada 2 (escopada,
+`standard`): PASS, `validate_verification.py` exit 0, os 2 mutantes confirmados mortos por
+reinjeção. Validado também com o Playwright MCP: admin cadastra material e rolo, pesa (812g/tara
+250g → 562g, caso de referência do ROADMAP), dá baixa parcial, abre (idempotente), descarta com
+confirmação; resumo por material atualiza saldo e custo médio a cada ação, incluindo custo médio
+`null` quando nada sobra em estoque; produção não vê a ação de cadastrar rolo; vendas só lê, sem
+nenhum formulário nem botão de descarte; busca por material sem resultado mostra o vazio
 **In progress**: nada
-**Next step**: nenhum bloqueio. Fases 9 (estoque de rolo), 16 (orçamentos) e 21 (compras) passam
-a referenciar `Customer`/`Supplier` por FK, ainda inexistente hoje (`## Relations` do plano)
+**Next step**: nenhum bloqueio. Fase 10 (insumos e peças) reaproveita o ledger `InventoryMovement`
+(AD-022) para um cadastro e uma tela separados; Fase 11 (alertas/QR) e Fase 19 (baixa automática
+de job) passam a filtrar/gravar direto em `filament_rolls`/`inventory_movements`; Fases 12 e 25
+consomem `GET /inventory/materials-summary` para o custo médio (AD-024)
 **Blockers**: nenhum
-**Uncommitted**: `.specs/features/phase-8-customers-suppliers/verification.md`,
-`.specs/lessons.json`, `.specs/LESSONS.md` (lições L-014 a L-016, candidate) e este `STATE.md` -
-o resto da Fase 8 já está commitado (ver `git log`)
+**Uncommitted**: este `STATE.md` - o resto da Fase 9 já está commitado (ver `git log`)
 **Branch**: main
