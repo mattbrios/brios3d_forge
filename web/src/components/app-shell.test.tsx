@@ -43,6 +43,7 @@ describe("AppShell", () => {
     expect(links.map((link) => link.textContent)).toEqual([
       "Importar do MakerWorld",
       "Materiais",
+      "Impressoras",
       "Usuários",
       "Configurações",
       "Canais de venda",
@@ -51,6 +52,7 @@ describe("AppShell", () => {
     expect(links.map((link) => link.getAttribute("href"))).toEqual([
       "/print-profiles",
       "/materials",
+      "/printers",
       "/users",
       "/settings",
       "/sales-channels",
@@ -69,6 +71,7 @@ describe("AppShell", () => {
       expect(within(nav).getAllByRole("link").map((link) => link.textContent)).toEqual([
         "Importar do MakerWorld",
         "Materiais",
+        "Impressoras",
         "Minha conta",
       ]);
       expect(within(nav).queryByRole("link", { name: "Usuários" })).toBeNull();
@@ -88,6 +91,20 @@ describe("AppShell", () => {
       const nav = screen.getByRole("navigation");
       const link = within(nav).getByRole("link", { name: "Materiais" });
       expect(link.getAttribute("href")).toBe("/materials");
+      cleanup();
+    }
+  });
+
+  it("printers appears for every role", () => {
+    for (const role of ["admin", "production", "sales"] as const) {
+      render(
+        <AppShell role={role}>
+          <p>conteúdo</p>
+        </AppShell>,
+      );
+      const nav = screen.getByRole("navigation");
+      const link = within(nav).getByRole("link", { name: "Impressoras" });
+      expect(link.getAttribute("href")).toBe("/printers");
       cleanup();
     }
   });
