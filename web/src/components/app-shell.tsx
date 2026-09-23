@@ -31,6 +31,13 @@ export function AppShell({
                 Importar do MakerWorld
               </Link>
             </li>
+            {(role === "admin" || role === "production" || role === "sales") && (
+              <li>
+                <Link href="/materials" className={LINK_CLASS}>
+                  Materiais
+                </Link>
+              </li>
+            )}
             {role === "admin" && (
               <>
                 <li>
