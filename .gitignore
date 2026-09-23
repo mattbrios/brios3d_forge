@@ -8,3 +8,6 @@ coverage
 
 # Playwright MCP
 .playwright-mcp/
+
+# Claude Code agent worktrees
+.claude/worktrees/

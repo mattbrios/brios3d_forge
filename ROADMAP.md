@@ -235,7 +235,7 @@ outros papéis (door 1, Fase 4: uma rota sem `@Roles()` é só de admin).
 | `auth` | x | x | x |
 | `users` | x | - | - |
 | `settings` | x | leitura | leitura |
-| `materials` | a definir na Fase 6 | a definir na Fase 6 | a definir na Fase 6 |
+| `materials` | x | leitura | leitura |
 | `printers` | a definir na Fase 7 | a definir na Fase 7 | a definir na Fase 7 |
 | `customers` | a definir na Fase 8 | a definir na Fase 8 | a definir na Fase 8 |
 | `suppliers` | a definir na Fase 8 | a definir na Fase 8 | a definir na Fase 8 |
@@ -285,10 +285,10 @@ público, e `POST /print-profiles/import` está aberto aos três papéis desde e
 **Dependências:** Fase 4.
 
 **Tarefas:**
-- [ ] Entidade `Material`: tipo (PLA, PETG, ABS, ASA, TPU, Nylon…), marca, cor, densidade (g/cm³), temperatura de bico e de mesa, precisa de secagem (e parâmetros de secagem, se houver), ativo
-- [ ] CRUD com paginação, busca e filtro por tipo; desativar em vez de apagar quando houver referências
-- [ ] Web: componentes reutilizáveis de listagem, formulário e confirmação; tela de materiais
-- [ ] Testes unitários e e2e do CRUD, incluindo a validação dos campos
+- [x] Entidade `Material`: tipo (PLA, PETG, ABS, ASA, TPU, Nylon…), marca, cor, densidade (g/cm³), temperatura de bico e de mesa, precisa de secagem (e parâmetros de secagem, se houver), ativo
+- [x] CRUD com paginação, busca e filtro por tipo; desativar em vez de apagar quando houver referências
+- [x] Web: componentes reutilizáveis de listagem, formulário e confirmação; tela de materiais
+- [x] Testes unitários e e2e do CRUD, incluindo a validação dos campos
 
 **Critérios de aceite:**
 - Criar, editar, listar, buscar e desativar um material funciona na API e no web
