@@ -59,7 +59,18 @@ validadores em vez de estender o do `POST`, e nenhum lado recusado dele tinha pr
 `@MaxLength(150)` lá passava por 301/301). Fix em `fdff93c`: nasceu C60, 9 casos sobre o `PATCH`.
 Rodada 3: **PASS** - 60/60 checks com evidência localizada, 3 sets recomputados com 0 membros sem
 prova, 4 falhas injetadas e 4 mortas (incluindo a reinjeção do AD-023, morta 4 de 4),
-`validate_verification.py` exit 0. Lições L-023 a L-030 gravadas
+`validate_verification.py` exit 0.
+Rodada 4 (escopada ao passo 5, walk the flow): **PASS**. Existiu para corrigir um erro do autor - as
+três primeiras rodadas registraram a validação em navegador como "fora de alcance" porque ele
+afirmou que as ferramentas do Playwright MCP não estavam expostas, sem nunca tê-las chamado; elas
+estavam. O MCP foi configurado em `.kiro/settings/mcp.json` (`npx @playwright/mcp@0.0.82
+--headless`, chromium 1246 em cache) e um Verifier independente percorreu as telas: ACs 41-49 com
+evidência de navegador, 3 sessões reais (admin, produção, vendas), incluindo o detalhe de um rolo
+cujo ledger foi gravado **antes** da Fase 10, com as colunas de quantidade e custo íntegras depois
+do `RENAME` (AC 48). Três notas sem reprovar: nenhuma tela define a compatibilidade peça×impressora
+(o vínculo só entra pela API, e nenhuma fonte binding pede tela - buraco de produto que pertence ao
+roadmap, e a Fase 22 é quem consome o vínculo), `Usuário` aparece como uuid no histórico porque é o
+que o contrato devolve, e não há tela de edição de item. Lições L-023 a L-032 gravadas
 **In progress**: nada
 **Next step**: nenhum bloqueio. Fase 11 (estoque mínimo, alertas e QR) consome `stock_items` e
 `filament_rolls`; Fase 21 (recebimento de compra) e Fase 15 (produto acabado) copiam o precedente do

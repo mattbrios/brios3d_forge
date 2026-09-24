@@ -194,6 +194,18 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: api/test/sales-channels.e2e-spec.ts:180 (expected 426 to be 400, full suite run 1 of 4, nothing concurrent) (e2e)
 - last seen: 2026-09-24T01:16:28Z
 
+### L-031 - Call the tool before recording it as unavailable: an unchecked 'the browser tools are not exposed in this session' line skipped the walk-the-flow step for three verification rounds and propagated into every later briefing
+- signal: `gate_fail` · recurrence: 1 feature(s) · scope: `verification` · harmful: 0
+- features: phase-10-stock-items
+- evidence: .specs/features/phase-10-stock-items/verification.md:41 (verification)
+- last seen: 2026-09-24T03:13:08Z
+
+### L-032 - When prescribing a browser pass over an empty state, name a method that the running app can reach: with no delete route and every category populated, the empty branch is only reachable by stubbing the list response, and the handoff must say so
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `web` · harmful: 0
+- features: phase-10-stock-items
+- evidence: .specs/features/phase-10-stock-items/checks.md:520 (web)
+- last seen: 2026-09-24T03:13:08Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
