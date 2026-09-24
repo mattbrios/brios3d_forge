@@ -135,6 +135,31 @@ describe("Stock item detail page", () => {
     expect((term.nextElementSibling as HTMLElement).textContent).toBe("—");
   });
 
+  it("prefills the minimum field from the item, empty when there is no minimum", async () => {
+    // Mesmo galho da tela de material, do outro lado: um piso nulo prefilado como "0" faria o admin
+    // gravar política de zero só por abrir e salvar. Os dois lados.
+    const cases: Array<[number | null, string]> = [
+      [null, ""],
+      [2, "2"],
+    ];
+    for (const [minimumQuantity, prefilled] of cases) {
+      stubApi({
+        "/auth/me": () => Promise.resolve(jsonResponse(200, ADMIN_ME)),
+        "/inventory/items/i2": () =>
+          Promise.resolve(jsonResponse(200, { ...SPARE_PART, minimumQuantity })),
+        "/printers?pageSize=100": () => Promise.resolve(jsonResponse(200, printersPage([PRINTER_1]))),
+      });
+      render(<StockItemDetailPage params={Promise.resolve({ id: "i2" })} />);
+
+      const field = (await screen.findByLabelText(
+        "Mínimo (un), vazio para nenhum",
+      )) as HTMLInputElement;
+      expect(field.value, `piso ${String(minimumQuantity)}`).toBe(prefilled);
+      cleanup();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("admin sets and clears the item minimum", async () => {
     let current = { ...SPARE_PART, minimumQuantity: null as number | null };
     const fetchMock = stubApi({

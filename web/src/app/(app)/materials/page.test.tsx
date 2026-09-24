@@ -223,6 +223,30 @@ describe("Materials page", () => {
     expect(within(withRow).getAllByRole("cell")[6].textContent).toBe("500 g");
     expect(within(withoutRow).getAllByRole("cell")[6].textContent).toBe("—");
   });
+  it("prefills the minimum field from the row, empty when there is no minimum", async () => {
+    // O galho de `formFromMaterial`. Se o nulo prefilasse "0", abrir o formulário de um material sem
+    // piso e salvar sem tocar no campo gravaria mínimo 0 - "política de zero" onde o door 1 decidiu
+    // "sem política" - e aquele material nunca mais alertaria, em silêncio. Os dois lados, porque só
+    // o vazio não distingue "" de String(null).
+    const withMinimum: Material = { ...MATERIAL_1, id: "m9", type: "ABS", minimumStockGrams: 500 };
+    const cases: Array<[Material, string, string]> = [
+      [MATERIAL_1, "PLA", ""],
+      [withMinimum, "ABS", "500"],
+    ];
+    for (const [material, type, prefilled] of cases) {
+      stubApi({
+        "/auth/me": () => Promise.resolve(jsonResponse(200, ADMIN_ME)),
+        "/materials?pageSize=100": () => Promise.resolve(jsonResponse(200, page([material]))),
+      });
+      render(<MaterialsPage />);
+      await screen.findByText(type);
+      fireEvent.click(screen.getByRole("button", { name: "Editar" }));
+      const field = screen.getByLabelText("Estoque mínimo (g, opcional)") as HTMLInputElement;
+      expect(field.value, `material ${type}`).toBe(prefilled);
+      cleanup();
+      vi.unstubAllGlobals();
+    }
+  });
   it("sends the typed minimum as a number and the empty field as null", async () => {
     // Os dois galhos de buildBody. Sem o primeiro, definir 500 g pela tela - o AC 1 visto pelo
     // usuario - nao tinha prova em nenhum nivel de tela.

@@ -3,9 +3,9 @@
 Profile: standard
 Plan: `.specs/features/phase-11-stock-alerts-qr/plan.md`
 
-61 checks em 4 fatias · 4 one-way doors · nenhuma questão aberta
-(C1-C51 aprovados antes do build; C52-C58 nasceram da rodada 1 da verificação e C59-C61 da rodada 2,
-fechando cobertura de tela)
+63 checks em 4 fatias · 4 one-way doors · nenhuma questão aberta
+(os 51 primeiros aprovados antes do build; os 12 seguintes nasceram da verificação, fechando
+cobertura de tela — 7 na rodada 1, 3 na rodada 2, 2 na rodada 3)
 
 O `AGENTS.md` não declara perfil (`light` seria o padrão). Uso `standard`, como as Fases 8 a 10,
 por três formas que esta fase traz e que o repositório não tem análogo para:
@@ -350,9 +350,27 @@ Proof: `npm --prefix web run test -- 'src/app/(app)/inventory/items/[id]/page.te
 
 **C61** - Na tela da etiqueta, o bloco de `70mm` × `40mm` dispõe QR e campos **em linha** (classe
 `flex` sem `flex-col`, o que decide "QR à esquerda, campos à direita" da `## Assumptions`), e o
-título e o botão "Imprimir" **desta página** carregam `print:hidden` enquanto o bloco da etiqueta
-não (C41 assera o `AppShell`, que é outro arquivo)
+título e o **contêiner** do botão "Imprimir" **desta página** carregam `print:hidden` enquanto o
+bloco da etiqueta não (C41 assera o `AppShell`, que é outro arquivo)
 Proof: `npm --prefix web run test -- 'src/app/(app)/inventory/[id]/label/page.test.tsx' -t "lays the code beside the fields and keeps the screen chrome out of the print"`
+
+### Nascidos da verificação, rodada 3
+
+A rodada 3 fechou os 3 gaps da rodada 2 e reprovou por **um mutante sobrevivente**: o terceiro lugar
+em que o mesmo campo aparece — o **pré-preenchimento** dos dois formulários de edição — não tinha
+asserção nenhuma. Prefilar `"0"` no lugar de `""` passava as três suítes inteiras e fazia o admin
+gravar política de zero só por abrir o formulário de um cadastro sem piso e salvar sem tocar no
+campo: exatamente a confusão "sem política" × "política de zero" que o door 1 recusou no banco.
+
+**C62** - Na tela `/materials`, abrir "Editar" de um material com `minimumStockGrams: null` deixa o
+campo "Estoque mínimo (g, opcional)" **vazio**, e de um com `500` deixa `"500"` (2 casos; só o lado
+vazio não distingue `""` de `String(null)`)
+Proof: `npm --prefix web run test -- 'src/app/(app)/materials/page.test.tsx' -t "prefills the minimum field from the row, empty when there is no minimum"`
+
+**C63** - Na tela `/inventory/items/<id>`, um item com `minimumQuantity: null` deixa o campo
+"Mínimo (un), vazio para nenhum" **vazio**, e um com `2` deixa `"2"` (2 casos, o mesmo galho na outra
+tela)
+Proof: `npm --prefix web run test -- 'src/app/(app)/inventory/items/[id]/page.test.tsx' -t "prefills the minimum field from the item, empty when there is no minimum"`
 
 ## Coverage
 
@@ -387,7 +405,8 @@ Proof: `npm --prefix web run test -- 'src/app/(app)/inventory/[id]/label/page.te
 | campos impressos na etiqueta (5) | material C37 · peso nominal C37 · lote C37, C38 · data de compra C37, C38 · id curto C37 | - |
 | composição da etiqueta (4) | lado do QR e do bloco C40 · QR dentro do bloco C56 · QR antes dos campos C56 · eixo em linha, e o chrome desta tela fora da impressão, C61 | - |
 | telas que o `plan.md` `## Observable` decide (7) | alerts C29-C32, C36 · label C37-C40, C43, C56, C57, C61 · roll detail C42, C46 · app shell C33-C35, C41 · materials form C52, C53 · stock item form C54, C58, C59, C60 · coleção `alerts` C14, C22, C23, C24 | - |
-| renders do piso, os dois lados em cada tela (3 telas) | `/materials` coluna C52 · `/inventory/items` coluna C59 · `/inventory/items/<id>` linha da `<dl>` C60 | - |
+| renders do piso, os dois lados em cada tela (3 telas) | `/materials` coluna: `500 g` e `—` C52 · `/inventory/items` coluna: `50 un` e `—` C59 · `/inventory/items/<id>` linha da `<dl>`: `—` C60 e `2 un` C58 | - |
+| prefill do campo do piso, os dois lados em cada formulário de edição (2 telas) | `/materials` C62 · `/inventory/items/<id>` C63 | - |
 | `PATCH /inventory/items/:id`, valores de `minimumQuantity` (3) | número C7 · omitido C49 (o `PATCH` de `sku` não zera o piso) · `null` explícito C55 | - |
 | `PATCH /materials/:id`, valores de `minimumStockGrams` (3) | número C1 · omitido C48 · `null` explícito C3 | - |
 | startup config: colunas novas visíveis (2 assemblies) | glob do `data-source.ts` do CLI, exercitado pelo `migration:run` do `global-setup.ts` C12 · `AppModule` com `autoLoadEntities`, exercitado por qualquer rota que leia o campo C1, C7 | - |
@@ -414,7 +433,7 @@ Proof: `npm --prefix web run test -- 'src/app/(app)/inventory/[id]/label/page.te
 | indicador de alertas no cabeçalho (decide: 3 estados, e um deles é uma falha silenciosa) | um teste de componente por estado | com alerta (C33), sem alerta (C34), falha (C35) |
 | tela da etiqueta (decide: valor do QR, campos nulos, rolo inexistente, composição, carregamento) | testes de tela por caso | C37-C40, C43, C56, C57, C61 |
 | `AppShell` e o mapeamento da linha de alerta para a resposta (instrumentação — copiam campo a campo, sem condicional que decida o resultado). O mapeamento ficou inline em `inventory.service.ts`, não num `toAlertResponse` próprio | nenhuma própria | cobertas pelas provas dos consumidores (C14, C22, C41) |
-| telas de cadastro que ganharam o campo do piso — `materials/page.tsx`, `inventory/items/page.tsx`, `inventory/items/[id]/page.tsx` (decidem: `buildBody` escolhe entre número e `null`, o submit do item escolhe entre número e omitir, e **três** `render` escolhem entre valor e `—`) | um teste de tela por galho, em **cada** tela que rende o campo, mais o que cada papel vê | os dois galhos do piso do material (C53), os dois do item (C54); os três renders nos dois estados — `/materials` C52, `/inventory/items` C59, `/inventory/items/<id>` C60; e definir/limpar mais o lado barrado no detalhe do item (C58) |
+| telas de cadastro que ganharam o campo do piso — `materials/page.tsx`, `inventory/items/page.tsx`, `inventory/items/[id]/page.tsx` (decidem: `buildBody` escolhe entre número e `null`, o submit do item escolhe entre número e omitir, **três** `render` escolhem entre valor e `—`, e **dois prefill** escolhem entre `String(valor)` e vazio) | um teste de tela por galho, em **cada** tela que toca o campo — render, submit e prefill — mais o que cada papel vê | os dois galhos do piso do material (C53), os dois do item (C54); os três renders nos dois estados — `/materials` C52, `/inventory/items` C59, `/inventory/items/<id>` C60 + C58; os dois prefill nos dois estados — C62, C63; e definir/limpar mais o lado barrado no detalhe do item (C58) |
 
 Evidence:
 
