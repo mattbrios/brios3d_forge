@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 30,
+  "next_id": 31,
   "lessons": [
     {
       "id": "L-001",
@@ -526,6 +526,24 @@
       ],
       "created": "2026-09-23T23:20:53Z",
       "last_seen": "2026-09-23T23:20:53Z"
+    },
+    {
+      "id": "L-030",
+      "key": "gate_fail::before blaming an intermittent e2e red on a second process sharing the test database check whether the received status is one the app can even return a status that appears nowhere in src means the request never reached the app under test so the leak is in the transport not in the data",
+      "text": "Before blaming an intermittent e2e red on a second process sharing the test database, check whether the received status is one the app can even return: a status that appears nowhere in src means the request never reached the app under test, so the leak is in the transport, not in the data",
+      "signal": "gate_fail",
+      "scope": "e2e",
+      "status": "candidate",
+      "features": [
+        "phase-10-stock-items"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "api/test/sales-channels.e2e-spec.ts:180 (expected 426 to be 400, full suite run 1 of 4, nothing concurrent) (e2e)"
+      ],
+      "created": "2026-09-24T01:16:28Z",
+      "last_seen": "2026-09-24T01:16:28Z"
     }
   ]
 }

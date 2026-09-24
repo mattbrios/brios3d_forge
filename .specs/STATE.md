@@ -31,7 +31,7 @@
 
 ## Handoff
 
-**Feature**: phase-10-stock-items - construída, aguardando o Verifier
+**Feature**: phase-10-stock-items - concluída (Verifier PASS na rodada 3)
 **Where**: C1-C57 construídos em 3 commits (`375e3e8` artefatos, `4b07126` API, `53ad563` web),
 um builder só (estimativa de 37k, abaixo do orçamento de 150k). API: `StockItem` +
 `StockItemPrinter`, 8 rotas novas em `inventory`, fold `computeStockItemAverageCost` (PMP por
@@ -46,11 +46,37 @@ rolo lendo as chaves novas. `lint`, `test`, `test:e2e` e `build` verdes nas duas
 produção (ajuste de -5 no histórico), papéis (admin cadastra e dá entrada; produção só movimenta;
 vendas só lê), estados de carregando/erro/vazio das duas telas novas, e o histórico do rolo
 íntegro depois da renomeação (1000 g a 0,12/g, baixa -100)
+**Verificação**: 3 rodadas, perfil `standard`, sempre por sub-agente independente.
+Rodada 1: FAIL - 2 mutantes sobreviventes (o lado **aceito** de `preferredSupplierId` não tinha
+prova em lugar nenhum, então um `assertSupplierExists` que recusasse todo fornecedor válido passava
+pelos 72 testes; e C24 matava o mutante do AD-023 - pré-checagem em memória + `UPDATE` absoluto - em
+só 1 de 4 rodadas, porque a intercalação era esperada e não forçada), mais 2 linhas de `Test policy`
+sem cumprimento. Fix em `c8c1876`: nasceram C58 (lado aceito do fornecedor e do `location`, asserido
+na resposta, na linha do banco, no detalhe, no `PATCH` e na lista) e C59 (7 lados recusados de
+limite/formato do `POST`), e C24 passou a **forçar** a intercalação com um `SELECT ... FOR UPDATE` do
+próprio teste. Rodada 2: FAIL - 1 mutante sobrevivente, o `UpdateStockItemDto` redeclara os 8
+validadores em vez de estender o do `POST`, e nenhum lado recusado dele tinha prova (relaxar
+`@MaxLength(150)` lá passava por 301/301). Fix em `fdff93c`: nasceu C60, 9 casos sobre o `PATCH`.
+Rodada 3: **PASS** - 60/60 checks com evidência localizada, 3 sets recomputados com 0 membros sem
+prova, 4 falhas injetadas e 4 mortas (incluindo a reinjeção do AD-023, morta 4 de 4),
+`validate_verification.py` exit 0. Lições L-023 a L-030 gravadas
 **In progress**: nada
-**Next step**: despachar o Verifier (sub-agente novo, perfil `standard`) sobre `5aa8cda..HEAD`
-com os 57 checks, e rodar `validate_verification.py phase-10-stock-items`
+**Next step**: nenhum bloqueio. Fase 11 (estoque mínimo, alertas e QR) consome `stock_items` e
+`filament_rolls`; Fase 21 (recebimento de compra) e Fase 15 (produto acabado) copiam o precedente do
+door 6 (cadastro sem movimento, entrada como segunda chamada) e, no caso da Fase 15, pagam a coluna
+nula do door 3; Fase 22 (manutenção) consome `stock_item_printers` para a pergunta inversa "quais
+peças servem nesta impressora"; Fase 12 passa a puxar o custo médio de insumo de
+`GET /inventory/items` em vez do parâmetro solto de `pricing`
+**Riscos abertos** (levantados pela verificação, nenhum reprovando a fase): (1) a suíte e2e tem
+não-determinismo **entre arquivos**, pré-existente e fora desta fase - a rodada 3 viu 2 vermelhos em
+`test/sales-channels.e2e-spec.ts` (Fase 5) sem nada concorrente, um deles com status `426`, que não
+existe em `api/src`, o que indica vazamento no transporte e não no dado (lição L-030); (2) C23
+declara na claim um mecanismo (`CHECK` sobre `UPDATE` relativo) que as suas asserções não
+distinguem - quem distingue é C24; (3) "cada lado recusado" dos DTOs é operacionalizado por campo e
+não por decorator, então `@IsString()`, `@IsArray()` e o `@IsNotEmpty()` dos textos opcionais ficam
+sem caso (consequência real hoje é zero: a tela envia `sku || undefined`)
 **Blockers**: nenhum
-**Uncommitted**: nada além deste `STATE.md` e do `ROADMAP.md` desta mesma mudança
+**Uncommitted**: nada além deste `STATE.md`
 **Branch**: main
 
 ## Handoff anterior

@@ -188,6 +188,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: verification.md Gate - api/test/stock-items.e2e-spec.ts:717 (C37, red 1 of 6 runs) (e2e)
 - last seen: 2026-09-23T23:20:53Z
 
+### L-030 - Before blaming an intermittent e2e red on a second process sharing the test database, check whether the received status is one the app can even return: a status that appears nowhere in src means the request never reached the app under test, so the leak is in the transport, not in the data
+- signal: `gate_fail` · recurrence: 1 feature(s) · scope: `e2e` · harmful: 0
+- features: phase-10-stock-items
+- evidence: api/test/sales-channels.e2e-spec.ts:180 (expected 426 to be 400, full suite run 1 of 4, nothing concurrent) (e2e)
+- last seen: 2026-09-24T01:16:28Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
