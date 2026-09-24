@@ -164,6 +164,23 @@ describe("Roll label page", () => {
     expect(code.compareDocumentPosition(fields) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(4);
   });
 
+  it("lays the code beside the fields and keeps the screen chrome out of the print", async () => {
+    // C56 prova a ordem do documento, que `flex-col` não muda: o eixo é decidido pela classe do
+    // bloco. E o `print:hidden` desta tela é o do título e do botão "Imprimir" - o do `AppShell`
+    // é outro arquivo (C41).
+    stubRoll(ROLL);
+    render(<RollLabelPage params={Promise.resolve({ id: ROLL_ID })} />);
+
+    const label = await screen.findByTestId("roll-label");
+    expect(label.className).toContain("flex");
+    expect(label.className).not.toContain("flex-col");
+
+    expect(screen.getByRole("heading", { name: "Etiqueta do rolo" }).className).toContain("print:hidden");
+    const printButton = screen.getByRole("button", { name: "Imprimir" });
+    expect((printButton.parentElement as HTMLElement).className).toContain("print:hidden");
+    expect(label.className).not.toContain("print:hidden");
+  });
+
   it("shows loading before the roll resolves", async () => {
     stubApi({
       [`/inventory/rolls/${ROLL_ID}`]: () => new Promise(() => undefined),

@@ -218,6 +218,21 @@ describe("Stock items page", () => {
     });
   });
 
+  it("shows an em dash in the minimum column for an item without a minimum", async () => {
+    // O lado nulo do render da coluna: trocar `—` por `0 un` é uma política diferente de
+    // "sem mínimo" e passava a suíte inteira, porque os dois fixtures tinham piso.
+    const withoutMinimum: StockItem = { ...CONSUMABLE, id: "i9", name: "Sem piso", minimumQuantity: null };
+    stubApi({
+      "/auth/me": () => Promise.resolve(jsonResponse(200, ADMIN_ME)),
+      [ALL_ITEMS_PATH]: () => Promise.resolve(jsonResponse(200, itemsPage([CONSUMABLE, withoutMinimum]))),
+    });
+    render(<StockItemsPageScreen />);
+    await screen.findByText("Sem piso");
+    // A coluna "Mínimo" é a 5ª, entre "Saldo" e "Custo médio".
+    expect(within(rowOf("Sem piso")).getAllByRole("cell")[4].textContent).toBe("—");
+    expect(within(rowOf("Parafuso M3x8")).getAllByRole("cell")[4].textContent).toBe("50 un");
+  });
+
   it("sends the typed item minimum and omits it when the field is empty", async () => {
     // Fase 11: o campo do piso no cadastro não tinha nenhuma asserção, então deixar de enviá-lo
     // passava a suíte inteira. Omitir é o que grava `null` (door 1), e por isso o caso vazio assera

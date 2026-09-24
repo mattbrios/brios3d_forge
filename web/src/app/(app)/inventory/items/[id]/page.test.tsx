@@ -117,6 +117,24 @@ describe("Stock item detail page", () => {
     expect(screen.queryByRole("button", { name: "Salvar mínimo" })).toBeNull();
   });
 
+  it("shows an em dash for an item without a minimum", async () => {
+    // O lado nulo da linha "Estoque mínimo" da `<dl>`: o fixture com piso já estava asserido, este
+    // não, então trocar `—` por `0 un` passava a suíte inteira.
+    stubApi({
+      // Sessão de vendas: o `<h2>` "Estoque mínimo" do formulário de admin não existe, então o
+      // único "Estoque mínimo" na tela é o `<dt>` da lista de dados.
+      "/auth/me": () => Promise.resolve(jsonResponse(200, SALES_ME)),
+      "/inventory/items/i2": () =>
+        Promise.resolve(jsonResponse(200, { ...SPARE_PART, minimumQuantity: null })),
+      "/printers?pageSize=100": () => Promise.resolve(jsonResponse(200, printersPage([PRINTER_1]))),
+    });
+    render(<StockItemDetailPage params={Promise.resolve({ id: "i2" })} />);
+
+    const term = await screen.findByText("Estoque mínimo");
+    expect(term.tagName).toBe("DT");
+    expect((term.nextElementSibling as HTMLElement).textContent).toBe("—");
+  });
+
   it("admin sets and clears the item minimum", async () => {
     let current = { ...SPARE_PART, minimumQuantity: null as number | null };
     const fetchMock = stubApi({
