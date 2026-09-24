@@ -66,6 +66,7 @@ export class MaterialsService {
         needsDrying: dto.needsDrying,
         ...drying,
         active: true,
+        minimumStockGrams: dto.minimumStockGrams ?? null,
       }),
     );
     return toMaterialResponse(created);
@@ -100,6 +101,8 @@ export class MaterialsService {
       if (dto.nozzleTempC !== undefined) material.nozzleTempC = dto.nozzleTempC;
       if (dto.bedTempC !== undefined) material.bedTempC = dto.bedTempC;
       if (dto.active !== undefined) material.active = dto.active;
+      // Fase 11, door 1: `undefined` preserva o piso, `null` explícito limpa a política.
+      if (dto.minimumStockGrams !== undefined) material.minimumStockGrams = dto.minimumStockGrams;
       material.needsDrying = finalNeedsDrying;
       // WHILE needsDrying for false, dryingTemperatureC/dryingHours ficam null (AC 5), mantido
       // também no PATCH.

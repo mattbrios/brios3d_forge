@@ -4,11 +4,13 @@ import {
   IsArray,
   IsIn,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
   Length,
   MaxLength,
+  Min,
 } from 'class-validator';
 import { STOCK_ITEM_CATEGORIES, type StockItemCategory } from '../entities/stock-item.entity.js';
 
@@ -56,4 +58,10 @@ export class CreateStockItemDto {
   @ArrayUnique()
   @IsUUID(undefined, { each: true })
   compatiblePrinterIds?: string[];
+
+  // Fase 11, door 1: piso opcional na unidade do item; omitir grava `null`.
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  minimumQuantity?: number | null;
 }

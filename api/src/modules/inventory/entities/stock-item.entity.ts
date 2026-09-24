@@ -18,6 +18,8 @@ export type StockItemCategory = (typeof STOCK_ITEM_CATEGORIES)[number];
 // backstop contra saldo negativo sob concorrência (AD-023).
 @Entity('stock_items')
 @Check('stock_item_balance_non_negative', '"balance_quantity" >= 0')
+// Fase 11, door 1: mesmo shape do piso do material, na unidade do próprio item.
+@Check('stock_items_minimum_non_negative', '"minimum_quantity" IS NULL OR "minimum_quantity" >= 0')
 export class StockItem {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -49,6 +51,10 @@ export class StockItem {
 
   @Column({ name: 'balance_quantity', type: 'double precision', default: 0 })
   balanceQuantity: number;
+
+  // Fase 11, door 1: piso de reposição na unidade do item; `null` é "sem política", não zero.
+  @Column({ name: 'minimum_quantity', type: 'double precision', nullable: true })
+  minimumQuantity: number | null;
 
   @Column({ default: true })
   active: boolean;

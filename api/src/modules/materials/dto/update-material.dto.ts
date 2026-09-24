@@ -74,4 +74,12 @@ export class UpdateMaterialDto {
   @IsOptional()
   @IsBoolean()
   active?: boolean;
+
+  // Fase 11, door 1: primeiro campo do sistema em que `undefined` e `null` significam coisas
+  // diferentes num PATCH - omitir preserva o piso, `null` explícito limpa a política. O
+  // `@IsOptional()` do class-validator deixa `null` passar, e o serviço distingue os dois.
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  minimumStockGrams?: number | null;
 }

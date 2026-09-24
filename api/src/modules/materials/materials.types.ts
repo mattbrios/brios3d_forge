@@ -13,6 +13,8 @@ export interface MaterialResponse {
   dryingTemperatureC: number | null;
   dryingHours: number | null;
   active: boolean;
+  // Fase 11, door 1: piso de reposição em gramas; `null` é "sem política de reposição".
+  minimumStockGrams: number | null;
 }
 
 export interface ListMaterialsResponse {
@@ -35,6 +37,7 @@ export function toMaterialResponse(material: Material): MaterialResponse {
     dryingTemperatureC: material.dryingTemperatureC,
     dryingHours: material.dryingHours,
     active: material.active,
+    minimumStockGrams: material.minimumStockGrams,
   };
 }
 

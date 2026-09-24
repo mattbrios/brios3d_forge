@@ -5,11 +5,13 @@ import {
   IsBoolean,
   IsIn,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
   Length,
   MaxLength,
+  Min,
 } from 'class-validator';
 import { STOCK_ITEM_CATEGORIES, type StockItemCategory } from '../entities/stock-item.entity.js';
 
@@ -63,4 +65,10 @@ export class UpdateStockItemDto {
   @IsOptional()
   @IsBoolean()
   active?: boolean;
+
+  // Fase 11, door 1: omitir preserva o piso, `null` explícito limpa a política.
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  minimumQuantity?: number | null;
 }

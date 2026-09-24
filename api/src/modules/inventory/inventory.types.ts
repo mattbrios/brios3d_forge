@@ -1,6 +1,7 @@
 import type { FilamentRoll } from './entities/filament-roll.entity.js';
 import type { InventoryMovement, MovementType } from './entities/inventory-movement.entity.js';
 import type { StockItem, StockItemCategory } from './entities/stock-item.entity.js';
+import type { StockAlert } from './stock-alerts.js';
 
 // Door 6a: status derivado em runtime, nunca uma coluna própria.
 export const ROLL_STATUSES = ['fechado', 'aberto', 'vazio', 'descartado'] as const;
@@ -76,6 +77,12 @@ export interface MaterialsSummaryResponse {
   items: MaterialSummaryItem[];
 }
 
+// Fase 11, door 4: uma lista só, sem paginação - o conjunto é por natureza pequeno (só o que
+// está abaixo do piso) e o indicador do cabeçalho precisa da contagem total numa chamada.
+export interface StockAlertsResponse {
+  items: StockAlert[];
+}
+
 export interface StockItemResponse {
   id: string;
   category: StockItemCategory;
@@ -85,6 +92,8 @@ export interface StockItemResponse {
   location: string | null;
   preferredSupplierId: string | null;
   balanceQuantity: number;
+  // Fase 11, door 1: piso de reposição na unidade do item; `null` é "sem política".
+  minimumQuantity: number | null;
   // Door 5: recalculado por replay do ledger a cada leitura, nunca armazenado (AD-024).
   avgCostCents: number | null;
   compatiblePrinterIds: string[];
@@ -161,6 +170,7 @@ export function toStockItemResponse(
     location: item.location,
     preferredSupplierId: item.preferredSupplierId,
     balanceQuantity: item.balanceQuantity,
+    minimumQuantity: item.minimumQuantity,
     avgCostCents,
     compatiblePrinterIds,
     active: item.active,

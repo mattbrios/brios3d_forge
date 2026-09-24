@@ -245,8 +245,10 @@ describe('Inventory (e2e)', () => {
     expect(response.status).toBe(200);
     const material = (response.body.items as Array<Record<string, unknown>>).find((row) => row.id === materialId);
     expect(material).toBeDefined();
+    // `minimumStockGrams` entrou na Fase 11 (door 1) e é política de reposição, não saldo nem
+    // custo: o door 5 desta fase continua valendo - nenhum campo derivado do estoque mora aqui.
     expect(Object.keys(material as object).sort()).toEqual(
-      ['active', 'bedTempC', 'brand', 'color', 'densityGCm3', 'dryingHours', 'dryingTemperatureC', 'id', 'needsDrying', 'nozzleTempC', 'type'].sort(),
+      ['active', 'bedTempC', 'brand', 'color', 'densityGCm3', 'dryingHours', 'dryingTemperatureC', 'id', 'minimumStockGrams', 'needsDrying', 'nozzleTempC', 'type'].sort(),
     );
   });
 

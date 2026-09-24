@@ -1,6 +1,9 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { Check, Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity('materials')
+// Fase 11, door 1: o piso é uma coluna nula da própria tabela, e o CHECK é o backstop do 400 da
+// API contra um valor negativo (AD-023).
+@Check('materials_minimum_non_negative', '"minimum_stock_grams" IS NULL OR "minimum_stock_grams" >= 0')
 export class Material {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -36,6 +39,11 @@ export class Material {
 
   @Column({ default: true })
   active: boolean;
+
+  // Fase 11, door 1: piso de reposição em gramas, comparado com a SOMA dos rolos não descartados.
+  // `null` é "sem política de reposição", nunca "mínimo zero" - por isso não tem DEFAULT.
+  @Column({ name: 'minimum_stock_grams', type: 'double precision', nullable: true })
+  minimumStockGrams: number | null;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;

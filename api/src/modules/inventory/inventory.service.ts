@@ -38,6 +38,7 @@ import {
   STOCK_ITEM_INACTIVE,
   STOCK_ITEM_NOT_FOUND,
   SUPPLIER_NOT_FOUND,
+  type StockAlertsResponse,
   type StockItemDetailResponse,
   type StockItemResponse,
   WEIGHT_BELOW_TARE,
@@ -45,6 +46,7 @@ import {
   toRollResponse,
   toStockItemResponse,
 } from './inventory.types.js';
+import { computeStockAlerts } from './stock-alerts.js';
 import { computeStockItemAverageCost } from './stock-item-average-cost.js';
 import { Material } from '../materials/entities/material.entity.js';
 import { Printer } from '../printers/entities/printer.entity.js';
@@ -337,6 +339,52 @@ export class InventoryService {
     return { items };
   }
 
+  async alerts(): Promise<StockAlertsResponse> {
+    // Parte de `materials`, não dos rolos: um material com piso e nenhum rolo tem de aparecer
+    // com saldo 0, e `materialsSummary` (que parte dos rolos) nunca o veria. O filtro de
+    // descartado mora no ON do LEFT JOIN, para o material sem rolo elegível continuar na linha.
+    const materialRows: Array<{
+      id: string;
+      type: string;
+      brand: string;
+      color: string;
+      active: boolean;
+      minimum: number | null;
+      balance: number | null;
+    }> = await this.rolls.manager
+      .createQueryBuilder(Material, 'material')
+      .select('material.id', 'id')
+      .addSelect('material.type', 'type')
+      .addSelect('material.brand', 'brand')
+      .addSelect('material.color', 'color')
+      .addSelect('material.active', 'active')
+      .addSelect('material.minimum_stock_grams', 'minimum')
+      .addSelect('SUM(roll.balance_grams)', 'balance')
+      .leftJoin(
+        FilamentRoll,
+        'roll',
+        'roll.material_id = material.id AND roll.discarded_at IS NULL',
+      )
+      .groupBy('material.id')
+      .getRawMany();
+
+    const stockItems = await this.stockItems.find();
+
+    const items = computeStockAlerts({
+      materials: materialRows.map((row) => ({
+        id: row.id,
+        type: row.type,
+        brand: row.brand,
+        color: row.color,
+        active: row.active,
+        minimumStockGrams: row.minimum === null ? null : Number(row.minimum),
+        balanceGrams: row.balance === null ? 0 : Number(row.balance),
+      })),
+      stockItems,
+    });
+    return { items };
+  }
+
   // --- Itens de estoque (insumos e peças de reposição) ---
 
   async createItem(dto: CreateStockItemDto): Promise<StockItemResponse> {
@@ -356,6 +404,7 @@ export class InventoryService {
           location: dto.location ?? null,
           preferredSupplierId: dto.preferredSupplierId ?? null,
           balanceQuantity: 0,
+          minimumQuantity: dto.minimumQuantity ?? null,
           active: true,
         }),
       );
@@ -384,6 +433,8 @@ export class InventoryService {
       if (dto.location !== undefined) item.location = dto.location;
       if (dto.preferredSupplierId !== undefined) item.preferredSupplierId = dto.preferredSupplierId;
       if (dto.active !== undefined) item.active = dto.active;
+      // Fase 11, door 1: `undefined` preserva o piso, `null` explícito limpa a política.
+      if (dto.minimumQuantity !== undefined) item.minimumQuantity = dto.minimumQuantity;
       await this.saveItem(itemsRepo, item);
 
       // Omitir o campo preserva os vínculos (AC 33); enviá-lo substitui o conjunto (AC 32).

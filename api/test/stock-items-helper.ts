@@ -11,14 +11,15 @@ interface NewStockItem {
   preferredSupplierId?: string | null;
   balanceQuantity?: number;
   active?: boolean;
+  minimumQuantity?: number | null;
 }
 
 // Grava o item direto no banco, sem passar pela rota, para preparar o estado de um teste.
 export async function createStockItem(dataSource: DataSource, item: NewStockItem = {}): Promise<string> {
   const rows: Array<{ id: string }> = await dataSource.query(
     `INSERT INTO stock_items
-       (category, name, sku, unit_of_measure, location, preferred_supplier_id, balance_quantity, active)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+       (category, name, sku, unit_of_measure, location, preferred_supplier_id, balance_quantity, active, minimum_quantity)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
     [
       item.category ?? 'insumo',
       item.name ?? 'Parafuso M3x8',
@@ -28,6 +29,7 @@ export async function createStockItem(dataSource: DataSource, item: NewStockItem
       item.preferredSupplierId ?? null,
       item.balanceQuantity ?? 0,
       item.active ?? true,
+      item.minimumQuantity ?? null,
     ],
   );
   return rows[0].id;

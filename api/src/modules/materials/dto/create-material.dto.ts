@@ -3,6 +3,7 @@ import {
   IsBoolean,
   IsNotEmpty,
   IsNumber,
+  IsOptional,
   IsPositive,
   IsString,
   Length,
@@ -66,4 +67,10 @@ export class CreateMaterialDto {
   @IsNumber()
   @IsPositive()
   dryingHours?: number;
+
+  // Fase 11, door 1: piso opcional em gramas; omitir grava `null` ("sem política de reposição").
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  minimumStockGrams?: number | null;
 }

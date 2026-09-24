@@ -22,6 +22,7 @@ import type {
   MaterialsSummaryResponse,
   RollDetailResponse,
   RollResponse,
+  StockAlertsResponse,
   StockItemDetailResponse,
   StockItemResponse,
 } from './inventory.types.js';
@@ -50,6 +51,14 @@ export class InventoryController {
   @Get('materials-summary')
   materialsSummary(@Query() query: MaterialsSummaryDto): Promise<MaterialsSummaryResponse> {
     return this.inventory.materialsSummary(query);
+  }
+
+  // Leitura para os três papéis (AC 20): quem repõe é admin, mas todo mundo precisa saber que
+  // vai faltar. Sem query nenhuma - a lista não pagina (door 4).
+  @Roles('production', 'sales')
+  @Get('alerts')
+  alerts(): Promise<StockAlertsResponse> {
+    return this.inventory.alerts();
   }
 
   @Roles('production', 'sales')
