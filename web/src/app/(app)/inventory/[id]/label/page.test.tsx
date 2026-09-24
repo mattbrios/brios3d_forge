@@ -147,6 +147,35 @@ describe("Roll label page", () => {
     expect(label.style.height).toBe("40mm");
   });
 
+  it("puts the code inside the label block and before the fields", async () => {
+    // C40 mede o QR e o bloco separadamente: sem isto, o QR podia estar fora do bloco ou depois dos
+    // campos e a suíte ficava verde. A composição aprovada é "QR de 30 mm à esquerda, campos à
+    // direita".
+    stubRoll(ROLL);
+    render(<RollLabelPage params={Promise.resolve({ id: ROLL_ID })} />);
+
+    const code = await screen.findByTestId("qr-code");
+    const label = screen.getByTestId("roll-label");
+    const fields = label.querySelector("dl") as HTMLElement;
+
+    expect(label.contains(code)).toBe(true);
+    expect(label.contains(fields)).toBe(true);
+    // Node.DOCUMENT_POSITION_FOLLOWING (4): `fields` vem depois de `code` na ordem do documento.
+    expect(code.compareDocumentPosition(fields) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(4);
+  });
+
+  it("shows loading before the roll resolves", async () => {
+    stubApi({
+      [`/inventory/rolls/${ROLL_ID}`]: () => new Promise(() => undefined),
+      "/materials?pageSize=100": () => Promise.resolve(jsonResponse(200, materialsPage([MATERIAL]))),
+    });
+    render(<RollLabelPage params={Promise.resolve({ id: ROLL_ID })} />);
+
+    expect(await screen.findByText("Carregando…")).toBeTruthy();
+    expect(screen.queryByTestId("roll-label")).toBeNull();
+    expect(screen.queryByTestId("qr-code")).toBeNull();
+  });
+
   it("shows the error state and no code for an unknown roll", async () => {
     stubRoll(null);
     render(<RollLabelPage params={Promise.resolve({ id: ROLL_ID })} />);

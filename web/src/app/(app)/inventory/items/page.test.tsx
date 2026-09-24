@@ -217,4 +217,43 @@ describe("Stock items page", () => {
       unitCostCents: 70,
     });
   });
+
+  it("sends the typed item minimum and omits it when the field is empty", async () => {
+    // Fase 11: o campo do piso no cadastro não tinha nenhuma asserção, então deixar de enviá-lo
+    // passava a suíte inteira. Omitir é o que grava `null` (door 1), e por isso o caso vazio assera
+    // ausência da chave, não `null`.
+    const cases: Array<[string, number | undefined]> = [
+      ["10", 10],
+      ["", undefined],
+    ];
+    for (const [typed, expected] of cases) {
+      const fetchMock = stubApi({
+        "/auth/me": () => Promise.resolve(jsonResponse(200, ADMIN_ME)),
+        [ALL_ITEMS_PATH]: () => Promise.resolve(jsonResponse(200, itemsPage([CONSUMABLE]))),
+        "/inventory/items": () => Promise.resolve(jsonResponse(201, CONSUMABLE)),
+      });
+      render(<StockItemsPageScreen />);
+      await screen.findByText("Parafuso M3x8");
+      fireEvent.click(screen.getByRole("button", { name: "Cadastrar item" }));
+      fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Ímã 6x3" } });
+      fireEvent.change(screen.getByLabelText("Unidade de medida (un, m, kg, L, folha)"), {
+        target: { value: "un" },
+      });
+      fireEvent.change(screen.getByLabelText("Estoque mínimo (opcional)"), { target: { value: typed } });
+      fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+      const createCalls = () =>
+        fetchMock.mock.calls.filter(
+          ([url, init]) =>
+            (url as string).endsWith("/inventory/items") &&
+            (init as RequestInit | undefined)?.method === "POST",
+        );
+      await vi.waitFor(() => expect(createCalls()).toHaveLength(1));
+      const body = bodyOf(createCalls()[0][1] as RequestInit);
+      expect(body.minimumQuantity, `digitado "${typed}"`).toBe(expected);
+      expect("minimumQuantity" in body, `chave presente para "${typed}"`).toBe(typed !== "");
+      cleanup();
+      vi.unstubAllGlobals();
+    }
+  });
 });

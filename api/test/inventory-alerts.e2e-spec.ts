@@ -211,6 +211,16 @@ describe('Stock minimums and alerts (e2e)', () => {
     expect(await itemMinimumOf(response.body.id)).toBe(10);
   });
 
+  it('clearing the item minimum writes null back', async () => {
+    const id = await createStockItem(dataSource, { name: 'Ímã 6x3', minimumQuantity: 10 });
+
+    // Corpo exato que a tela do item envia para limpar a política; o simétrico do material é C3.
+    const response = await patchItem(id, { minimumQuantity: null }, adminCookie);
+    expect(response.status).toBe(200);
+    expect(response.body.minimumQuantity).toBeNull();
+    expect(await itemMinimumOf(id)).toBeNull();
+  });
+
   it('rejects a negative or non-numeric item minimum on create and on update', async () => {
     const id = await createStockItem(dataSource, { name: 'Base', minimumQuantity: 10 });
     const itemsBefore = await countItems();

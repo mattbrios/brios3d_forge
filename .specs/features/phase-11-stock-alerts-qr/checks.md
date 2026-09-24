@@ -3,7 +3,8 @@
 Profile: standard
 Plan: `.specs/features/phase-11-stock-alerts-qr/plan.md`
 
-51 checks em 4 fatias · 4 one-way doors · nenhuma questão aberta
+58 checks em 4 fatias · 4 one-way doors · nenhuma questão aberta
+(C1-C51 aprovados antes do build; C52-C58 nasceram da rodada 1 da verificação, fechando cobertura de tela)
 
 O `AGENTS.md` não declara perfil (`light` seria o padrão). Uso `standard`, como as Fases 8 a 10,
 por três formas que esta fase traz e que o repositório não tem análogo para:
@@ -29,8 +30,9 @@ Os valores esperados vêm do `plan.md` (`## Criteria` e `## Landing`) e ficam es
 Onde as provas rodam. Os e2e (`npm --prefix api run test:e2e`) montam o `AppModule` contra o
 `forge_test`, com as migrations aplicadas pelo `global-setup.ts` antes da suíte (padrão da Fase 0),
 num arquivo novo `test/inventory-alerts.e2e-spec.ts` que reusa `auth-helper.ts`,
-`materials-helper.ts`, `inventory-helper.ts` e `stock-items-helper.ts` (os dois últimos ganham o
-parâmetro opcional do piso no `INSERT`). O predicado e a ordenação (`stock-alerts.ts`, função pura,
+`materials-helper.ts`, `inventory-helper.ts` e `stock-items-helper.ts` (`materials-helper.ts` e
+`stock-items-helper.ts` ganham o parâmetro opcional do piso no `INSERT`; `inventory-helper.ts` não,
+porque rolo não tem piso). O predicado e a ordenação (`stock-alerts.ts`, função pura,
 sem banco) ganham um spec Vitest isolado ao lado de `average-cost.spec.ts`. A migration ganha
 arquivo próprio (`test/minimums-migration.e2e-spec.ts`) rodando `down()` e `up()` por
 `QueryRunner` sobre linhas semeadas, no mesmo formato de `movements-migration.e2e-spec.ts`
@@ -285,6 +287,51 @@ Proof: `npm --prefix web run test -- 'src/app/(app)/inventory/[id]/page.test.tsx
 sem `^` nem `~` (door 2, regra de versão fixada do `AGENTS.md`)
 Proof: `npm --prefix web run test -- src/lib/qrcode-pin.test.ts -t "pins qrcode.react to an exact version"`
 
+### Nascidos da verificação, rodada 1
+
+A rodada 1 passou os 51 checks com evidência localizada e matou as 5 falhas injetadas, e reprovou por
+**cobertura**: duas telas que o `plan.md` `## Observable` decide (`screen materials form` e
+`screen stock item form`) não eram alcançadas por check nenhum, o galho numérico de `buildBody` e a
+composição da etiqueta não tinham asserção, e `{ "minimumQuantity": null }` — o corpo que o próprio
+web envia para limpar a política — não tinha prova em nível de rota. C52-C58 fecham isso. Os valores
+esperados continuam vindo do `plan.md`, escritos literalmente.
+
+**C52** - Na tela `/materials`, com um material de piso `500` e outro sem piso, a coluna "Mínimo"
+mostra `500 g` na linha do primeiro e `—` na do segundo (AC 6 no nível da tela; um `render` que
+trocasse o nulo por `0 g` passava a suíte inteira)
+Proof: `npm --prefix web run test -- 'src/app/(app)/materials/page.test.tsx' -t "shows the minimum column as grams or an em dash"`
+
+**C53** - Tabela sobre os dois galhos de `buildBody` na tela `/materials` (2 casos): preencher
+"Estoque mínimo (g, opcional)" com `500` e salvar manda `minimumStockGrams: 500` no corpo; deixar o
+campo vazio manda `minimumStockGrams: null` (AC 1, AC 3 no nível da tela)
+Proof: `npm --prefix web run test -- 'src/app/(app)/materials/page.test.tsx' -t "sends the typed minimum as a number and the empty field as null"`
+
+**C54** - Tabela sobre o cadastro de item na tela `/inventory/items` (2 casos): com
+"Estoque mínimo (opcional)" igual a `10`, o `POST` leva `minimumQuantity: 10`; com o campo vazio, a
+chave **não** aparece no corpo (omitir é o que grava `null`, door 1) (AC 7, AC 9 no nível da tela)
+Proof: `npm --prefix web run test -- 'src/app/(app)/inventory/items/page.test.tsx' -t "sends the typed item minimum and omits it when the field is empty"`
+
+**C55** - Num item com `minimumQuantity: 10`, `PATCH /inventory/items/:id` com
+`{ "minimumQuantity": null }` responde `200` com `minimumQuantity: null` e deixa a coluna
+`minimum_quantity` nula (o simétrico de C3 no item, e o corpo exato que a tela do item envia para
+limpar a política; `## Surface`: "número ou `null`")
+Proof: `npm --prefix api run test:e2e -- test/inventory-alerts.e2e-spec.ts -t "clearing the item minimum writes null back"`
+
+**C56** - Na tela da etiqueta, o elemento do QR é **descendente** do bloco de `70mm` × `40mm` e vem
+antes do `<dl>` dos campos na ordem do documento (composição aprovada em `## Assumptions`: "QR de
+30 mm à esquerda e os campos à direita"; C40 mede os dois separadamente e não prova containment)
+Proof: `npm --prefix web run test -- 'src/app/(app)/inventory/[id]/label/page.test.tsx' -t "puts the code inside the label block and before the fields"`
+
+**C57** - Enquanto o `GET /inventory/rolls/:id` não resolve, a tela da etiqueta mostra "Carregando…"
+e não renderiza nem o bloco da etiqueta nem o QR (`Observable`: `screen label / loading state`)
+Proof: `npm --prefix web run test -- 'src/app/(app)/inventory/[id]/label/page.test.tsx' -t "shows loading before the roll resolves"`
+
+**C58** - Na tela `/inventory/items/<id>`, `admin` define o piso (corpo `{ "minimumQuantity": 2 }`) e
+depois o limpa com o campo vazio (corpo `{ "minimumQuantity": null }`), e `sales` não vê a ação
+"Salvar mínimo" (a Fase 10 entregou o item sem formulário de edição, então sem esta seção nenhum item
+já cadastrado recebe piso pela interface — AC 7 ficaria sem caminho de tela)
+Proof: `npm --prefix web run test -- 'src/app/(app)/inventory/items/[id]/page.test.tsx' -t "admin sets and clears the item minimum"`
+
 ## Coverage
 
 | Set (size) | Member -> proof | Unproven |
@@ -314,8 +361,12 @@ Proof: `npm --prefix web run test -- src/lib/qrcode-pin.test.ts -t "pins qrcode.
 | papéis que leem alertas, lado positivo (3) | `admin` C14 · `production` C26 · `sales` C26, C36 | - |
 | estados da tela `/inventory/alerts` (3) | carregando C29 · erro C31 · vazio C32 | - |
 | estados do indicador no cabeçalho (3) | com alerta C33 · sem alerta C34 · falha na busca C35 | - |
-| estados da tela da etiqueta (2) | etiqueta pronta C37 · rolo inexistente C43 | - |
+| estados da tela da etiqueta (3) | etiqueta pronta C37 · rolo inexistente C43 · carregando C57 | - |
 | campos impressos na etiqueta (5) | material C37 · peso nominal C37 · lote C37, C38 · data de compra C37, C38 · id curto C37 | - |
+| composição da etiqueta (3) | lado do QR e do bloco C40 · QR dentro do bloco C56 · QR antes dos campos C56 | - |
+| telas que o `plan.md` `## Observable` decide (7) | alerts C29-C32, C36 · label C37-C40, C43, C56, C57 · roll detail C42, C46 · app shell C33-C35, C41 · materials form C52, C53 · stock item form C54, C58 · coleção `alerts` C14, C22, C23, C24 | - |
+| `PATCH /inventory/items/:id`, valores de `minimumQuantity` (3) | número C7 · omitido C49 (o `PATCH` de `sku` não zera o piso) · `null` explícito C55 | - |
+| `PATCH /materials/:id`, valores de `minimumStockGrams` (3) | número C1 · omitido C48 · `null` explícito C3 | - |
 | startup config: colunas novas visíveis (2 assemblies) | glob do `data-source.ts` do CLI, exercitado pelo `migration:run` do `global-setup.ts` C12 · `AppModule` com `autoLoadEntities`, exercitado por qualquer rota que leia o campo C1, C7 | - |
 
 - Claims que citam código de status, rota ou formato de resposta: C1-C27, C48-C51 — cada uma tem
@@ -339,7 +390,8 @@ Proof: `npm --prefix web run test -- src/lib/qrcode-pin.test.ts -t "pins qrcode.
 | DTOs que ganham campo opcional aceitando `null` (instrumentação com decisão de validação; mesma forma dos DTOs das Fases 5-10) | e2e do lado aceito e de cada lado recusado, nas quatro rotas de escrita | aceito C1, C7, C10, C11; recusado C4, C8; `null` explícito C3 |
 | indicador de alertas no cabeçalho (decide: 3 estados, e um deles é uma falha silenciosa) | um teste de componente por estado | com alerta (C33), sem alerta (C34), falha (C35) |
 | tela da etiqueta (decide: valor do QR, campos nulos, rolo inexistente) | testes de tela por caso | C37-C40, C43 |
-| `AppShell`, `toAlertResponse` e o mapeamento de resposta (instrumentação — copiam campo a campo, sem condicional que decida o resultado) | nenhuma própria | cobertas pelas provas dos consumidores (C14, C22, C41) |
+| `AppShell` e o mapeamento da linha de alerta para a resposta (instrumentação — copiam campo a campo, sem condicional que decida o resultado). O mapeamento ficou inline em `inventory.service.ts`, não num `toAlertResponse` próprio | nenhuma própria | cobertas pelas provas dos consumidores (C14, C22, C41) |
+| telas de cadastro que ganharam o campo do piso — `materials/page.tsx`, `inventory/items/page.tsx`, `inventory/items/[id]/page.tsx` (decidem: `buildBody` escolhe entre número e `null`, o submit do item escolhe entre número e omitir, e o `render` da coluna escolhe entre valor e `—`) | um teste de tela por galho, mais o que cada papel vê | os dois galhos do piso do material (C53), os dois do item (C54), a coluna nos dois estados (C52), e definir/limpar mais o lado barrado no detalhe do item (C58) |
 
 Evidence:
 

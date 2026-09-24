@@ -208,6 +208,47 @@ describe("Materials page", () => {
     });
   });
 
+  it("shows the minimum column as grams or an em dash", async () => {
+    // Fase 11: a coluna existia sem nenhuma asserção, então trocar o nulo por "0 g" - que é uma
+    // política diferente de "sem mínimo" - passava a suíte inteira.
+    const withMinimum: Material = { ...MATERIAL_1, id: "m9", type: "ABS", minimumStockGrams: 500 };
+    stubApi({
+      "/auth/me": () => Promise.resolve(jsonResponse(200, ADMIN_ME)),
+      "/materials?pageSize=100": () => Promise.resolve(jsonResponse(200, page([withMinimum, MATERIAL_1]))),
+    });
+    render(<MaterialsPage />);
+    const withRow = (await screen.findByText("ABS")).closest("tr") as HTMLTableRowElement;
+    const withoutRow = screen.getByText("PLA").closest("tr") as HTMLTableRowElement;
+    // A coluna "Mínimo" é a 7a, entre "Mesa °C" e "Situação".
+    expect(within(withRow).getAllByRole("cell")[6].textContent).toBe("500 g");
+    expect(within(withoutRow).getAllByRole("cell")[6].textContent).toBe("—");
+  });
+  it("sends the typed minimum as a number and the empty field as null", async () => {
+    // Os dois galhos de buildBody. Sem o primeiro, definir 500 g pela tela - o AC 1 visto pelo
+    // usuario - nao tinha prova em nenhum nivel de tela.
+    const cases: Array<[string, number | null]> = [
+      ["500", 500],
+      ["", null],
+    ];
+    for (const [typed, expected] of cases) {
+      const fetchMock = stubApi({
+        "/auth/me": () => Promise.resolve(jsonResponse(200, ADMIN_ME)),
+        "/materials?pageSize=100": () => Promise.resolve(jsonResponse(200, page([MATERIAL_1]))),
+        "/materials/m1": () => Promise.resolve(jsonResponse(200, { ...MATERIAL_1, minimumStockGrams: expected })),
+      });
+      render(<MaterialsPage />);
+      await screen.findByText("PLA");
+      fireEvent.click(screen.getByRole("button", { name: "Editar" }));
+      fireEvent.change(screen.getByLabelText("Estoque mínimo (g, opcional)"), { target: { value: typed } });
+      fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
+      await vi.waitFor(() => expect(callsTo(fetchMock, "/materials/m1")).toHaveLength(1));
+      expect(bodyOf(callsTo(fetchMock, "/materials/m1")[0][1]).minimumStockGrams, `digitado "${typed}"`).toBe(
+        expected,
+      );
+      cleanup();
+      vi.unstubAllGlobals();
+    }
+  });
   it("admin edits a material without reloading", async () => {
     const patched: Route = () => Promise.resolve(jsonResponse(200, { ...MATERIAL_1, color: "Vermelho" }));
     const fetchMock = stubApi({
