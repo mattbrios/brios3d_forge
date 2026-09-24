@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 33,
+  "next_id": 45,
   "lessons": [
     {
       "id": "L-001",
@@ -580,6 +580,222 @@
       ],
       "created": "2026-09-24T03:13:08Z",
       "last_seen": "2026-09-24T03:13:08Z"
+    },
+    {
+      "id": "L-033",
+      "key": "ac_gap::when a field is added to an existing crud screen write a check for the new column and for both branches of the form s value mapping not only for the api route that stores it",
+      "text": "When a field is added to an existing CRUD screen, write a check for the new column and for both branches of the form's value mapping, not only for the API route that stores it",
+      "signal": "ac_gap",
+      "scope": "web-screens",
+      "status": "candidate",
+      "features": [
+        "phase-11-stock-alerts-qr"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "web/src/app/(app)/materials/page.tsx:63 (web-screens)"
+      ],
+      "created": "2026-09-24T12:50:25Z",
+      "last_seen": "2026-09-24T12:50:25Z"
+    },
+    {
+      "id": "L-034",
+      "key": "ac_gap::when a patch field accepts an explicit null to clear a policy assert the null round trip through the route on every entity that has the field not just the first one",
+      "text": "When a PATCH field accepts an explicit null to clear a policy, assert the null round-trip through the route on every entity that has the field, not just the first one",
+      "signal": "ac_gap",
+      "scope": "api-routes",
+      "status": "candidate",
+      "features": [
+        "phase-11-stock-alerts-qr"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "api/src/modules/inventory/inventory.service.ts:437 (api-routes)"
+      ],
+      "created": "2026-09-24T12:50:26Z",
+      "last_seen": "2026-09-24T12:50:26Z"
+    },
+    {
+      "id": "L-035",
+      "key": "spec_precision_gap::a check claiming one element sits inside another must be proven by a containment assertion since querying both elements separately passes even when they are siblings",
+      "text": "A check claiming one element sits inside another must be proven by a containment assertion, since querying both elements separately passes even when they are siblings",
+      "signal": "spec_precision_gap",
+      "scope": "web-screens",
+      "status": "candidate",
+      "features": [
+        "phase-11-stock-alerts-qr"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "web/src/app/(app)/inventory/[id]/label/page.test.tsx:142 (web-screens)"
+      ],
+      "created": "2026-09-24T12:50:26Z",
+      "last_seen": "2026-09-24T12:50:26Z"
+    },
+    {
+      "id": "L-036",
+      "key": "spec_precision_gap::name in checks md every existing screen file the change touches because a file listed only in handoff gets no check and no test policy row",
+      "text": "Name in checks.md every existing screen file the change touches, because a file listed only in Handoff gets no check and no test policy row",
+      "signal": "spec_precision_gap",
+      "scope": "checks",
+      "status": "candidate",
+      "features": [
+        "phase-11-stock-alerts-qr"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        ".specs/features/phase-11-stock-alerts-qr/checks.md (checks)"
+      ],
+      "created": "2026-09-24T12:50:26Z",
+      "last_seen": "2026-09-24T12:50:26Z"
+    },
+    {
+      "id": "L-037",
+      "key": "ac_gap::when the same optional field is rendered by more than one screen assert both the value side and the empty dash side on every screen that renders it not only on the first one",
+      "text": "When the same optional field is rendered by more than one screen, assert both the value side and the empty-dash side on every screen that renders it, not only on the first one",
+      "signal": "ac_gap",
+      "scope": "web-screens",
+      "status": "candidate",
+      "features": [
+        "phase-11-stock-alerts-qr"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "web/src/app/(app)/inventory/items/page.tsx:78 (web-screens)"
+      ],
+      "created": "2026-09-24T13:19:07Z",
+      "last_seen": "2026-09-24T13:19:07Z"
+    },
+    {
+      "id": "L-038",
+      "key": "ac_gap::prove a side by side layout by asserting the container s flex direction since a document order assertion also passes when the elements are stacked",
+      "text": "Prove a side-by-side layout by asserting the container's flex direction, since a document-order assertion also passes when the elements are stacked",
+      "signal": "ac_gap",
+      "scope": "web-screens",
+      "status": "candidate",
+      "features": [
+        "phase-11-stock-alerts-qr"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "web/src/app/(app)/inventory/[id]/label/page.tsx:106 (web-screens)"
+      ],
+      "created": "2026-09-24T13:19:07Z",
+      "last_seen": "2026-09-24T13:19:07Z"
+    },
+    {
+      "id": "L-039",
+      "key": "ac_gap::assert the print hidden variant on every screen that has its own chrome to hide since the shared shell test says nothing about that screen",
+      "text": "Assert the print-hidden variant on every screen that has its own chrome to hide, since the shared shell test says nothing about that screen",
+      "signal": "ac_gap",
+      "scope": "web-screens",
+      "status": "candidate",
+      "features": [
+        "phase-11-stock-alerts-qr"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "web/src/app/(app)/inventory/[id]/label/page.tsx:90 (web-screens)"
+      ],
+      "created": "2026-09-24T13:19:08Z",
+      "last_seen": "2026-09-24T13:19:08Z"
+    },
+    {
+      "id": "L-040",
+      "key": "spec_precision_gap::when a verification round adds a check update the test policy and coverage rows that priced the gap to cite it or the row keeps pointing at the weaker proof",
+      "text": "When a verification round adds a check, update the Test policy and Coverage rows that priced the gap to cite it, or the row keeps pointing at the weaker proof",
+      "signal": "spec_precision_gap",
+      "scope": "checks",
+      "status": "candidate",
+      "features": [
+        "phase-11-stock-alerts-qr"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        ".specs/features/phase-11-stock-alerts-qr/checks.md Test policy row 'DTOs que ganham campo opcional aceitando null' (checks)"
+      ],
+      "created": "2026-09-24T13:19:08Z",
+      "last_seen": "2026-09-24T13:19:08Z"
+    },
+    {
+      "id": "L-041",
+      "key": "surviving_mutant::assert the initial value of a form field prefilled from a nullable record on both sides since a test that overwrites the field with fireevent change before submitting never observes what the prefill put there",
+      "text": "Assert the initial value of a form field prefilled from a nullable record, on both sides, since a test that overwrites the field with fireEvent.change before submitting never observes what the prefill put there",
+      "signal": "surviving_mutant",
+      "scope": "web-screens",
+      "status": "candidate",
+      "features": [
+        "phase-11-stock-alerts-qr"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "web/src/app/(app)/materials/page.tsx:105 · fault 5 survived · verification.md gap 1 (web-screens)"
+      ],
+      "created": "2026-09-24T13:43:44Z",
+      "last_seen": "2026-09-24T13:43:44Z"
+    },
+    {
+      "id": "L-042",
+      "key": "spec_precision_gap::when a coverage row claims both sides of a branch cite the check that asserts each side because a row pointing at a single check that asserts one side reads as proof of both",
+      "text": "When a Coverage row claims both sides of a branch, cite the check that asserts each side, because a row pointing at a single check that asserts one side reads as proof of both",
+      "signal": "spec_precision_gap",
+      "scope": "checks",
+      "status": "candidate",
+      "features": [
+        "phase-11-stock-alerts-qr"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "checks.md row 'renders do piso, os dois lados em cada tela' · verification.md gap 2 (checks)"
+      ],
+      "created": "2026-09-24T13:43:52Z",
+      "last_seen": "2026-09-24T13:43:52Z"
+    },
+    {
+      "id": "L-043",
+      "key": "spec_precision_gap::write a claim about a styling attribute against the element that actually carries it not the control the user sees so the claim and its assertion name the same node",
+      "text": "Write a claim about a styling attribute against the element that actually carries it, not the control the user sees, so the claim and its assertion name the same node",
+      "signal": "spec_precision_gap",
+      "scope": "checks",
+      "status": "candidate",
+      "features": [
+        "phase-11-stock-alerts-qr"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "C61 claim vs web/src/app/(app)/inventory/[id]/label/page.test.tsx:180 · verification.md gap 3 (checks)"
+      ],
+      "created": "2026-09-24T13:43:52Z",
+      "last_seen": "2026-09-24T13:43:52Z"
+    },
+    {
+      "id": "L-044",
+      "key": "surviving_mutant::for a nullable field enumerate the surfaces it touches every render every submit every prefill and prove both sides on each because covering one surface per round took three rounds to reach the third",
+      "text": "For a nullable field, enumerate the surfaces it touches - every render, every submit, every prefill - and prove both sides on each, because covering one surface per round took three rounds to reach the third",
+      "signal": "surviving_mutant",
+      "scope": "web-screens",
+      "status": "candidate",
+      "features": [
+        "phase-11-stock-alerts-qr"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        ".specs/features/phase-11-stock-alerts-qr/verification.md rounds 1-3 (three FAILs, same shape) (web-screens)"
+      ],
+      "created": "2026-09-24T17:51:02Z",
+      "last_seen": "2026-09-24T17:51:02Z"
     }
   ]
 }

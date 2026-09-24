@@ -33,9 +33,10 @@
 
 ## Handoff
 
-**Feature**: phase-11-stock-alerts-qr - construída, **verificação pendente** (Verifier não
-despachado nesta sessão)
-**Where**: C1-C51 em 2 commits (`7d51f03` API, `a0bc9d2` web), um builder só (estimativa de 63k,
+**Feature**: phase-11-stock-alerts-qr - concluída (PASS na rodada 4; 3 rodadas independentes antes)
+**Where**: C1-C63 em 5 commits (`7d51f03` API, `a0bc9d2` web, `e6dc929` form do piso no item,
+`d462ec3` e `c146c1e` e `48458e1` fechando cobertura de tela achada pela verificação). Um builder só
+(estimativa de 63k,
 abaixo do orçamento de 150k, sem pergunta de mecanismo). API: `minimum_stock_grams` em `materials`
 e `minimum_quantity` em `stock_items` (migration `AddStockMinimums`, colunas nulas sem `DEFAULT` +
 2 `CHECK`), fold puro `computeStockAlerts` (`stock-alerts.ts`) e `GET /inventory/alerts` devolvendo
@@ -71,12 +72,30 @@ partir do PNG da etiqueta, devolvendo
 bloco da etiqueta sai (header, nav, título e botão com `display: none`); a URL do QR sem sessão
 redireciona para `/login?next=%2Finventory%2F<id>` e o login aterriza no rolo; vendas vê indicador e
 tela sem nenhum botão ou input
+**Verificação**: 4 rodadas, perfil `standard`. Rodadas 1, 2 e 3 por três sub-agentes independentes
+distintos, todas FAIL, e todas pela **mesma forma**: um galho de tela que decide entre "sem política"
+e um valor, sem asserção. Rodada 1: duas telas que o `Observable` decide (`materials form`,
+`stock item form`) sem check nenhum -> C52-C58. Rodada 2: o lado `—` dos dois renders irmãos e o eixo
+da etiqueta -> C59-C61. Rodada 3: **mutante sobrevivente** — o *prefill* dos dois formulários de
+edição, terceira superfície do mesmo campo; prefilar `"0"` no lugar de `""` passava as três suítes, e
+um admin salvaria política de zero só por abrir e salvar um cadastro sem piso -> C62-C63 (decisão do
+usuário no limite de três rodadas: fechar a lacuna). Rodada 4: **PASS** — 63/63 checks com evidência
+localizada, 29 conjuntos recomputados com 0 membros sem prova, 9 linhas de `Test policy` cumpridas, e
+o mutante da rodada 3 reinjetado nos dois arquivos **morreu** com os outros 146 testes do web verdes.
+Acumulado: 16 faltas injetadas, 16 mortas. `validate_verification.py` exit 0.
+A rodada 4 é **degradada**: o despacho de sub-agente falhou duas vezes (`aborted`), então ela foi
+feita pelo autor pelo caminho degradado do `verify.md`, marcada como `self-verified` no relatório e
+sinalizada por WARN do gate. O que a sustenta: escopo estreito (reinjetar um mutante nomeado, um fato
+observável) e C1-C61 carregados dos três verificadores independentes. O que ela não dá: um olhar novo
+procurando o que o autor não pensou em procurar — que é justamente o que produziu os achados das três
+rodadas anteriores
 **In progress**: nada
-**Next step**: despachar o **Verifier** (sub-agente independente, perfil `standard`, sobre
-`ed2b29e..HEAD` com os 51 checks) e só então declarar a fase concluída. Depois: Fase 12
-(calculadora) consome `GET /inventory/materials-summary` e `GET /inventory/items`; Fase 15 (produto
-acabado) e Fase 27 (projeção de compra) reusam AD-025
-**Riscos abertos**: (1) com zero alertas o indicador desaparece (AC 27) e não existe item de menu
+**Next step**: nenhum bloqueio. Fase 12 (calculadora) consome `GET /inventory/materials-summary` e
+`GET /inventory/items`; Fase 15 (produto acabado) e Fase 27 (projeção de compra) reusam AD-025; Fase
+19 (baixa automática) e Fase 21 (recebimento de compra) escrevem nas mesmas colunas de saldo
+**Riscos abertos**: (0) o prefill dos formulários de edição está guardado por teste (C62, C63) mas
+**nunca foi observado em navegador** — a caminhada da rodada 1 digitou o valor sem olhar o campo antes;
+(1) com zero alertas o indicador desaparece (AC 27) e não existe item de menu
 para `/inventory/alerts`, então a tela de estado vazio só é alcançável por URL - inconsistência
 entre o AC 25 e o AC 27 que pertence ao produto, não ao código; nenhum check pede o item de menu, e
 adicioná-lo mudaria as listas exatas de `app-shell.test.tsx` (prova da Fase 4). (2) O
@@ -85,7 +104,8 @@ execução - dívida pré-existente do schema contra as entidades, não desta fa
 mostrou não-determinismo entre arquivos numa das rodadas (2 vermelhos em `inventory.e2e-spec.ts`,
 um com status `426`), já registrado na lição L-030; a rodada seguinte veio 333/333 verde
 **Blockers**: nenhum
-**Uncommitted**: `ROADMAP.md`, `.specs/STATE.md` e `AGENTS.md`
+**Uncommitted**: `.specs/STATE.md`, `.specs/LESSONS.md`, `.specs/lessons.json`, `AGENTS.md`,
+`.gitignore` e `.agents/.skill-lock.json`
 **Branch**: main
 
 ## Handoff anterior

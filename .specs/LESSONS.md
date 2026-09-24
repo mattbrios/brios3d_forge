@@ -206,6 +206,78 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: .specs/features/phase-10-stock-items/checks.md:520 (web)
 - last seen: 2026-09-24T03:13:08Z
 
+### L-033 - When a field is added to an existing CRUD screen, write a check for the new column and for both branches of the form's value mapping, not only for the API route that stores it
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `web-screens` · harmful: 0
+- features: phase-11-stock-alerts-qr
+- evidence: web/src/app/(app)/materials/page.tsx:63 (web-screens)
+- last seen: 2026-09-24T12:50:25Z
+
+### L-034 - When a PATCH field accepts an explicit null to clear a policy, assert the null round-trip through the route on every entity that has the field, not just the first one
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `api-routes` · harmful: 0
+- features: phase-11-stock-alerts-qr
+- evidence: api/src/modules/inventory/inventory.service.ts:437 (api-routes)
+- last seen: 2026-09-24T12:50:26Z
+
+### L-035 - A check claiming one element sits inside another must be proven by a containment assertion, since querying both elements separately passes even when they are siblings
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `web-screens` · harmful: 0
+- features: phase-11-stock-alerts-qr
+- evidence: web/src/app/(app)/inventory/[id]/label/page.test.tsx:142 (web-screens)
+- last seen: 2026-09-24T12:50:26Z
+
+### L-036 - Name in checks.md every existing screen file the change touches, because a file listed only in Handoff gets no check and no test policy row
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `checks` · harmful: 0
+- features: phase-11-stock-alerts-qr
+- evidence: .specs/features/phase-11-stock-alerts-qr/checks.md (checks)
+- last seen: 2026-09-24T12:50:26Z
+
+### L-037 - When the same optional field is rendered by more than one screen, assert both the value side and the empty-dash side on every screen that renders it, not only on the first one
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `web-screens` · harmful: 0
+- features: phase-11-stock-alerts-qr
+- evidence: web/src/app/(app)/inventory/items/page.tsx:78 (web-screens)
+- last seen: 2026-09-24T13:19:07Z
+
+### L-038 - Prove a side-by-side layout by asserting the container's flex direction, since a document-order assertion also passes when the elements are stacked
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `web-screens` · harmful: 0
+- features: phase-11-stock-alerts-qr
+- evidence: web/src/app/(app)/inventory/[id]/label/page.tsx:106 (web-screens)
+- last seen: 2026-09-24T13:19:07Z
+
+### L-039 - Assert the print-hidden variant on every screen that has its own chrome to hide, since the shared shell test says nothing about that screen
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `web-screens` · harmful: 0
+- features: phase-11-stock-alerts-qr
+- evidence: web/src/app/(app)/inventory/[id]/label/page.tsx:90 (web-screens)
+- last seen: 2026-09-24T13:19:08Z
+
+### L-040 - When a verification round adds a check, update the Test policy and Coverage rows that priced the gap to cite it, or the row keeps pointing at the weaker proof
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `checks` · harmful: 0
+- features: phase-11-stock-alerts-qr
+- evidence: .specs/features/phase-11-stock-alerts-qr/checks.md Test policy row 'DTOs que ganham campo opcional aceitando null' (checks)
+- last seen: 2026-09-24T13:19:08Z
+
+### L-041 - Assert the initial value of a form field prefilled from a nullable record, on both sides, since a test that overwrites the field with fireEvent.change before submitting never observes what the prefill put there
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `web-screens` · harmful: 0
+- features: phase-11-stock-alerts-qr
+- evidence: web/src/app/(app)/materials/page.tsx:105 · fault 5 survived · verification.md gap 1 (web-screens)
+- last seen: 2026-09-24T13:43:44Z
+
+### L-042 - When a Coverage row claims both sides of a branch, cite the check that asserts each side, because a row pointing at a single check that asserts one side reads as proof of both
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `checks` · harmful: 0
+- features: phase-11-stock-alerts-qr
+- evidence: checks.md row 'renders do piso, os dois lados em cada tela' · verification.md gap 2 (checks)
+- last seen: 2026-09-24T13:43:52Z
+
+### L-043 - Write a claim about a styling attribute against the element that actually carries it, not the control the user sees, so the claim and its assertion name the same node
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `checks` · harmful: 0
+- features: phase-11-stock-alerts-qr
+- evidence: C61 claim vs web/src/app/(app)/inventory/[id]/label/page.test.tsx:180 · verification.md gap 3 (checks)
+- last seen: 2026-09-24T13:43:52Z
+
+### L-044 - For a nullable field, enumerate the surfaces it touches - every render, every submit, every prefill - and prove both sides on each, because covering one surface per round took three rounds to reach the third
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `web-screens` · harmful: 0
+- features: phase-11-stock-alerts-qr
+- evidence: .specs/features/phase-11-stock-alerts-qr/verification.md rounds 1-3 (three FAILs, same shape) (web-screens)
+- last seen: 2026-09-24T17:51:02Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
