@@ -55,6 +55,12 @@ function StockItemDetailContent({ id }: { id: string }) {
   const [countSubmitting, setCountSubmitting] = useState(false);
   const [countError, setCountError] = useState<string | null>(null);
 
+  // Fase 11: o cadastro do item (Fase 10) tem formulário só de criação, então sem isto um item já
+  // cadastrado nunca poderia ganhar um piso pela interface.
+  const [minimumQuantity, setMinimumQuantity] = useState<string | null>(null);
+  const [minimumSubmitting, setMinimumSubmitting] = useState(false);
+  const [minimumError, setMinimumError] = useState<string | null>(null);
+
   const [confirmingDeactivate, setConfirmingDeactivate] = useState(false);
   const [deactivating, setDeactivating] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -69,7 +75,9 @@ function StockItemDetailContent({ id }: { id: string }) {
       apiFetch<PrintersPage>("/printers?pageSize=100"),
     ])
       .then(([me, item, printers]) => {
-        if (active) setStatus({ kind: "ready", role: me.role, item, printers: printers.items });
+        if (!active) return;
+        setStatus({ kind: "ready", role: me.role, item, printers: printers.items });
+        setMinimumQuantity(item.minimumQuantity === null ? "" : String(item.minimumQuantity));
       })
       .catch((error: unknown) => {
         if (active) setStatus({ kind: "error", message: messageOf(error) });
@@ -123,6 +131,27 @@ function StockItemDetailContent({ id }: { id: string }) {
       setCountError(messageOf(error));
     } finally {
       setCountSubmitting(false);
+    }
+  }
+
+  async function submitMinimum(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMinimumSubmitting(true);
+    setMinimumError(null);
+    try {
+      await apiFetch(`/inventory/items/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        // Campo vazio é "sem mínimo": `null` explícito limpa a política.
+        body: JSON.stringify({
+          minimumQuantity: minimumQuantity === "" ? null : Number(minimumQuantity),
+        }),
+      });
+      retry();
+    } catch (error) {
+      setMinimumError(messageOf(error));
+    } finally {
+      setMinimumSubmitting(false);
     }
   }
 
@@ -208,6 +237,26 @@ function StockItemDetailContent({ id }: { id: string }) {
       )}
 
       {actionError && <p role="alert">{actionError}</p>}
+
+      {role === "admin" && (
+        <div className="flex flex-col gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+          <h2 className="text-lg font-semibold">Estoque mínimo</h2>
+          <form onSubmit={submitMinimum} className="flex flex-col gap-3">
+            <label className="flex flex-col gap-1 text-sm">
+              Mínimo ({item.unitOfMeasure}), vazio para nenhum
+              <input
+                type="number"
+                value={minimumQuantity ?? ""}
+                onChange={(event) => setMinimumQuantity(event.target.value)}
+              />
+            </label>
+            {minimumError && <p role="alert">{minimumError}</p>}
+            <button type="submit" disabled={minimumSubmitting}>
+              {minimumSubmitting ? "Salvando…" : "Salvar mínimo"}
+            </button>
+          </form>
+        </div>
+      )}
 
       {operational && (
         <div className="flex flex-col gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">

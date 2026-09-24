@@ -28,8 +28,67 @@
 | AD-022 | Ledger de movimentação imutável (`InventoryMovement`): coluna `type` como enum Postgres, `quantityGrams` assinado (positivo em entrada, negativo em saída), `userId` obrigatório, sem rota de update/delete; o saldo é uma coluna materializada (`balanceGrams`) escrita na mesma transação do movimento, nunca recalculada por `SUM()` a cada leitura | Fase 9 introduz o padrão; a Fase 10 (insumos e peças) reaproveita a mesma tabela/shape para um cadastro e uma tela separados | active | 2026-09-23 |
 | AD-023 | Decremento concorrente sobre uma coluna materializada: `UPDATE` relativo em SQL (`col = col - :delta`), nunca uma pré-checagem em JS a partir de um valor já lido; um `CHECK` de banco é o único backstop contra o valor ficar negativo, capturado pelo código de erro do Postgres (`isCheckViolation`, mesmo padrão de `isUniqueViolation` da Fase 4) e traduzido para `400` | Fase 9 é a primeira invariante numérica do sistema sob concorrência; uma pré-checagem em JS competindo com o `CHECK` deixa o `CHECK` sem nenhuma prova possível de exercitar (achado da verificação da Fase 9, rodada 1) | active | 2026-09-23 |
 | AD-024 | Custo médio ponderado nunca é armazenado: sempre recalculado sob demanda a partir do estado atual do ledger (rolos não descartados com saldo > 0), exposto só por `GET /inventory/materials-summary` | Fase 9 decide isso explicitamente; as Fases 12 (calculadora) e 25 (margem real) devem chamar este endpoint em vez de introduzir um campo cacheado em `Material` | active | 2026-09-23 |
+| AD-025 | Piso de estoque ("estoque mínimo") é uma coluna nula da própria tabela do cadastro (`materials.minimum_stock_grams`, `stock_items.minimum_quantity`), sem `DEFAULT`, com `CHECK` de não negatividade; `NULL` significa "sem política de reposição", nunca "mínimo zero". O alerta compara `saldo < piso` (estritamente abaixo) e é leitura derivada, nunca persistida, exposta só por `GET /inventory/alerts` | Fase 11 introduz o padrão; a Fase 15 (produto acabado) e a Fase 27 (projeção de compra) devem reusar a mesma coluna-por-dono e o mesmo `kind` de `StockAlert` em vez de criar tabela polimórfica de mínimos ou uma terceira lista na resposta | active | 2026-09-24 |
+| AD-026 | Dado acessório do cabeçalho (hoje a contagem de alertas) é buscado pelo próprio componente do cabeçalho, nunca pelo `AuthGate`, e a falha degrada em silêncio - sem indicador e sem `role="alert"`, com a tela continuando a renderizar | Fase 11: o cabeçalho aparece em toda tela autenticada, então um erro ali apareceria no sistema inteiro por causa de um dado que o usuário não foi ver; buscar no `AuthGate` deixaria a sessão esperando por ele | active | 2026-09-24 |
 
 ## Handoff
+
+**Feature**: phase-11-stock-alerts-qr - construída, **verificação pendente** (Verifier não
+despachado nesta sessão)
+**Where**: C1-C51 em 2 commits (`7d51f03` API, `a0bc9d2` web), um builder só (estimativa de 63k,
+abaixo do orçamento de 150k, sem pergunta de mecanismo). API: `minimum_stock_grams` em `materials`
+e `minimum_quantity` em `stock_items` (migration `AddStockMinimums`, colunas nulas sem `DEFAULT` +
+2 `CHECK`), fold puro `computeStockAlerts` (`stock-alerts.ts`) e `GET /inventory/alerts` devolvendo
+`{ items: StockAlert[] }` sem paginação, ordenado pela fração do piso que falta. A consulta parte de
+`materials` com `LEFT JOIN filament_rolls ... AND discarded_at IS NULL` no `ON`, para material com
+piso e zero rolo aparecer com saldo `0`. Web: tela `/inventory/alerts`, `AlertsIndicator` no slot
+novo do `AppShell`, `/inventory/[id]/label` com `QRCodeSVG` (`qrcode.react` fixado em `4.2.0`),
+`print:hidden` no `<header>` e no `<nav>`, campo do piso nos formulários de material e de item, e
+"Imprimir etiqueta" no detalhe do rolo. `lint`, `test`, `test:e2e` e `build` verdes nas duas pastas
+(108 unit + 333 e2e na API, 138 no web)
+**Desvios do plano, todos registrados no diff**: (1) `Flow` hop 5 e a linha de `Impact` do
+`AppShell` foram reescritos (são "kept true"): quem busca `/inventory/alerts` é o próprio
+`AlertsIndicator`, não o `AuthGate` - ver AD-026. (2) O `migration:generate` propôs recriar 3 enums
+(churn sem mudança de valor) e derrubar `FK_fixed_cost_items_settings_id`; nada disso pertence à fase
+e ficou fora da migration, com o motivo escrito no arquivo. (3) `test/inventory-helper.ts` não ganhou
+parâmetro de piso (rolo não tem piso; quem ganhou foram `materials-helper.ts` e
+`stock-items-helper.ts`). (4) **Fora dos checks**: o detalhe do item (`/inventory/items/[id]`) ganhou
+um formulário admin de "Estoque mínimo", porque a Fase 10 entregou o item só com formulário de
+criação e sem isto nenhum item já cadastrado poderia receber um piso pela interface - o AC 7 ficaria
+sem caminho de tela. (5) Dois testes de fases anteriores tiveram o conjunto esperado **ampliado**,
+nunca relaxado: `inventory.e2e-spec.ts` "does not add stock or cost fields to GET /materials"
+(o piso é política, não saldo nem custo - o door 5 da Fase 9 segue valendo) e
+`inventory/items/page.test.tsx` (coluna "Mínimo" entre saldo e custo médio)
+**Validação em navegador** (Playwright MCP, app em docker): piso de 1000 g no material com 800 g em
+rolo e 10 un no insumo com 4 definidos pelos formulários; `/inventory/alerts` com os dois na ordem
+certa (60% faltando antes de 20%) e links para `/inventory` e `/inventory/items/<id>`; indicador com
+`2` no cabeçalho de `/printers`; entrada de 6 un derrubando para `1 item abaixo do mínimo`; piso do
+material limpo levando ao estado vazio e ao indicador desaparecendo; erro da API mostrando
+"Tentar novamente" sem tabela parcial e o cabeçalho degradando sem indicador e sem `role="alert"`;
+etiqueta 70 × 40 mm com QR de 30 mm (`viewBox 0 0 45 45`), e **o QR foi decodificado de verdade** a
+partir do PNG da etiqueta, devolvendo
+`http://localhost:3000/inventory/28022a95-abf9-4c56-bd7a-a2e7b5deeecf`; sob `media: print` só o
+bloco da etiqueta sai (header, nav, título e botão com `display: none`); a URL do QR sem sessão
+redireciona para `/login?next=%2Finventory%2F<id>` e o login aterriza no rolo; vendas vê indicador e
+tela sem nenhum botão ou input
+**In progress**: nada
+**Next step**: despachar o **Verifier** (sub-agente independente, perfil `standard`, sobre
+`ed2b29e..HEAD` com os 51 checks) e só então declarar a fase concluída. Depois: Fase 12
+(calculadora) consome `GET /inventory/materials-summary` e `GET /inventory/items`; Fase 15 (produto
+acabado) e Fase 27 (projeção de compra) reusam AD-025
+**Riscos abertos**: (1) com zero alertas o indicador desaparece (AC 27) e não existe item de menu
+para `/inventory/alerts`, então a tela de estado vazio só é alcançável por URL - inconsistência
+entre o AC 25 e o AC 27 que pertence ao produto, não ao código; nenhum check pede o item de menu, e
+adicioná-lo mudaria as listas exatas de `app-shell.test.tsx` (prova da Fase 4). (2) O
+`migration:generate` continua propondo o churn de enums e o drop da FK de `fixed_cost_items` a cada
+execução - dívida pré-existente do schema contra as entidades, não desta fase. (3) A suíte e2e
+mostrou não-determinismo entre arquivos numa das rodadas (2 vermelhos em `inventory.e2e-spec.ts`,
+um com status `426`), já registrado na lição L-030; a rodada seguinte veio 333/333 verde
+**Blockers**: nenhum
+**Uncommitted**: `ROADMAP.md`, `.specs/STATE.md` e `AGENTS.md`
+**Branch**: main
+
+## Handoff anterior
 
 **Feature**: phase-10-stock-items - concluída (Verifier PASS na rodada 3)
 **Where**: C1-C57 construídos em 3 commits (`375e3e8` artefatos, `4b07126` API, `53ad563` web),
@@ -88,34 +147,4 @@ não por decorator, então `@IsString()`, `@IsArray()` e o `@IsNotEmpty()` dos t
 sem caso (consequência real hoje é zero: a tela envia `sku || undefined`)
 **Blockers**: nenhum
 **Uncommitted**: nada além deste `STATE.md`
-**Branch**: main
-
-## Handoff anterior
-
-**Feature**: phase-9-filament-inventory - concluída
-**Where**: C1-C35 verificados (C33-C35 nasceram na rodada 1 fechando lacunas de cobertura).
-Rodada 1 (`standard`): FAIL - 2 mutantes sobreviventes (a pré-checagem em JS de saldo deixava o
-`CHECK (balance_grams >= 0)` do banco sem nenhuma prova sob concorrência, door 3; os valores
-`vazio`/`descartado` de `status` nunca eram asserted, door 6a), mais 4 lacunas de cobertura (C5
-mockava `manager.transaction` como pass-through sem provar que a transação era usada; as 3 rotas
-de leitura só tinham prova do lado "barrado", nunca do lado "passa" para produção/vendas; os
-filtros `status`/`search` de `GET /inventory/rolls` sem prova; `rollCount` do resumo por material
-sem asserção). Fix em `inventory.service.ts` (removida a pré-checagem de `addMovement` - saldo
-insuficiente, sequencial ou concorrente, passa sempre pelo mesmo `UPDATE` relativo + `CHECK`,
-ver AD-023), `inventory.service.spec.ts` (assert que `manager.transaction` foi chamado) e
-`inventory.e2e-spec.ts` (C33-C35 novos + asserções de `status`/`rollCount` adicionadas nos checks
-existentes) - nada de código de produção além da remoção da pré-checagem. Rodada 2 (escopada,
-`standard`): PASS, `validate_verification.py` exit 0, os 2 mutantes confirmados mortos por
-reinjeção. Validado também com o Playwright MCP: admin cadastra material e rolo, pesa (812g/tara
-250g → 562g, caso de referência do ROADMAP), dá baixa parcial, abre (idempotente), descarta com
-confirmação; resumo por material atualiza saldo e custo médio a cada ação, incluindo custo médio
-`null` quando nada sobra em estoque; produção não vê a ação de cadastrar rolo; vendas só lê, sem
-nenhum formulário nem botão de descarte; busca por material sem resultado mostra o vazio
-**In progress**: nada
-**Next step**: nenhum bloqueio. Fase 10 (insumos e peças) reaproveita o ledger `InventoryMovement`
-(AD-022) para um cadastro e uma tela separados; Fase 11 (alertas/QR) e Fase 19 (baixa automática
-de job) passam a filtrar/gravar direto em `filament_rolls`/`inventory_movements`; Fases 12 e 25
-consomem `GET /inventory/materials-summary` para o custo médio (AD-024)
-**Blockers**: nenhum
-**Uncommitted**: este `STATE.md` - o resto da Fase 9 já está commitado (ver `git log`)
 **Branch**: main

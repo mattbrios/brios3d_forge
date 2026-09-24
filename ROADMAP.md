@@ -239,7 +239,7 @@ outros papéis (door 1, Fase 4: uma rota sem `@Roles()` é só de admin).
 | `printers` | x | leitura + `PATCH /printers/:id/hourmeter` | leitura |
 | `customers` | x | leitura | x |
 | `suppliers` | x | leitura | leitura |
-| `inventory` | x | leitura + pesagem/baixa/descarte/abertura/secagem do rolo, e consumo/perda/contagem do item (a entrada do item é admin, porque carrega custo) | leitura |
+| `inventory` | x | leitura + pesagem/baixa/descarte/abertura/secagem do rolo, e consumo/perda/contagem do item (a entrada do item é admin, porque carrega custo). Os alertas de estoque mínimo são leitura dos três papéis; definir o piso é só admin | leitura |
 | `purchasing` | a definir na Fase 21 | a definir na Fase 21 | a definir na Fase 21 |
 | `products` | a definir na Fase 13 | a definir na Fase 13 | a definir na Fase 13 |
 | `pricing` | x | x | x |
@@ -388,18 +388,20 @@ público, e `POST /print-profiles/import` está aberto aos três papéis desde e
 **Dependências:** Fases 9 e 10.
 
 **Tarefas:**
-- [ ] Estoque mínimo por material (em gramas, somando os rolos) e por item
-- [ ] Endpoint e painel de alertas com os itens abaixo do mínimo
-- [ ] Indicador de alertas no layout do web
-- [ ] Gerar uma etiqueta imprimível com QR code por rolo, apontando para a página do rolo no web
-- [ ] Ao ler o QR, abrir a página do rolo com ações rápidas (pesar, dar baixa)
-- [ ] Testes do cálculo de alertas
+- [x] Estoque mínimo por material (em gramas, somando os rolos) e por item
+- [x] Endpoint e painel de alertas com os itens abaixo do mínimo
+- [x] Indicador de alertas no layout do web
+- [x] Gerar uma etiqueta imprimível com QR code por rolo, apontando para a página do rolo no web
+- [x] Ao ler o QR, abrir a página do rolo com ações rápidas (pesar, dar baixa)
+- [x] Testes do cálculo de alertas
 
 **Critérios de aceite:**
-- Baixar um material abaixo do mínimo faz ele aparecer nos alertas; repor faz ele sumir
-- A etiqueta é impressa com um QR legível que abre o rolo certo (verificado lendo o QR da tela no Playwright ou manualmente)
+- [x] Baixar um material abaixo do mínimo faz ele aparecer nos alertas; repor faz ele sumir
+- [x] A etiqueta é impressa com um QR legível que abre o rolo certo (verificado lendo o QR da tela no Playwright ou manualmente)
+- [x] As telas foram validadas com Playwright
 
-**Riscos ou observações:** o formato da etiqueta (tamanho, impressora térmica ou A4) não está definido.
+**Riscos ou observações:** resolvido na Fase 11 — bloco de 70 × 40 mm com QR de 30 mm nível `M`,
+sem `@page size` fixo, então a mesma página serve A4 e térmica (questão aberta 14).
 
 ---
 
@@ -824,7 +826,16 @@ público, e `POST /print-profiles/import` está aberto aos três papéis desde e
     há como um rolo "ser" só o tipo sem já carregar marca e cor da linha referenciada.
 13. **Baixa no fim do job:** o operador escolhe o rolo, ou o sistema sugere (rolo aberto primeiro / FIFO)? E quando um rolo acaba no meio da impressão?
 14. **Etiqueta QR:** qual o formato (impressora térmica ou A4) e quais dados vão impressos?
+    *Respondida (Fase 11):* bloco de 70 × 40 mm com QR de 30 mm (nível `M`), impresso pelo
+    diálogo do navegador sem fixar `@page size` - a mesma página serve A4 (uma etiqueta por
+    folha, recorte manual) e térmica, porque o papel é escolhido no diálogo. Impressos: material
+    (tipo · marca · cor), peso nominal, lote, data de compra e os 8 primeiros caracteres do id;
+    o saldo fica fora, porque muda a cada baixa e a etiqueta é impressa uma vez. O QR codifica
+    exatamente `<origem do web>/inventory/<rollId>`.
 15. **Estoque mínimo de filamento:** vale por material (soma dos rolos) ou por número de rolos fechados?
+    *Respondida (Fase 11):* por material, em gramas, sobre a soma dos rolos não descartados.
+    `minimum_stock_grams` nulo é "sem política de reposição", nunca "mínimo zero", e o alerta
+    dispara só quando o saldo está estritamente abaixo do piso.
 
 **Catálogo, orçamento e produção**
 16. **Arquivos:** o catálogo não guarda STL/3MF nem fotos (usa a URL do modelo). Onde guardar os arquivos personalizados dos clientes (Fase 18)? Volume local no Docker ou storage S3-compatível?

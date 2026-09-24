@@ -113,6 +113,56 @@ describe("Stock item detail page", () => {
     expect(screen.queryByRole("button", { name: "Desativar" })).toBeNull();
     expect(screen.queryByText("Baixa")).toBeNull();
     expect(screen.queryByText("Contagem de inventário")).toBeNull();
+    // Fase 11: definir o piso é de admin (AC 5 do mesmo corte de papéis).
+    expect(screen.queryByRole("button", { name: "Salvar mínimo" })).toBeNull();
+  });
+
+  it("admin sets and clears the item minimum", async () => {
+    let current = { ...SPARE_PART, minimumQuantity: null as number | null };
+    const fetchMock = stubApi({
+      "/auth/me": () => Promise.resolve(jsonResponse(200, ADMIN_ME)),
+      "/inventory/items/i2": (init) => {
+        if (init?.method === "PATCH") {
+          const body = bodyOf(init);
+          current = { ...current, minimumQuantity: body.minimumQuantity as number | null };
+          return Promise.resolve(jsonResponse(200, current));
+        }
+        return Promise.resolve(jsonResponse(200, current));
+      },
+      "/printers?pageSize=100": () => Promise.resolve(jsonResponse(200, printersPage([PRINTER_1]))),
+    });
+    render(<StockItemDetailPage params={Promise.resolve({ id: "i2" })} />);
+
+    await screen.findByText("entrada");
+    fireEvent.change(screen.getByLabelText("Mínimo (un), vazio para nenhum"), { target: { value: "2" } });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar mínimo" }));
+    await vi.waitFor(() =>
+      expect(
+        callsTo(fetchMock, "/inventory/items/i2").filter(
+          ([, init]) => (init as RequestInit | undefined)?.method === "PATCH",
+        ),
+      ).toHaveLength(1),
+    );
+    const setCall = callsTo(fetchMock, "/inventory/items/i2").filter(
+      ([, init]) => (init as RequestInit | undefined)?.method === "PATCH",
+    )[0];
+    expect(bodyOf(setCall[1] as RequestInit)).toEqual({ minimumQuantity: 2 });
+    expect(await screen.findByText("2 un")).toBeTruthy();
+
+    // Campo vazio limpa a política com `null` explícito, não com 0.
+    fireEvent.change(screen.getByLabelText("Mínimo (un), vazio para nenhum"), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar mínimo" }));
+    await vi.waitFor(() =>
+      expect(
+        callsTo(fetchMock, "/inventory/items/i2").filter(
+          ([, init]) => (init as RequestInit | undefined)?.method === "PATCH",
+        ),
+      ).toHaveLength(2),
+    );
+    const clearCall = callsTo(fetchMock, "/inventory/items/i2").filter(
+      ([, init]) => (init as RequestInit | undefined)?.method === "PATCH",
+    )[1];
+    expect(bodyOf(clearCall[1] as RequestInit)).toEqual({ minimumQuantity: null });
   });
 
   it("shows balance, average cost, compatible printers and the history", async () => {
