@@ -178,6 +178,10 @@ function StockItemDetailContent({ id }: { id: string }) {
         <dd>
           {item.balanceQuantity} {item.unitOfMeasure}
         </dd>
+        <dt>Estoque mínimo</dt>
+        <dd>
+          {item.minimumQuantity === null ? "—" : `${item.minimumQuantity} ${item.unitOfMeasure}`}
+        </dd>
         <dt>Custo médio</dt>
         <dd>{formatAvgCost(item.avgCostCents, item.unitOfMeasure)}</dd>
         <dt>SKU</dt>

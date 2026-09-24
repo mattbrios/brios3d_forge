@@ -6,12 +6,12 @@ import { AuthGate } from "./auth-gate";
 
 const navigation = vi.hoisted(() => {
   const replace = vi.fn();
-  return { replace, router: { replace } };
+  return { replace, router: { replace }, pathname: "/print-profiles" };
 });
 
 vi.mock("next/navigation", () => ({
   useRouter: () => navigation.router,
-  usePathname: () => "/print-profiles",
+  usePathname: () => navigation.pathname,
 }));
 
 function jsonResponse(status: number, body: unknown): Response {
@@ -63,6 +63,7 @@ describe("AuthGate", () => {
   beforeEach(() => {
     vi.stubEnv("NEXT_PUBLIC_API_URL", "http://api.test:3001");
     navigation.replace.mockReset();
+    navigation.pathname = "/print-profiles";
   });
 
   afterEach(() => {
@@ -82,6 +83,23 @@ describe("AuthGate", () => {
       expect(navigation.replace).toHaveBeenCalledWith("/login?next=%2Fprint-profiles"),
     );
     expect(screen.queryByText("conteúdo da página")).toBeNull();
+  });
+
+  it("preserves the roll path in next when the session is missing", async () => {
+    // Fase 11 (AC 37): o QR da etiqueta é lido no celular, provavelmente sem sessão. O destino
+    // tem de sobreviver ao desvio pelo login.
+    navigation.pathname = "/inventory/8f3c1e2a-0000-4000-8000-000000000001";
+    stubApi({ "/auth/me": () => Promise.resolve(jsonResponse(401, NO_SESSION)) });
+    render(
+      <AuthGate>
+        <Page />
+      </AuthGate>,
+    );
+    await waitFor(() =>
+      expect(navigation.replace).toHaveBeenCalledWith(
+        "/login?next=%2Finventory%2F8f3c1e2a-0000-4000-8000-000000000001",
+      ),
+    );
   });
 
   it("shows loading while checking", () => {

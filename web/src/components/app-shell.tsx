@@ -7,23 +7,31 @@ const LINK_CLASS = "block rounded px-2 py-1 hover:bg-zinc-200 dark:hover:bg-zinc
 export function AppShell({
   children,
   account,
+  alerts,
   role,
 }: {
   children: ReactNode;
   account?: ReactNode;
+  // Fase 11: slot do indicador de alertas no cabeçalho, ao lado da conta.
+  alerts?: ReactNode;
   // Decide o que o menu mostra (AC 44, AC 45). Sem `role`, só os itens de todo papel aparecem.
   role?: UserRole;
 }) {
   return (
     <div className="flex min-h-full flex-1 flex-col">
-      <header className="flex items-center justify-between border-b border-zinc-200 bg-white px-6 py-4 dark:border-zinc-800 dark:bg-zinc-950">
+      {/* `print:hidden` no cabeçalho e no menu (Fase 11, AC 34): a etiqueta do rolo é impressa
+          desta mesma árvore, e o chrome do app não pode sair no papel. */}
+      <header className="flex items-center justify-between border-b border-zinc-200 bg-white px-6 py-4 print:hidden dark:border-zinc-800 dark:bg-zinc-950">
         <span className="text-lg font-semibold">Brios3D Forge</span>
-        {account}
+        <div className="flex items-center gap-3">
+          {alerts}
+          {account}
+        </div>
       </header>
       <div className="flex flex-1">
         <nav
           aria-label="Navegação principal"
-          className="w-56 shrink-0 border-r border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900"
+          className="w-56 shrink-0 border-r border-zinc-200 bg-zinc-50 p-4 print:hidden dark:border-zinc-800 dark:bg-zinc-900"
         >
           <ul className="flex flex-col gap-1 text-sm">
             <li>

@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { ApiError, UNAUTHORIZED_EVENT, apiFetch } from "@/lib/api";
 import type { AuthUser } from "@/lib/auth";
+import { AlertsIndicator } from "./alerts-indicator";
 import { AppShell } from "./app-shell";
 
 type GateState =
@@ -92,6 +93,9 @@ export function AuthGate({ children }: { children: ReactNode }) {
   return (
     <AppShell
       role={state.user.role}
+      // O indicador busca os alertas por conta própria: uma falha nele não pode atrasar nem
+      // derrubar a tela que o usuário foi ver (AC 28).
+      alerts={<AlertsIndicator />}
       account={
         <div className="flex items-center gap-3 text-sm">
           {signOutError && (

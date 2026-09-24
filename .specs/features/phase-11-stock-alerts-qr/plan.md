@@ -39,8 +39,11 @@ e a Fase 10 já usam para custo médio.
    compara saldo com piso, monta `label` e `unit` por tipo de dono e ordena pela fração do piso
    que falta (door 4)
 4. out: `GET /inventory/alerts` -> `{ items: StockAlert[] }` (door 4)
-5. Web: `AuthGate` (exists) busca os alertas junto com `/auth/me` e passa a contagem ao
-   `AppShell` (exists), que mostra o indicador no cabeçalho com link para a tela
+5. Web: `AuthGate` (exists) monta `AlertsIndicator` (new, no door - placement ao lado de
+   `health-status.tsx`) no slot `alerts` do `AppShell` (exists), e o indicador busca
+   `/inventory/alerts` por conta própria, mostrando a contagem no cabeçalho com link para a tela.
+   Buscar dentro do `AuthGate` deixaria a sessão esperando por um dado acessório, e o AC 28 pede
+   justamente o contrário: a falha do alerta não pode atrasar nem derrubar a tela
 6. Web: `/inventory/alerts` (new, no door - placement ao lado de `/inventory/items`) lista os
    alertas; `/inventory/[id]/label` (new, no door - placement) renderiza a etiqueta com
    `QRCodeSVG` (door 2) codificando `<origem>/inventory/<rollId>` (door 3), e o chrome do
@@ -57,7 +60,7 @@ e a Fase 10 já usam para custo médio.
 | domain | novo termo: `StockAlert` — linha de leitura (um material ou um item abaixo do piso), calculada a cada chamada e nunca persistida, no mesmo espírito do custo médio (AD-024) |
 | domain | existente: "estoque mínimo" ganha um significado único no sistema (saldo somado `<` piso). Quem vai branchar nele depois: a Fase 15 (produto acabado reusa o alerta) e a Fase 27 (projeção de compra parte do mesmo piso) |
 | contrato consumido | `MaterialResponse` ganha `minimumStockGrams` e `StockItemResponse` ganha `minimumQuantity` — aditivo, nenhum campo muda de nome. Quem lê hoje: `web/src/lib/materials.ts`, `web/src/lib/stock-items.ts`, as telas `/materials`, `/inventory`, `/inventory/items`, `/inventory/items/[id]` e o detalhe do rolo (que já busca `/materials?pageSize=100`) |
-| contrato consumido | `AppShell` ganha o slot do indicador e `AuthGate` passa a buscar `/inventory/alerts` junto com `/auth/me`. Quem depende: `web/src/components/app-shell.test.tsx` e `auth-gate.test.tsx`, atualizados na mesma mudança |
+| contrato consumido | `AppShell` ganha o slot `alerts` no cabeçalho (mais `print:hidden` no `<header>` e no `<nav>`) e `AuthGate` passa a montar `AlertsIndicator` nesse slot; quem busca `/inventory/alerts` é o próprio indicador. Quem depende: `web/src/components/app-shell.test.tsx` e `auth-gate.test.tsx`, atualizados na mesma mudança |
 | stored data | `materials` e `stock_items` existem e têm linhas: as duas colunas entram **nulas**, então não há backfill e nenhuma linha atual passa a gerar alerta enquanto ninguém definir o piso |
 | dependência | `web/package.json` ganha `qrcode.react` fixado em `4.2.0` (door 2); `api/` não ganha dependência nenhuma |
 | doc | `ROADMAP.md`: a linha `inventory` da matriz de permissões passa a citar a leitura de alertas e a edição do piso (admin); as questões abertas 14 (formato da etiqueta) e 15 (mínimo por material em gramas) passam a "respondida (Fase 11)" |

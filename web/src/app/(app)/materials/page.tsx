@@ -23,6 +23,7 @@ interface MaterialFormValues {
   needsDrying: boolean;
   dryingTemperatureC: string;
   dryingHours: string;
+  minimumStockGrams: string;
 }
 
 const BLANK_FORM: MaterialFormValues = {
@@ -35,6 +36,7 @@ const BLANK_FORM: MaterialFormValues = {
   needsDrying: false,
   dryingTemperatureC: "",
   dryingHours: "",
+  minimumStockGrams: "",
 };
 
 const FORM_FIELDS: FieldConfig<MaterialFormValues>[] = [
@@ -47,6 +49,8 @@ const FORM_FIELDS: FieldConfig<MaterialFormValues>[] = [
   { key: "needsDrying", label: "Precisa secar", type: "checkbox" },
   { key: "dryingTemperatureC", label: "Temperatura de secagem (°C)", type: "number" },
   { key: "dryingHours", label: "Horas de secagem", type: "number" },
+  // Fase 11: piso opcional; campo vazio limpa a política (envia null).
+  { key: "minimumStockGrams", label: "Estoque mínimo (g, opcional)", type: "number" },
 ];
 
 const COLUMNS: Column<Material>[] = [
@@ -56,6 +60,11 @@ const COLUMNS: Column<Material>[] = [
   { key: "densityGCm3", label: "Densidade" },
   { key: "nozzleTempC", label: "Bico °C" },
   { key: "bedTempC", label: "Mesa °C" },
+  {
+    key: "minimumStockGrams",
+    label: "Mínimo",
+    render: (row) => (row.minimumStockGrams === null ? "—" : `${row.minimumStockGrams} g`),
+  },
   { key: "active", label: "Situação", render: (row) => (row.active ? "Ativo" : "Inativo") },
 ];
 
@@ -77,6 +86,8 @@ function buildBody(values: MaterialFormValues): Record<string, unknown> {
     body.dryingTemperatureC = Number(values.dryingTemperatureC);
     body.dryingHours = Number(values.dryingHours);
   }
+  // Campo vazio é "sem mínimo": `null` explícito, que é o que limpa a política no PATCH.
+  body.minimumStockGrams = values.minimumStockGrams === "" ? null : Number(values.minimumStockGrams);
   return body;
 }
 
@@ -91,6 +102,7 @@ function formFromMaterial(material: Material): MaterialFormValues {
     needsDrying: material.needsDrying,
     dryingTemperatureC: material.dryingTemperatureC !== null ? String(material.dryingTemperatureC) : "",
     dryingHours: material.dryingHours !== null ? String(material.dryingHours) : "",
+    minimumStockGrams: material.minimumStockGrams !== null ? String(material.minimumStockGrams) : "",
   };
 }
 

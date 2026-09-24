@@ -27,6 +27,7 @@ const MATERIAL_1: Material = {
   dryingTemperatureC: null,
   dryingHours: null,
   active: true,
+  minimumStockGrams: null,
 };
 
 const materialsPage = (items: Material[]) => ({ items, total: items.length, page: 1, pageSize: 100 });

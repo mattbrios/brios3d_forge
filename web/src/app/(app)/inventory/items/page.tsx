@@ -26,15 +26,24 @@ interface ItemFormValues {
   unitOfMeasure: string;
   sku: string;
   location: string;
+  minimumQuantity: string;
 }
 
-const BLANK_FORM: ItemFormValues = { name: "", unitOfMeasure: "", sku: "", location: "" };
+const BLANK_FORM: ItemFormValues = {
+  name: "",
+  unitOfMeasure: "",
+  sku: "",
+  location: "",
+  minimumQuantity: "",
+};
 
 const FORM_FIELDS: FieldConfig<ItemFormValues>[] = [
   { key: "name", label: "Nome" },
   { key: "unitOfMeasure", label: "Unidade de medida (un, m, kg, L, folha)" },
   { key: "sku", label: "SKU (opcional)" },
   { key: "location", label: "Localização (opcional)" },
+  // Fase 11: piso opcional, na unidade do próprio item.
+  { key: "minimumQuantity", label: "Estoque mínimo (opcional)", type: "number" },
 ];
 
 interface EntryFormValues {
@@ -62,6 +71,12 @@ const COLUMNS: Column<StockItem>[] = [
   { key: "category", label: "Categoria", render: (item) => CATEGORY_LABELS[item.category] },
   { key: "unitOfMeasure", label: "Unidade" },
   { key: "balanceQuantity", label: "Saldo", render: (item) => `${item.balanceQuantity} ${item.unitOfMeasure}` },
+  {
+    key: "minimumQuantity",
+    label: "Mínimo",
+    render: (item) =>
+      item.minimumQuantity === null ? "—" : `${item.minimumQuantity} ${item.unitOfMeasure}`,
+  },
   {
     key: "avgCostCents",
     label: "Custo médio",
@@ -123,6 +138,8 @@ export default function StockItemsPageScreen() {
           unitOfMeasure: createForm.unitOfMeasure,
           sku: createForm.sku || undefined,
           location: createForm.location || undefined,
+          minimumQuantity:
+            createForm.minimumQuantity === "" ? undefined : Number(createForm.minimumQuantity),
         }),
       });
       setCreateForm(BLANK_FORM);

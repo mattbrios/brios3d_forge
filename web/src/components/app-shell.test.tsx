@@ -21,6 +21,20 @@ describe("AppShell", () => {
     expect(within(main).getByText("conteúdo da página")).toBeTruthy();
   });
 
+  it("hides the header and the nav when printing", () => {
+    // Fase 11 (AC 34): a etiqueta do rolo é impressa de dentro desta árvore, então o chrome do
+    // app não pode sair no papel - e o conteúdo tem de sair.
+    render(
+      <AppShell role="admin">
+        <p>conteúdo da página</p>
+      </AppShell>,
+    );
+
+    expect(screen.getByRole("banner").className).toContain("print:hidden");
+    expect(screen.getByRole("navigation").className).toContain("print:hidden");
+    expect(screen.getByRole("main").className).not.toContain("print:hidden");
+  });
+
   it("links to print profiles", () => {
     render(
       <AppShell>

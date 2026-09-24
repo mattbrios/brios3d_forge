@@ -11,6 +11,8 @@ export interface Material {
   dryingTemperatureC: number | null;
   dryingHours: number | null;
   active: boolean;
+  // Fase 11: piso de reposição em gramas, somando os rolos; null é "sem mínimo".
+  minimumStockGrams: number | null;
 }
 
 export interface MaterialsPage {

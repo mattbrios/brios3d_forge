@@ -36,6 +36,7 @@ const SPARE_PART: StockItemDetail = {
   location: "gaveta 2",
   preferredSupplierId: null,
   balanceQuantity: 5,
+  minimumQuantity: 2,
   avgCostCents: 4500,
   compatiblePrinterIds: ["p1"],
   active: true,

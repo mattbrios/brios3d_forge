@@ -23,6 +23,7 @@ const CONSUMABLE: StockItem = {
   location: "gaveta 1",
   preferredSupplierId: null,
   balanceQuantity: 200,
+  minimumQuantity: 50,
   avgCostCents: 60,
   compatiblePrinterIds: [],
   active: true,
@@ -37,6 +38,7 @@ const SPARE_PART: StockItem = {
   name: "Bico 0.4 hardened",
   sku: "BICO-04",
   balanceQuantity: 3,
+  minimumQuantity: 1,
   avgCostCents: null,
   compatiblePrinterIds: ["p1"],
 };
@@ -103,18 +105,20 @@ describe("Stock items page", () => {
     const consumableCells = within(rowOf("Parafuso M3x8"))
       .getAllByRole("cell")
       .map((cell) => cell.textContent);
-    expect(consumableCells.slice(0, 5)).toEqual([
+    // A coluna "Mínimo" entrou na Fase 11, entre o saldo e o custo médio.
+    expect(consumableCells.slice(0, 6)).toEqual([
       "Parafuso M3x8",
       "Insumo",
       "un",
       "200 un",
+      "50 un",
       "R$ 0.60/un",
     ]);
     // Saldo zero não inventa custo médio: a coluna mostra o traço.
     expect(
       within(rowOf("Bico 0.4 hardened"))
         .getAllByRole("cell")
-        .map((cell) => cell.textContent)[4],
+        .map((cell) => cell.textContent)[5],
     ).toBe("—");
 
     fireEvent.change(screen.getByLabelText("Categoria"), { target: { value: "peca_reposicao" } });

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { type FormEvent, useEffect, useState } from "react";
 import { ConfirmDialog } from "@/components/crud/confirm-dialog";
 import { ApiError, apiFetch } from "@/lib/api";
@@ -198,7 +199,13 @@ function RollDetailContent({ id }: { id: string }) {
 
   return (
     <section className="flex max-w-3xl flex-col gap-6">
-      <h1 className="text-2xl font-semibold">{materialLabel(materials, roll.materialId)}</h1>
+      <div className="flex items-baseline justify-between gap-4">
+        <h1 className="text-2xl font-semibold">{materialLabel(materials, roll.materialId)}</h1>
+        {/* Fase 11: o rolo na prateleira ganha um caminho de volta para esta página. */}
+        <Link href={`/inventory/${id}/label`} className="text-sm underline">
+          Imprimir etiqueta
+        </Link>
+      </div>
       <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
         <dt>Status</dt>
         <dd>{roll.status}</dd>

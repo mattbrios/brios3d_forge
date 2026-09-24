@@ -117,6 +117,19 @@ describe("Login page", () => {
     }
   });
 
+  it("returns to the roll page given in next", async () => {
+    // Fase 11 (AC 37): fecha o caminho do QR - ler no celular, cair no login, e aterrizar no rolo.
+    navigation.search = "?next=%2Finventory%2F8f3c1e2a-0000-4000-8000-000000000001";
+    stubApi(() => Promise.resolve(jsonResponse(200, ANA)));
+    render(<LoginPage />);
+    await fillAndSubmit();
+    await waitFor(() =>
+      expect(navigation.replace).toHaveBeenCalledWith(
+        "/inventory/8f3c1e2a-0000-4000-8000-000000000001",
+      ),
+    );
+  });
+
   it("redirects a signed in user", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(200, ANA)));
     render(<LoginPage />);

@@ -25,6 +25,7 @@ const MATERIAL_1: Material = {
   dryingTemperatureC: null,
   dryingHours: null,
   active: true,
+  minimumStockGrams: null,
 };
 
 type Route = (init?: RequestInit) => Promise<Response>;
@@ -172,6 +173,7 @@ describe("Materials page", () => {
           dryingTemperatureC: null,
           dryingHours: null,
           active: true,
+          minimumStockGrams: null,
         }),
       );
     const fetchMock = stubApi({
@@ -201,6 +203,8 @@ describe("Materials page", () => {
       nozzleTempC: 240,
       bedTempC: 90,
       needsDrying: false,
+      // Fase 11: campo vazio vira `null` explícito, que é o que limpa a política no PATCH.
+      minimumStockGrams: null,
     });
   });
 

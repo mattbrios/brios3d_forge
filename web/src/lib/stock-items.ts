@@ -17,6 +17,8 @@ export interface StockItem {
   location: string | null;
   preferredSupplierId: string | null;
   balanceQuantity: number;
+  // Fase 11: piso de reposição na unidade do item; null é "sem mínimo".
+  minimumQuantity: number | null;
   // null quando o saldo é zero: sem nada na prateleira não há custo médio a informar.
   avgCostCents: number | null;
   compatiblePrinterIds: string[];

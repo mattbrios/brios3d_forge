@@ -13,6 +13,7 @@ function jsonResponse(status: number, body: unknown): Response {
 
 const SALES_ME = { id: "u3", name: "Vendas", email: "sales@test.local", role: "sales" };
 const PRODUCTION_ME = { id: "u2", name: "Produção", email: "production@test.local", role: "production" };
+const ADMIN_ME = { id: "u1", name: "Ana", email: "admin@test.local", role: "admin" };
 
 const MATERIAL_1: Material = {
   id: "m1",
@@ -26,6 +27,7 @@ const MATERIAL_1: Material = {
   dryingTemperatureC: null,
   dryingHours: null,
   active: true,
+  minimumStockGrams: null,
 };
 
 const ROLL: RollDetail = {
@@ -141,6 +143,37 @@ describe("Roll detail page", () => {
     const consumoCells = within(consumoRow).getAllByRole("cell").map((cell) => cell.textContent);
     expect(consumoCells[1]).toBe("-200");
     expect(consumoCells[2]).toBe("—");
+  });
+
+  it("offers a link to print the roll label", async () => {
+    stubApi({
+      "/auth/me": () => Promise.resolve(jsonResponse(200, PRODUCTION_ME)),
+      "/inventory/rolls/r1": () => Promise.resolve(jsonResponse(200, ROLL)),
+      "/materials?pageSize=100": () => Promise.resolve(jsonResponse(200, materialsPage([MATERIAL_1]))),
+    });
+    render(<RollDetailPage params={Promise.resolve({ id: "r1" })} />);
+
+    const link = await screen.findByRole("link", { name: "Imprimir etiqueta" });
+    expect(link.getAttribute("href")).toBe("/inventory/r1/label");
+  });
+
+  it("admin and production see the weigh and movement forms on the roll page", async () => {
+    // O QR aterriza aqui (AC 38): pesar e dar baixa têm de estar na própria página, sem uma
+    // navegação a mais no celular.
+    for (const me of [ADMIN_ME, PRODUCTION_ME]) {
+      stubApi({
+        "/auth/me": () => Promise.resolve(jsonResponse(200, me)),
+        "/inventory/rolls/r1": () => Promise.resolve(jsonResponse(200, ROLL)),
+        "/materials?pageSize=100": () => Promise.resolve(jsonResponse(200, materialsPage([MATERIAL_1]))),
+      });
+      render(<RollDetailPage params={Promise.resolve({ id: "r1" })} />);
+
+      expect(await screen.findByRole("button", { name: "Pesar" }), me.role).toBeTruthy();
+      expect(screen.getByLabelText("Peso bruto na balança (g)"), me.role).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Dar baixa" }), me.role).toBeTruthy();
+      expect(screen.getByLabelText("Gramas"), me.role).toBeTruthy();
+      cleanup();
+    }
   });
 
   it("confirms before discarding", async () => {
