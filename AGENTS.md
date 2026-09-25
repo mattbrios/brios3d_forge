@@ -25,6 +25,28 @@ npm --prefix api run start:dev | build | lint | test | test:e2e
 npm --prefix web run dev | build | lint
 ```
 
+## Política de testes
+
+Classifique pela **forma do código**, nunca pelo nome da camada. Um arquivo **decide** quando algo nele muda o resultado: um limite, uma validação, um `switch` por tipo, uma transição de estado, uma ordenação, um guard, uma regra de precedência. É **instrumentação** quando o corpo repassa argumentos ou copia campo a campo, sem nenhuma condicional que decida a saída.
+
+| Forma do código | Provas exigidas | Profundidade |
+| --- | --- | --- |
+| Decide e é alcançado por uma rota | um e2e na rota **e** um teste no nível do próprio arquivo | o contrato na rota; um caso asserido por linha da tabela de decisão no nível do arquivo |
+| Decide e não é alcançado por uma rota (função pura) | um `*.spec.ts` ao lado do arquivo | um caso asserido por linha da tabela de decisão |
+| Ponto de entrada que não decide (controller, DTO) | um e2e na rota | o lado aceito **e** cada lado recusado |
+| Instrumentação (mapper, repassagem) | nenhuma própria | coberta pela prova de quem consome |
+| `CHECK`, índice único ou outra invariante do banco | um teste por lado de violação, direto no banco | cada lado, e também sob concorrência quando a coluna é decrementada (AD-023) |
+| Migration que altera tabela com linhas | um e2e próprio que roda `down()` e `up()` sobre linhas semeadas | valores preservados e a restrição nova satisfeita |
+| `@Roles()` numa rota | um e2e tabela-driven por papel | o lado barrado **e** o lado liberado |
+| Tela | um teste por estado em `*.test.tsx` | carregando, erro, vazio, e o que cada papel vê |
+
+Vale para toda linha acima:
+
+- **Um limite precisa dos dois lados**: o valor que dispara e o valor que não dispara. Só o lado que dispara não distingue `<` de `<=`.
+- Escreva o valor esperado **literalmente** na asserção. Nunca derive o esperado chamando o código sob teste.
+- Um teste prova a camada onde ele **afirma**, não as camadas pelas quais ele passa. Um e2e que atravessa um `switch` exercita um caminho dele.
+- Nunca enfraqueça uma asserção, apague ou pule um teste para a suíte passar.
+
 ## Regras
 
 - TypeScript `strict`, sem `any`. Código e commits em inglês; comentários podem ser em português.
