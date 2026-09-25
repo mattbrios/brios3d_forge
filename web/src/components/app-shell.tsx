@@ -148,7 +148,15 @@ export function AppShell({
     if (target instanceof Element && target.closest("a")) setDrawer(false);
   }
 
-  let lastGroup: string | undefined;
+  // Rótulo de grupo antes do primeiro item de cada grupo; itens sem grupo seguem no anterior.
+  const groupHeads = items.map((item, index) => {
+    const previous = items
+      .slice(0, index)
+      .map((candidate) => candidate.group)
+      .filter(Boolean)
+      .at(-1);
+    return item.group && item.group !== previous ? item.group : null;
+  });
 
   return (
     <div className={cx("bf-shell", mode && `bf-shell--${mode}`, drawer && "bf-shell--drawer")}>
@@ -178,21 +186,16 @@ export function AppShell({
               onClick={(event) => closeDrawerOnLink(event.target)}
             >
               <div className="bf-sidebar__nav">
-                {items.map((item) => {
-                  const head =
-                    item.group && item.group !== lastGroup ? (
+                {items.map((item, index) => (
+                  <div key={item.href} style={{ display: "contents" }}>
+                    {groupHeads[index] && (
                       <div className="bf-sidebar__group" aria-hidden="true">
-                        {item.group}
+                        {groupHeads[index]}
                       </div>
-                    ) : null;
-                  lastGroup = item.group ?? lastGroup;
-                  return (
-                    <div key={item.href} style={{ display: "contents" }}>
-                      {head}
-                      <NavLink item={item} active={current === item.href} />
-                    </div>
-                  );
-                })}
+                    )}
+                    <NavLink item={item} active={current === item.href} />
+                  </div>
+                ))}
               </div>
               <div className="bf-sidebar__foot">
                 <NavLink item={ACCOUNT_ITEM} active={current === ACCOUNT_ITEM.href} />

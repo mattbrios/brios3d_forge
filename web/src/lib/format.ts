@@ -1,6 +1,4 @@
-const BRL = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-
-// Centavos inteiros em reais: 120000 -> "R$ 1.200,00".
+// Centavos inteiros em reais, no mesmo formato do resto do app: 1050 -> "R$ 10.50".
 export function formatCents(cents: number): string {
-  return BRL.format(cents / 100);
+  return `R$ ${(cents / 100).toFixed(2)}`;
 }

@@ -8,6 +8,23 @@ import type { Printer, PrintersPage } from "@/lib/printers";
 import type { QuotePreviewRequest, QuotePreviewResult } from "@/lib/pricing";
 import type { SalesChannel } from "@/lib/sales-channels";
 import type { StockItem, StockItemsPage } from "@/lib/stock-items";
+import {
+  Boxes,
+  Calculator,
+  Clock,
+  Layers,
+  Plus,
+  Printer as PrinterIcon,
+  Receipt,
+  Store,
+  Trash2,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button, IconButton } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Alert, Loading, PageError } from "@/components/ui/feedback";
+import { Checkbox, Field, Input, Select } from "@/components/ui/form";
+import { formatCents } from "@/lib/format";
 
 interface Registries {
   materials: Material[];
@@ -39,8 +56,6 @@ type CalcStatus =
   | { kind: "error"; message: string }
   | { kind: "done"; result: QuotePreviewResult };
 
-const INPUT_CLASS = "rounded border border-zinc-300 bg-white px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900";
-
 function messageOf(error: unknown): string {
   return error instanceof ApiError ? error.message : "Não foi possível conectar à API";
 }
@@ -49,9 +64,16 @@ function materialLabel(material: Material): string {
   return `${material.type} · ${material.brand} · ${material.color}`;
 }
 
-function formatCents(cents: number): string {
-  return `R$ ${(cents / 100).toFixed(2)}`;
-}
+// Parcelas do custo direto, na ordem e nas cores do resultado (CostBreakdown do Design System).
+const COST_ROWS: { key: keyof QuotePreviewResult["costs"]; label: string; color: string }[] = [
+  { key: "materialCents", label: "Material", color: "var(--cost-1)" },
+  { key: "energyCents", label: "Energia", color: "var(--cost-2)" },
+  { key: "depreciationCents", label: "Depreciação", color: "var(--cost-3)" },
+  { key: "maintenanceCents", label: "Manutenção", color: "var(--cost-4)" },
+  { key: "laborCents", label: "Mão de obra", color: "var(--cost-5)" },
+  { key: "suppliesCents", label: "Insumos", color: "var(--cost-6)" },
+  { key: "fixedCostsCents", label: "Custos fixos", color: "var(--cost-7)" },
+];
 
 export default function PricingPage() {
   const [status, setStatus] = useState<Status>({ kind: "loading" });
@@ -193,83 +215,114 @@ export default function PricingPage() {
   }
 
   if (status.kind === "loading") {
-    return <p>Carregando…</p>;
+    return <Loading />;
   }
 
   if (status.kind === "error") {
-    return (
-      <div className="flex flex-col items-start gap-3">
-        <p role="alert">{status.message}</p>
-        <button
-          type="button"
-          onClick={retry}
-          className="rounded border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
-        >
-          Tentar novamente
-        </button>
-      </div>
-    );
+    return <PageError message={status.message} onRetry={retry} />;
   }
 
   const { registries } = status;
   const calculating = calc.kind === "loading";
+  const grid = { gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,340px),1fr))", gap: "var(--layout-gutter)" };
 
   return (
-    <section className="flex max-w-4xl flex-col gap-6">
-      <h1 className="text-2xl font-semibold">Calculadora</h1>
-
-      <div className="flex flex-col gap-2 border-b border-zinc-200 pb-4 dark:border-zinc-800">
-        <h2 className="text-lg font-semibold">Importar do MakerWorld (opcional)</h2>
+    <>
+      <div className="flex flex-col gap-4">
+        <div>
+          <h2 className="bf-section-title">Importar do MakerWorld (opcional)</h2>
+          <p className="bf-muted" style={{ margin: "2px 0 0", fontSize: 13, fontWeight: 500 }}>
+            Preenche horas e linhas de material
+          </p>
+        </div>
         <PrintProfileImport onFilamentsChange={handleFilamentsChange} />
       </div>
 
-      <form onSubmit={submitCalculate} className="flex flex-col gap-4">
-        <label className="flex flex-col gap-1 text-sm">
-          Impressora cadastrada
-          {registries.printers.length === 0 ? (
-            <p>Nenhuma impressora cadastrada. Cadastre uma impressora antes de calcular.</p>
-          ) : (
-            <select
-              value={printerId}
-              onChange={(event) => setPrinterId(event.target.value)}
-              className={INPUT_CLASS}
-              required
-            >
-              <option value="">Selecione…</option>
-              {registries.printers.map((printer) => (
-                <option key={printer.id} value={printer.id}>
-                  {printer.name}
-                </option>
-              ))}
-            </select>
-          )}
-        </label>
+      <form onSubmit={submitCalculate} className="flex flex-col" style={{ gap: "var(--layout-gutter)" }}>
+        <div className="grid items-start" style={grid}>
+          <Card title="Impressão" icon={PrinterIcon}>
+            <div className="bf-form-grid">
+              <Field label="Impressora cadastrada" style={{ gridColumn: "1 / -1" }}>
+                {registries.printers.length === 0 ? (
+                  <p className="bf-muted" style={{ margin: 0 }}>
+                    Nenhuma impressora cadastrada. Cadastre uma impressora antes de calcular.
+                  </p>
+                ) : (
+                  <Select value={printerId} onChange={(event) => setPrinterId(event.target.value)} required>
+                    <option value="">Selecione…</option>
+                    {registries.printers.map((printer) => (
+                      <option key={printer.id} value={printer.id}>
+                        {printer.name}
+                      </option>
+                    ))}
+                  </Select>
+                )}
+              </Field>
+              <Field label="Horas de impressão">
+                <Input
+                  inputMode="decimal"
+                  value={printHours}
+                  onChange={(event) => setPrintHours(event.target.value)}
+                  required
+                />
+              </Field>
+              <Field label="Quantidade">
+                <Input inputMode="numeric" value={quantity} onChange={(event) => setQuantity(event.target.value)} required />
+              </Field>
+            </div>
+          </Card>
 
-        <label className="flex flex-col gap-1 text-sm">
-          Horas de impressão
-          <input
-            inputMode="decimal"
-            value={printHours}
-            onChange={(event) => setPrintHours(event.target.value)}
-            className={`${INPUT_CLASS} w-32`}
-            required
-          />
-        </label>
+          <Card title="Mão de obra" icon={Clock}>
+            <div className="bf-form-grid" style={{ gridTemplateColumns: "repeat(auto-fill,minmax(min(100%,140px),1fr))" }}>
+              <Field label="Preparo (h)">
+                <Input inputMode="decimal" value={prepHours} onChange={(event) => setPrepHours(event.target.value)} />
+              </Field>
+              <Field label="Fatiamento (h)">
+                <Input
+                  inputMode="decimal"
+                  value={slicingHours}
+                  onChange={(event) => setSlicingHours(event.target.value)}
+                />
+              </Field>
+              <Field label="Pós-processamento (h)">
+                <Input
+                  inputMode="decimal"
+                  value={postProcessingHours}
+                  onChange={(event) => setPostProcessingHours(event.target.value)}
+                />
+              </Field>
+              <Field label="Custo da hora de mão de obra (centavos)" style={{ gridColumn: "1 / -1" }}>
+                <Input
+                  inputMode="decimal"
+                  value={laborCentsPerHour}
+                  onChange={(event) => setLaborCentsPerHour(event.target.value)}
+                />
+              </Field>
+            </div>
+          </Card>
 
-        <div className="flex flex-col gap-2">
-          <h2 className="font-medium">Materiais</h2>
-          {registries.materials.length === 0 ? (
-            <p>Nenhum material cadastrado. Cadastre um material antes de calcular.</p>
-          ) : (
-            <>
-              {materialLines.map((line, index) => (
+          <Card
+            title="Materiais"
+            icon={Layers}
+            action={
+              registries.materials.length > 0 && (
+                <Button size="sm" variant="secondary" icon={Plus} onClick={addMaterialLine}>
+                  Adicionar material
+                </Button>
+              )
+            }
+          >
+            {registries.materials.length === 0 ? (
+              <p className="bf-muted" style={{ margin: 0 }}>
+                Nenhum material cadastrado. Cadastre um material antes de calcular.
+              </p>
+            ) : (
+              materialLines.map((line, index) => (
                 <div key={line.key} className="flex flex-wrap items-end gap-2">
-                  <label className="flex flex-col gap-1 text-sm">
-                    {`Material ${index + 1}`}
-                    <select
+                  <Field label={`Material ${index + 1}`} style={{ flex: "1 1 200px" }}>
+                    <Select
                       value={line.materialId}
                       onChange={(event) => updateMaterialLine(line.key, "materialId", event.target.value)}
-                      className={INPUT_CLASS}
                     >
                       <option value="">Selecione…</option>
                       {registries.materials.map((material) => (
@@ -277,43 +330,48 @@ export default function PricingPage() {
                           {materialLabel(material)}
                         </option>
                       ))}
-                    </select>
-                  </label>
-                  <label className="flex flex-col gap-1 text-sm">
-                    Gramas
-                    <input
+                    </Select>
+                  </Field>
+                  <Field label="Gramas" style={{ width: 110 }}>
+                    <Input
                       inputMode="decimal"
                       value={line.grams}
                       onChange={(event) => updateMaterialLine(line.key, "grams", event.target.value)}
-                      className={`${INPUT_CLASS} w-24`}
                     />
-                  </label>
-                  <button type="button" onClick={() => removeMaterialLine(line.key)}>
-                    Remover
-                  </button>
+                  </Field>
+                  <IconButton
+                    icon={Trash2}
+                    label="Remover"
+                    variant="outline"
+                    onClick={() => removeMaterialLine(line.key)}
+                  />
                 </div>
-              ))}
-              <button type="button" onClick={addMaterialLine} className="self-start">
-                Adicionar material
-              </button>
-            </>
-          )}
-        </div>
+              ))
+            )}
+          </Card>
 
-        <div className="flex flex-col gap-2">
-          <h2 className="font-medium">Insumos (opcional)</h2>
-          {registries.stockItems.length === 0 ? (
-            <p>Nenhum insumo cadastrado.</p>
-          ) : (
-            <>
-              {supplyLines.map((line, index) => (
+          <Card
+            title="Insumos (opcional)"
+            icon={Boxes}
+            action={
+              registries.stockItems.length > 0 && (
+                <Button size="sm" variant="secondary" icon={Plus} onClick={addSupplyLine}>
+                  Adicionar insumo
+                </Button>
+              )
+            }
+          >
+            {registries.stockItems.length === 0 ? (
+              <p className="bf-muted" style={{ margin: 0 }}>
+                Nenhum insumo cadastrado.
+              </p>
+            ) : (
+              supplyLines.map((line, index) => (
                 <div key={line.key} className="flex flex-wrap items-end gap-2">
-                  <label className="flex flex-col gap-1 text-sm">
-                    {`Insumo ${index + 1}`}
-                    <select
+                  <Field label={`Insumo ${index + 1}`} style={{ flex: "1 1 200px" }}>
+                    <Select
                       value={line.stockItemId}
                       onChange={(event) => updateSupplyLine(line.key, "stockItemId", event.target.value)}
-                      className={INPUT_CLASS}
                     >
                       <option value="">Selecione…</option>
                       {registries.stockItems.map((item) => (
@@ -321,157 +379,140 @@ export default function PricingPage() {
                           {item.name}
                         </option>
                       ))}
-                    </select>
-                  </label>
-                  <label className="flex flex-col gap-1 text-sm">
-                    Quantidade
-                    <input
+                    </Select>
+                  </Field>
+                  <Field label="Quantidade" style={{ width: 110 }}>
+                    <Input
                       inputMode="decimal"
                       value={line.quantity}
                       onChange={(event) => updateSupplyLine(line.key, "quantity", event.target.value)}
-                      className={`${INPUT_CLASS} w-24`}
                     />
-                  </label>
-                  <button type="button" onClick={() => removeSupplyLine(line.key)}>
-                    Remover
-                  </button>
+                  </Field>
+                  <IconButton
+                    icon={Trash2}
+                    label="Remover"
+                    variant="outline"
+                    onClick={() => removeSupplyLine(line.key)}
+                  />
                 </div>
-              ))}
-              <button type="button" onClick={addSupplyLine} className="self-start">
-                Adicionar insumo
-              </button>
-            </>
-          )}
+              ))
+            )}
+          </Card>
         </div>
 
-        <div className="flex flex-wrap gap-4">
-          <label className="flex flex-col gap-1 text-sm">
-            Preparo (h)
-            <input
-              inputMode="decimal"
-              value={prepHours}
-              onChange={(event) => setPrepHours(event.target.value)}
-              className={`${INPUT_CLASS} w-24`}
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            Fatiamento (h)
-            <input
-              inputMode="decimal"
-              value={slicingHours}
-              onChange={(event) => setSlicingHours(event.target.value)}
-              className={`${INPUT_CLASS} w-24`}
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            Pós-processamento (h)
-            <input
-              inputMode="decimal"
-              value={postProcessingHours}
-              onChange={(event) => setPostProcessingHours(event.target.value)}
-              className={`${INPUT_CLASS} w-24`}
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            Custo da hora de mão de obra (centavos)
-            <input
-              inputMode="decimal"
-              value={laborCentsPerHour}
-              onChange={(event) => setLaborCentsPerHour(event.target.value)}
-              className={`${INPUT_CLASS} w-32`}
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            Quantidade
-            <input
-              inputMode="numeric"
-              value={quantity}
-              onChange={(event) => setQuantity(event.target.value)}
-              className={`${INPUT_CLASS} w-20`}
-              required
-            />
-          </label>
-        </div>
-
-        <fieldset className="flex flex-col gap-2">
-          <legend className="text-sm font-medium">Canais</legend>
-          {registries.channels.length === 0 ? (
-            <p>Nenhum canal de venda cadastrado. Cadastre um canal antes de calcular.</p>
-          ) : (
-            registries.channels.map((channel) => (
-              <label key={channel.id} className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
+        <Card title="Canais" icon={Store}>
+          <fieldset className="flex flex-wrap gap-x-6 gap-y-3" style={{ margin: 0, padding: 0, border: 0 }}>
+            <legend className="bf-sr">Canais</legend>
+            {registries.channels.length === 0 ? (
+              <p className="bf-muted" style={{ margin: 0 }}>
+                Nenhum canal de venda cadastrado. Cadastre um canal antes de calcular.
+              </p>
+            ) : (
+              registries.channels.map((channel) => (
+                <Checkbox
+                  key={channel.id}
+                  label={channel.name}
                   checked={channelIds.includes(channel.id)}
                   onChange={(event) => toggleChannel(channel.id, event.target.checked)}
                 />
-                {channel.name}
-              </label>
-            ))
-          )}
-        </fieldset>
+              ))
+            )}
+          </fieldset>
+        </Card>
 
-        <div className="flex items-center gap-3">
-          <button
-            type="submit"
-            disabled={calculating}
-            className="rounded bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
-          >
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          {calculating && (
+            <span role="status" className="bf-loading">
+              Calculando…
+            </span>
+          )}
+          <Button type="submit" variant="accent" size="lg" icon={Calculator} disabled={calculating}>
             Calcular
-          </button>
-          {calculating && <span role="status">Calculando…</span>}
+          </Button>
         </div>
       </form>
 
-      {calc.kind === "error" && <p role="alert">{calc.message}</p>}
+      {calc.kind === "error" && (
+        <Alert tone="danger" role="alert">
+          {calc.message}
+        </Alert>
+      )}
 
       {calc.kind === "done" && (
-        <div className="flex flex-col gap-4 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-          <h2 className="text-lg font-semibold">Resultado</h2>
-          <dl className="grid grid-cols-2 gap-1 text-sm sm:grid-cols-3">
-            <dt>Material</dt>
-            <dd>{formatCents(calc.result.costs.materialCents)}</dd>
-            <dt>Energia</dt>
-            <dd>{formatCents(calc.result.costs.energyCents)}</dd>
-            <dt>Depreciação</dt>
-            <dd>{formatCents(calc.result.costs.depreciationCents)}</dd>
-            <dt>Manutenção</dt>
-            <dd>{formatCents(calc.result.costs.maintenanceCents)}</dd>
-            <dt>Mão de obra</dt>
-            <dd>{formatCents(calc.result.costs.laborCents)}</dd>
-            <dt>Insumos</dt>
-            <dd>{formatCents(calc.result.costs.suppliesCents)}</dd>
-            <dt>Custos fixos</dt>
-            <dd>{formatCents(calc.result.costs.fixedCostsCents)}</dd>
-            <dt>Custo direto</dt>
-            <dd>{formatCents(calc.result.costs.directCostCents)}</dd>
-            <dt>Custo com risco</dt>
-            <dd>{formatCents(calc.result.costs.costWithRiskCents)}</dd>
-          </dl>
-
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left">
-                <th>Canal</th>
-                <th>Preço unitário</th>
-                <th>Preço total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {calc.result.channels.map((channel) => (
-                <tr key={channel.id}>
-                  <td>{channel.name}</td>
-                  <td>
-                    {formatCents(channel.unitPriceCents)}
-                    {channel.minimumPriceApplied ? " (mínimo aplicado)" : ""}
-                  </td>
-                  <td>{formatCents(channel.totalPriceCents)}</td>
-                </tr>
+        <Card
+          title="Resultado"
+          icon={Receipt}
+          subtitle={`${calc.result.printer.name} · ${calc.result.quantity} un.`}
+        >
+          <div className="bf-cost">
+            <div className="bf-cost__bar" aria-hidden="true">
+              {COST_ROWS.map((row) =>
+                calc.result.costs[row.key] > 0 ? (
+                  <span key={row.key} style={{ flex: calc.result.costs[row.key], background: row.color }} />
+                ) : null,
+              )}
+            </div>
+            <dl className="bf-cost__list">
+              {COST_ROWS.map((row) => (
+                <div key={row.key}>
+                  <dt>
+                    <i style={{ background: row.color }} />
+                    {row.label}
+                  </dt>
+                  <dd>
+                    {formatCents(calc.result.costs[row.key])}
+                    <span aria-hidden="true">
+                      {calc.result.costs.directCostCents > 0
+                        ? `${Math.round((calc.result.costs[row.key] / calc.result.costs.directCostCents) * 100)}%`
+                        : ""}
+                    </span>
+                  </dd>
+                </div>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </dl>
+            <dl className="bf-cost__totals" style={{ margin: 0 }}>
+              <div>
+                <dt>
+                  <span>Custo direto</span>
+                </dt>
+                <dd style={{ margin: 0 }}>
+                  <b>{formatCents(calc.result.costs.directCostCents)}</b>
+                </dd>
+              </div>
+              <div className="is-strong">
+                <dt>
+                  <span>Custo com risco</span>
+                </dt>
+                <dd style={{ margin: 0 }}>
+                  <b>{formatCents(calc.result.costs.costWithRiskCents)}</b>
+                </dd>
+              </div>
+            </dl>
+            <ul className="bf-cost__channels" style={{ margin: 0, padding: 0, listStyle: "none" }}>
+              {calc.result.channels.map((channel) => (
+                <li key={channel.id} className="bf-cost__channel">
+                  <div className="bf-cost__channel-name">
+                    {channel.name}
+                    {channel.minimumPriceApplied && (
+                      <Badge tone="warning" size="sm">
+                        mínimo aplicado
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="bf-cost__price">
+                    {formatCents(channel.unitPriceCents)}
+                    <small>/un.</small>
+                  </div>
+                  <div className="bf-cost__total">
+                    {calc.result.quantity > 1 ? `${calc.result.quantity} un. · ` : ""}Total{" "}
+                    {formatCents(channel.totalPriceCents)}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </Card>
       )}
-    </section>
+    </>
   );
 }

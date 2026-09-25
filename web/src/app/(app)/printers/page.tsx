@@ -7,7 +7,7 @@ import { EntityForm, type FieldConfig } from "@/components/crud/entity-form";
 import { ApiError, apiFetch } from "@/lib/api";
 import type { AuthUser } from "@/lib/auth";
 import type { Nozzle, Printer, PrintersPage } from "@/lib/printers";
-import { Gauge, Pencil, Plus, Power, Printer as PrinterIcon, Search } from "lucide-react";
+import { Gauge, Pencil, Power, Printer as PrinterIcon, Search } from "lucide-react";
 import { ActiveBadge, Badge } from "@/components/ui/badge";
 import { Button, IconButton } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -314,24 +314,27 @@ export default function PrintersPage() {
                         </div>
                       )}
                       {canAdjustHourmeter && (
-                        <div className="flex items-center gap-2">
-                          <label className="flex items-center gap-1 text-xs">
-                            Horímetro (h)
-                            <input
+                        <div className="flex items-end gap-2">
+                          <Field label="Horímetro (h)">
+                            <Input
+                              inputSize="sm"
+                              style={{ width: 110 }}
                               type="number"
                               value={hourmeterDraft[printer.id] ?? String(printer.hourmeterHours)}
                               onChange={(event) =>
                                 setHourmeterDraft((current) => ({ ...current, [printer.id]: event.target.value }))
                               }
                             />
-                          </label>
-                          <button
-                            type="button"
+                          </Field>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            icon={Gauge}
                             onClick={() => void adjustHourmeter(printer)}
                             disabled={hourmeterSubmitting[printer.id] === true}
                           >
                             Ajustar horímetro
-                          </button>
+                          </Button>
                         </div>
                       )}
                       {rowError[printer.id] && (

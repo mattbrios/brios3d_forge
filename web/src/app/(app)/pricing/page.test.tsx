@@ -157,14 +157,14 @@ describe("Pricing page", () => {
     render(<PricingPage />);
     expect(screen.getByText("Carregando…")).toBeTruthy();
     resolveMaterials(jsonResponse(200, { items: [MATERIAL_1], total: 1, page: 1, pageSize: 100 }));
-    await screen.findByText("Calculadora");
+    await screen.findByRole("heading", { name: "Impressão" });
   });
 
   // C14 (AC 15): seletor de material com estado vazio quando nenhum material cadastrado (ativo).
   it("shows an empty state on the material selector when none are registered", async () => {
     stubApi(defaultRegistries({ materials: [] }));
     render(<PricingPage />);
-    await screen.findByText("Calculadora");
+    await screen.findByRole("heading", { name: "Impressão" });
     expect(
       screen.getByText("Nenhum material cadastrado. Cadastre um material antes de calcular."),
     ).toBeTruthy();
@@ -179,7 +179,7 @@ describe("Pricing page", () => {
       "/print-profiles/import": () => Promise.resolve(jsonResponse(200, seaAnimals)),
     });
     render(<PricingPage />);
-    await screen.findByText("Calculadora");
+    await screen.findByRole("heading", { name: "Impressão" });
 
     fireEvent.change(screen.getByLabelText("URL do MakerWorld"), {
       target: { value: "https://makerworld.com/models/3007827" },
@@ -200,7 +200,7 @@ describe("Pricing page", () => {
   it("adds a material or supply line manually with a registry selector, never a free-text cost field", async () => {
     stubApi(defaultRegistries({}));
     render(<PricingPage />);
-    await screen.findByText("Calculadora");
+    await screen.findByRole("heading", { name: "Impressão" });
 
     fireEvent.click(screen.getByRole("button", { name: "Adicionar material" }));
     const materialSelect = screen.getByLabelText("Material 1");
@@ -224,7 +224,7 @@ describe("Pricing page", () => {
       "/pricing/quote-preview": () => Promise.resolve(jsonResponse(200, QUOTE_RESULT)),
     });
     render(<PricingPage />);
-    await screen.findByText("Calculadora");
+    await screen.findByRole("heading", { name: "Impressão" });
 
     fireEvent.change(screen.getByLabelText("Impressora cadastrada"), { target: { value: "p1" } });
     fireEvent.change(screen.getByLabelText("Horas de impressão"), { target: { value: "5" } });
@@ -248,7 +248,7 @@ describe("Pricing page", () => {
     });
     stubApi({ ...defaultRegistries({}), "/pricing/quote-preview": () => quotePromise });
     render(<PricingPage />);
-    await screen.findByText("Calculadora");
+    await screen.findByRole("heading", { name: "Impressão" });
 
     fireEvent.change(screen.getByLabelText("Impressora cadastrada"), { target: { value: "p1" } });
     fireEvent.change(screen.getByLabelText("Horas de impressão"), { target: { value: "5" } });
@@ -275,7 +275,7 @@ describe("Pricing page", () => {
       Promise.resolve(jsonResponse(400, { error: "Material sem custo médio disponível: PLA · Marca A · Natural" }));
     const fetchMock = stubApi({ ...defaultRegistries({}), "/pricing/quote-preview": () => quoteRoute() });
     render(<PricingPage />);
-    await screen.findByText("Calculadora");
+    await screen.findByRole("heading", { name: "Impressão" });
 
     fireEvent.change(screen.getByLabelText("Impressora cadastrada"), { target: { value: "p1" } });
     fireEvent.change(screen.getByLabelText("Horas de impressão"), { target: { value: "5" } });
