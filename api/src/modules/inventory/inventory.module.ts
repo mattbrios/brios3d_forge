@@ -11,5 +11,7 @@ import { InventoryService } from './inventory.service.js';
   imports: [TypeOrmModule.forFeature([FilamentRoll, InventoryMovement, StockItem, StockItemPrinter])],
   controllers: [InventoryController],
   providers: [InventoryService],
+  // Fase 12 (quote-preview): QuotePreviewService precisa do custo médio de material e insumo.
+  exports: [InventoryService],
 })
 export class InventoryModule {}

@@ -14,5 +14,7 @@ import { SettingsService } from './settings.service.js';
   imports: [TypeOrmModule.forFeature([Settings, FixedCostItem, SalesChannel])],
   controllers: [SettingsController, SalesChannelsController],
   providers: [SettingsService, SalesChannelsService],
+  // Fase 12 (quote-preview): QuotePreviewService precisa de Settings e do canal por id.
+  exports: [SettingsService, SalesChannelsService],
 })
 export class SettingsModule {}

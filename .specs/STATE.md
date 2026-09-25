@@ -30,8 +30,68 @@
 | AD-024 | Custo médio ponderado nunca é armazenado: sempre recalculado sob demanda a partir do estado atual do ledger (rolos não descartados com saldo > 0), exposto só por `GET /inventory/materials-summary` | Fase 9 decide isso explicitamente; as Fases 12 (calculadora) e 25 (margem real) devem chamar este endpoint em vez de introduzir um campo cacheado em `Material` | active | 2026-09-23 |
 | AD-025 | Piso de estoque ("estoque mínimo") é uma coluna nula da própria tabela do cadastro (`materials.minimum_stock_grams`, `stock_items.minimum_quantity`), sem `DEFAULT`, com `CHECK` de não negatividade; `NULL` significa "sem política de reposição", nunca "mínimo zero". O alerta compara `saldo < piso` (estritamente abaixo) e é leitura derivada, nunca persistida, exposta só por `GET /inventory/alerts` | Fase 11 introduz o padrão; a Fase 15 (produto acabado) e a Fase 27 (projeção de compra) devem reusar a mesma coluna-por-dono e o mesmo `kind` de `StockAlert` em vez de criar tabela polimórfica de mínimos ou uma terceira lista na resposta | active | 2026-09-24 |
 | AD-026 | Dado acessório do cabeçalho (hoje a contagem de alertas) é buscado pelo próprio componente do cabeçalho, nunca pelo `AuthGate`, e a falha degrada em silêncio - sem indicador e sem `role="alert"`, com a tela continuando a renderizar | Fase 11: o cabeçalho aparece em toda tela autenticada, então um erro ali apareceria no sistema inteiro por causa de um dado que o usuário não foi ver; buscar no `AuthGate` deixaria a sessão esperando por ele | active | 2026-09-24 |
+| AD-027 | `POST /pricing/quote-preview` mapeia o cadastro de canal (Fase 5: `taxRate` e `feeRate` por canal, validado contra `defaultMarginRate`) para o `PricingInput` puro (Fase 1: um `taxRate` global e um `feeRate` por canal) assim: `marginRate` = `settings.defaultMarginRate`, `taxRate` do `PricingInput` fica em `0`, e o `feeRate` enviado a cada canal é `channel.taxRate + channel.feeRate` do cadastro | o `pricing` puro não tem um `taxRate` por canal e não deveria ganhar um só para esta integração (mudaria a Fase 1); somar preserva exatamente a mesma regra de 100% que a Fase 5 já valida no cadastro (`marginRate + channel.taxRate + channel.feeRate < 1`), sem introduzir uma segunda leitura da mesma soma | active | 2026-09-25 |
 
 ## Handoff
+
+**Feature**: phase-12-integrated-calculator - concluída (Verifier PASS na rodada 1)
+**Where**: C1-C19 em 3 commits (`c49d142` API, `acc1b32` web, `cbbc3cf` ROADMAP.md). Um builder só
+(estimativa de 16k, abaixo do orçamento de 150k, sem pergunta de mecanismo). API: `POST
+/pricing/quote-preview` novo em `pricing.controller.ts` (mesmo módulo, sem controller novo);
+`QuotePreviewService` (novo) resolve `printerId`/`materialId`/`stockItemId`/`channelId` recebidos
+via os services existentes (`MaterialsService`, `PrintersService`, `InventoryService`,
+`SettingsService`, `SalesChannelsService`), monta um `PricingInput` (Fase 1, sem alteração) e
+chama `PricingService.calculate` sem modificá-lo. `MaterialsService`, `PrintersService` e
+`SalesChannelsService` ganharam `getById` (não existia; a rota precisa validar o id recebido) e os
+quatro módulos (`InventoryModule`, `MaterialsModule`, `PrintersModule`, `SettingsModule`) passaram
+a `exports: [...]` o próprio service (nenhum exportava antes). Web: tela nova `/pricing`
+embutindo `<PrintProfileImport onFilamentsChange={...} />` (prop nova, opcional, sem duplicar o
+componente - AD-024 permanece: nenhum custo é digitado, só ids do cadastro), seletores dinâmicos
+de material/insumo/impressora/canal, e item de menu "Calculadora" em `app-shell.tsx` (entre
+"Importar do MakerWorld" e "Materiais", visível a admin/production/sales). `lint`, `test` e
+`build` verdes nas duas pastas (109 unit + 345 e2e na API, 156 no web)
+**AD-027** (novo): o mapeamento de `taxRate`/`feeRate` de canal (Fase 5, por canal) para o
+`PricingInput` puro (Fase 1, um `taxRate` global e um `feeRate` por canal) soma
+`channel.taxRate + channel.feeRate` no `feeRate` enviado e zera o `taxRate` global, preservando a
+mesma regra de 100% que a Fase 5 já valida no cadastro
+**Desvios do plano, todos registrados no diff**: (1) o plano não previa que `MaterialsService`,
+`PrintersService` e `SalesChannelsService` precisariam de um `getById` novo - nenhum dos três
+tinha um método de busca por id única antes desta fase (`PrintersService` só tinha `list`,
+`create`, `update`, `adjustHourmeter`; `SalesChannelsService` só validava id dentro de `update`).
+Placement, não door: reversível, mesmo padrão de `InventoryService.getItemById` já existente. (2)
+O label do seletor de impressora da tela `/pricing` é "Impressora cadastrada", não "Impressora" -
+o `PrintProfileImport` embutido já usa o label "Impressora" para o campo de texto livre importado
+da URL, e os dois coexistem na mesma tela
+**Validação em navegador** (Playwright MCP, app em docker): impressora e material cadastrados
+(custo médio real de dois rolos), cálculo bem-sucedido como admin e como production; nova entrada
+de rolo mudando o custo médio (R$ 0,15/g -> R$ 0,23/g) refletida no recálculo sem nenhuma edição
+manual de custo; erro 400 (material sem custo médio) com `role="alert"` preservando o formulário
+inteiro; estado vazio do seletor de impressora ("Nenhuma impressora cadastrada..."). Os dois
+registros criados só para o teste (material `PETG-SEMCUSTO`, impressora `Bambu X1C QA`) foram
+desativados ao final
+**Verificação**: 1 rodada, perfil `light`, por sub-agente independente. **PASS** - 19/19 checks
+com evidência localizada (`file:line`), níveis de prova confirmados (e2e cruzando o `AppModule`
+real para C1-C11, nível do próprio arquivo para C12, componente renderizado para C13-C19), e a
+seção `## Swept` relida contra o código (guard global, mensagens de erro por entidade,
+`ArrayMinSize(1)` do novo DTO - todos confirmados). Nenhum mutante injetado (fora do perfil
+`light`). `validate_verification.py` exit 0 já na primeira tentativa
+**In progress**: nada
+**Next step**: nenhum bloqueio. Fase 13 (catálogo e ficha técnica) depende da Fase 12; Fase 16
+(orçamentos) persiste a prévia calculada aqui como `Quote`
+**Riscos abertos**: (1) o custo médio de material e insumo é sempre lido de novo em cada
+`POST /pricing/quote-preview` (AD-024) - correto pela decisão já tomada, mas significa que a rota
+faz de 3 a 4 buscas em paralelo (`materialsSummary`, `getItemById` por insumo, `getById` de
+impressora, `get` de settings) mesmo sem nenhuma escrita; não é um problema hoje (sem paginação
+nem N+1 real), mas cresce se o número de materiais/insumos por orçamento crescer muito. (2) o
+mapeamento de `taxRate`/`feeRate` por canal (AD-027) é uma solução de placement para uma
+inconsistência real entre o cadastro de canal (Fase 5, dois campos) e o `pricing` puro (Fase 1, um
+`taxRate` global): funciona porque hoje só existe uma leitura da soma, mas se uma fase futura
+precisar do `taxRate` de canal isolado do `feeRate` na resposta, este mapeamento não vai bastar
+**Blockers**: nenhum
+**Uncommitted**: `.specs/STATE.md` (esta atualização)
+**Branch**: main
+
+## Handoff anterior
 
 **Feature**: phase-11-stock-alerts-qr - concluída (PASS na rodada 4; 3 rodadas independentes antes)
 **Where**: C1-C63 em 5 commits (`7d51f03` API, `a0bc9d2` web, `e6dc929` form do piso no item,
@@ -114,63 +174,3 @@ um com status `426`), já registrado na lição L-030; a rodada seguinte veio 33
 `.gitignore` e `.agents/.skill-lock.json`
 **Branch**: main
 
-## Handoff anterior
-
-**Feature**: phase-10-stock-items - concluída (Verifier PASS na rodada 3)
-**Where**: C1-C57 construídos em 3 commits (`375e3e8` artefatos, `4b07126` API, `53ad563` web),
-um builder só (estimativa de 37k, abaixo do orçamento de 150k). API: `StockItem` +
-`StockItemPrinter`, 8 rotas novas em `inventory`, fold `computeStockItemAverageCost` (PMP por
-replay do ledger), e o ledger `inventory_movements` passou a ter dono único
-(`roll_id` XOR `stock_item_id`) com as colunas renomeadas para `quantity`/`unit_cost_cents` em
-duas migrations (`CreateStockItems`, `AlterInventoryMovementsOwner`, esta última com
-`RENAME COLUMN` e sem backfill). Web: telas `/inventory/items`, `/inventory/items/[id]` e
-`/inventory/movements`, menu com "Filamento"/"Insumos e peças"/"Movimentações", e o detalhe do
-rolo lendo as chaves novas. `lint`, `test`, `test:e2e` e `build` verdes nas duas pastas (107 unit
-+ 299 e2e na API, 118 no web). Validado também no navegador contra o app rodando: custo médio
-0,60/un depois de 100@50 e 100@70, consumo de 150 sem mexer na média, perda e contagem por
-produção (ajuste de -5 no histórico), papéis (admin cadastra e dá entrada; produção só movimenta;
-vendas só lê), estados de carregando/erro/vazio das duas telas novas, e o histórico do rolo
-íntegro depois da renomeação (1000 g a 0,12/g, baixa -100)
-**Verificação**: 3 rodadas, perfil `standard`, sempre por sub-agente independente.
-Rodada 1: FAIL - 2 mutantes sobreviventes (o lado **aceito** de `preferredSupplierId` não tinha
-prova em lugar nenhum, então um `assertSupplierExists` que recusasse todo fornecedor válido passava
-pelos 72 testes; e C24 matava o mutante do AD-023 - pré-checagem em memória + `UPDATE` absoluto - em
-só 1 de 4 rodadas, porque a intercalação era esperada e não forçada), mais 2 linhas de `Test policy`
-sem cumprimento. Fix em `c8c1876`: nasceram C58 (lado aceito do fornecedor e do `location`, asserido
-na resposta, na linha do banco, no detalhe, no `PATCH` e na lista) e C59 (7 lados recusados de
-limite/formato do `POST`), e C24 passou a **forçar** a intercalação com um `SELECT ... FOR UPDATE` do
-próprio teste. Rodada 2: FAIL - 1 mutante sobrevivente, o `UpdateStockItemDto` redeclara os 8
-validadores em vez de estender o do `POST`, e nenhum lado recusado dele tinha prova (relaxar
-`@MaxLength(150)` lá passava por 301/301). Fix em `fdff93c`: nasceu C60, 9 casos sobre o `PATCH`.
-Rodada 3: **PASS** - 60/60 checks com evidência localizada, 3 sets recomputados com 0 membros sem
-prova, 4 falhas injetadas e 4 mortas (incluindo a reinjeção do AD-023, morta 4 de 4),
-`validate_verification.py` exit 0.
-Rodada 4 (escopada ao passo 5, walk the flow): **PASS**. Existiu para corrigir um erro do autor - as
-três primeiras rodadas registraram a validação em navegador como "fora de alcance" porque ele
-afirmou que as ferramentas do Playwright MCP não estavam expostas, sem nunca tê-las chamado; elas
-estavam. O MCP foi configurado em `.kiro/settings/mcp.json` (`npx @playwright/mcp@0.0.82
---headless`, chromium 1246 em cache) e um Verifier independente percorreu as telas: ACs 41-49 com
-evidência de navegador, 3 sessões reais (admin, produção, vendas), incluindo o detalhe de um rolo
-cujo ledger foi gravado **antes** da Fase 10, com as colunas de quantidade e custo íntegras depois
-do `RENAME` (AC 48). Três notas sem reprovar: nenhuma tela define a compatibilidade peça×impressora
-(o vínculo só entra pela API, e nenhuma fonte binding pede tela - buraco de produto que pertence ao
-roadmap, e a Fase 22 é quem consome o vínculo), `Usuário` aparece como uuid no histórico porque é o
-que o contrato devolve, e não há tela de edição de item. Lições L-023 a L-032 gravadas
-**In progress**: nada
-**Next step**: nenhum bloqueio. Fase 11 (estoque mínimo, alertas e QR) consome `stock_items` e
-`filament_rolls`; Fase 21 (recebimento de compra) e Fase 15 (produto acabado) copiam o precedente do
-door 6 (cadastro sem movimento, entrada como segunda chamada) e, no caso da Fase 15, pagam a coluna
-nula do door 3; Fase 22 (manutenção) consome `stock_item_printers` para a pergunta inversa "quais
-peças servem nesta impressora"; Fase 12 passa a puxar o custo médio de insumo de
-`GET /inventory/items` em vez do parâmetro solto de `pricing`
-**Riscos abertos** (levantados pela verificação, nenhum reprovando a fase): (1) a suíte e2e tem
-não-determinismo **entre arquivos**, pré-existente e fora desta fase - a rodada 3 viu 2 vermelhos em
-`test/sales-channels.e2e-spec.ts` (Fase 5) sem nada concorrente, um deles com status `426`, que não
-existe em `api/src`, o que indica vazamento no transporte e não no dado (lição L-030); (2) C23
-declara na claim um mecanismo (`CHECK` sobre `UPDATE` relativo) que as suas asserções não
-distinguem - quem distingue é C24; (3) "cada lado recusado" dos DTOs é operacionalizado por campo e
-não por decorator, então `@IsString()`, `@IsArray()` e o `@IsNotEmpty()` dos textos opcionais ficam
-sem caso (consequência real hoje é zero: a tela envia `sku || undefined`)
-**Blockers**: nenhum
-**Uncommitted**: nada além deste `STATE.md`
-**Branch**: main

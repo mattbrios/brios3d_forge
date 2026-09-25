@@ -47,8 +47,8 @@ As fases seguem os quatro marcos do `CONTEXT.md` (MVP → Operação diária →
 | 8 | Clientes e fornecedores | Cadastros de clientes e fornecedores | ✅ |
 | 9 | Estoque de filamento por rolo | Rolos, movimentações, pesagem com tara, custo médio ponderado | ✅ |
 | 10 | Insumos e peças de reposição | Itens controlados por quantidade, com movimentações e custo médio | ✅ |
-| 11 | Estoque mínimo, alertas e etiqueta QR | Alertas de reposição e etiqueta com QR code para o rolo | ⬜ |
-| 12 | Calculadora integrada | Tela de precificação usando cadastros, estoque e os dados importados pela URL do MakerWorld | ⬜ |
+| 11 | Estoque mínimo, alertas e etiqueta QR | Alertas de reposição e etiqueta com QR code para o rolo | ✅ |
+| 12 | Calculadora integrada | Tela de precificação usando cadastros, estoque e os dados importados pela URL do MakerWorld | ✅ |
 | **Marco 2** | | *Operação diária no sistema* | |
 | 13 | Catálogo e ficha técnica | Produtos com URL do modelo, variações, ficha técnica, licença e custo sempre atualizado | ⬜ |
 | 14 | Metadados do modelo por URL | Buscar imagem, título e licença no Printables, MakerWorld ou Thingiverse | ⬜ |
@@ -412,21 +412,21 @@ sem `@page size` fixo, então a mesma página serve A4 e térmica (questão aber
 **Dependências:** Fases 1, 2, 5, 7, 9 e 10.
 
 **Tarefas:**
-- [ ] Serviço de aplicação que monta a entrada do `pricing` a partir dos cadastros: impressora, materiais com custo médio R$/g, insumos com custo médio, configurações e canais
-- [ ] `POST /pricing/quote-preview` recebendo IDs e quantidades (impressora, materiais + gramas, insumos, horas, quantidade, canais)
-- [ ] Web: tela da calculadora com
-  - [ ] URL do MakerWorld que preenche o tempo e os gramas por filamento (via Fase 2)
-  - [ ] mapeamento de cada filamento do perfil (tipo e cor) para um material cadastrado
-  - [ ] preenchimento manual como alternativa
-  - [ ] quadro com o custo detalhado por componente e o preço por canal lado a lado
-  - [ ] simulação de quantidade (desconto por diluição)
-- [ ] Testes de integração: os valores da tela batem com o `pricing` puro para os mesmos dados
+- [x] Serviço de aplicação que monta a entrada do `pricing` a partir dos cadastros: impressora, materiais com custo médio R$/g, insumos com custo médio, configurações e canais
+- [x] `POST /pricing/quote-preview` recebendo IDs e quantidades (impressora, materiais + gramas, insumos, horas, quantidade, canais)
+- [x] Web: tela da calculadora com
+  - [x] URL do MakerWorld que preenche o tempo e os gramas por filamento (via Fase 2)
+  - [x] mapeamento de cada filamento do perfil (tipo e cor) para um material cadastrado
+  - [x] preenchimento manual como alternativa
+  - [x] quadro com o custo detalhado por componente e o preço por canal lado a lado
+  - [x] simulação de quantidade (desconto por diluição)
+- [x] Testes de integração: os valores da tela batem com o `pricing` puro para os mesmos dados
 
 **Critérios de aceite:**
-- Importar um perfil multicor pela URL (fixture), mapear os materiais e ver o preço por canal com o detalhamento
-- Mudar o custo médio de um material (nova entrada de rolo) muda o resultado
-- A tela foi validada com Playwright nos estados de carregamento, erro (URL inválida ou MakerWorld indisponível, com o preenchimento manual) e vazio
-- **Critério do marco MVP:** o sistema precifica corretamente e controla filamento
+- [x] Importar um perfil multicor pela URL (fixture), mapear os materiais e ver o preço por canal com o detalhamento
+- [x] Mudar o custo médio de um material (nova entrada de rolo) muda o resultado
+- [x] A tela foi validada com Playwright nos estados de carregamento, erro (URL inválida ou MakerWorld indisponível, com o preenchimento manual) e vazio
+- [x] **Critério do marco MVP:** o sistema precifica corretamente e controla filamento
 
 ---
 

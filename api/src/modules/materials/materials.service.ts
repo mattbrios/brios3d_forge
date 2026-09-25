@@ -50,6 +50,15 @@ export class MaterialsService {
     return { items: rows.map(toMaterialResponse), total, page, pageSize };
   }
 
+  // Consumido pela Fase 12 (quote-preview) para validar o materialId recebido no corpo.
+  async getById(id: string): Promise<MaterialResponse> {
+    const material = await this.materials.findOne({ where: { id } });
+    if (!material) {
+      throw new NotFoundException(MATERIAL_NOT_FOUND);
+    }
+    return toMaterialResponse(material);
+  }
+
   async create(dto: CreateMaterialDto): Promise<MaterialResponse> {
     const drying = dto.needsDrying
       ? { dryingTemperatureC: dto.dryingTemperatureC ?? null, dryingHours: dto.dryingHours ?? null }

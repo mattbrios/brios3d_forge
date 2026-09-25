@@ -5,6 +5,11 @@ import { PricingController } from './pricing.controller.js';
 import { PricingError } from './pricing.error.js';
 import type { PricingService } from './pricing.service.js';
 import type { PricingResult } from './pricing.types.js';
+import type { QuotePreviewService } from './quote-preview.service.js';
+
+// Serviço da rota nova (Fase 12) não é exercitado por este spec (tem o próprio); um stub
+// mínimo basta para instanciar o controller.
+const stubQuotePreviewService = {} as unknown as QuotePreviewService;
 
 describe('PricingController', () => {
   const dto = r1() as CalculatePricingDto;
@@ -15,7 +20,7 @@ describe('PricingController', () => {
         throw new PricingError('Duplicate channel name: "Balcão"');
       },
     } as unknown as PricingService;
-    const controller = new PricingController(service);
+    const controller = new PricingController(service, stubQuotePreviewService);
 
     let thrown: unknown;
     try {
@@ -35,7 +40,7 @@ describe('PricingController', () => {
         throw boom;
       },
     } as unknown as PricingService;
-    expect(() => new PricingController(service).calculate(dto)).toThrow(boom);
+    expect(() => new PricingController(service, stubQuotePreviewService).calculate(dto)).toThrow(boom);
   });
 
   it('returns the service result untouched', () => {
@@ -55,6 +60,6 @@ describe('PricingController', () => {
       channels: [],
     };
     const service = { calculate: () => result } as unknown as PricingService;
-    expect(new PricingController(service).calculate(dto)).toBe(result);
+    expect(new PricingController(service, stubQuotePreviewService).calculate(dto)).toBe(result);
   });
 });
