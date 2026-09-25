@@ -2,6 +2,11 @@
 
 import { type FormEvent, useState } from "react";
 import { ApiError, apiFetch } from "@/lib/api";
+import { Lock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Alert } from "@/components/ui/feedback";
+import { Field, Input } from "@/components/ui/form";
 
 type Status = { kind: "idle" } | { kind: "saving" } | { kind: "error"; message: string } | { kind: "done" };
 
@@ -38,39 +43,45 @@ export default function AccountPage() {
   }
 
   return (
-    <section className="flex max-w-sm flex-col gap-4">
-      <h1 className="text-2xl font-semibold">Minha conta</h1>
-      <form onSubmit={submit} className="flex flex-col gap-3">
-        <label>
-          Senha atual
-          <input
-            type="password"
-            value={currentPassword}
-            onChange={(event) => setCurrentPassword(event.target.value)}
-          />
-        </label>
-        <label>
-          Nova senha
-          <input
-            type="password"
-            value={newPassword}
-            onChange={(event) => setNewPassword(event.target.value)}
-          />
-        </label>
-        <label>
-          Confirmar nova senha
-          <input
-            type="password"
-            value={confirmPassword}
-            onChange={(event) => setConfirmPassword(event.target.value)}
-          />
-        </label>
-        {status.kind === "error" && <p role="alert">{status.message}</p>}
-        {status.kind === "done" && <p role="status">Senha alterada</p>}
-        <button type="submit" disabled={status.kind === "saving"}>
-          {status.kind === "saving" ? "Salvando…" : "Trocar senha"}
-        </button>
-      </form>
-    </section>
+    <div style={{ maxWidth: 560, width: "100%" }}>
+      <Card title="Trocar senha" icon={Lock}>
+        {status.kind === "done" && (
+          <Alert tone="success" role="status">
+            Senha alterada
+          </Alert>
+        )}
+        <form onSubmit={submit} className="flex flex-col gap-5">
+          <div className="bf-form-grid">
+            <Field label="Senha atual" style={{ gridColumn: "1 / -1" }}>
+              <Input
+                type="password"
+                value={currentPassword}
+                onChange={(event) => setCurrentPassword(event.target.value)}
+              />
+            </Field>
+            <Field label="Nova senha">
+              <Input type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} />
+            </Field>
+            <Field label="Confirmar nova senha">
+              <Input
+                type="password"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+              />
+            </Field>
+          </div>
+          {status.kind === "error" && (
+            <Alert tone="danger" role="alert">
+              {status.message}
+            </Alert>
+          )}
+          <div className="flex justify-end">
+            <Button type="submit" loading={status.kind === "saving"}>
+              {status.kind === "saving" ? "Salvando…" : "Trocar senha"}
+            </Button>
+          </div>
+        </form>
+      </Card>
+    </div>
   );
 }

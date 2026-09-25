@@ -7,6 +7,12 @@ import { EntityForm, type FieldConfig } from "@/components/crud/entity-form";
 import { ApiError, apiFetch } from "@/lib/api";
 import type { AuthUser } from "@/lib/auth";
 import type { Customer, CustomersPage } from "@/lib/customers";
+import { Pencil, Plus, Power, Search } from "lucide-react";
+import { ActiveBadge } from "@/components/ui/badge";
+import { IconButton } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { EmptyState, Loading, PageError } from "@/components/ui/feedback";
+import { Field, Input } from "@/components/ui/form";
 
 type Status =
   | { kind: "loading" }
@@ -36,7 +42,7 @@ const COLUMNS: Column<Customer>[] = [
   { key: "document", label: "CPF/CNPJ" },
   { key: "phone", label: "Telefone" },
   { key: "email", label: "E-mail" },
-  { key: "active", label: "Situação", render: (row) => (row.active ? "Ativo" : "Inativo") },
+  { key: "active", label: "Situação", render: (row) => <ActiveBadge active={row.active} /> },
 ];
 
 function messageOf(error: unknown): string {
@@ -183,65 +189,69 @@ export default function CustomersPage() {
   }
 
   if (status.kind === "loading") {
-    return <p>Carregando…</p>;
+    return <Loading />;
   }
 
   if (status.kind === "error") {
-    return (
-      <div className="flex flex-col items-start gap-3">
-        <p role="alert">{status.message}</p>
-        <button
-          type="button"
-          onClick={retry}
-          className="rounded border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
-        >
-          Tentar novamente
-        </button>
-      </div>
-    );
+    return <PageError message={status.message} onRetry={retry} />;
   }
 
   const { role, customers } = status;
   const editable = role === "admin" || role === "sales";
 
   return (
-    <section className="flex max-w-4xl flex-col gap-6">
-      <h1 className="text-2xl font-semibold">Clientes</h1>
+    <>
+      <div className="bf-page-head">
+        <div style={{ flex: "1 1 220px", maxWidth: 360 }}>
+          <Field label="Buscar">
+            <Input
+              icon={Search}
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="nome"
+            />
+          </Field>
+        </div>
+      </div>
 
-      <label className="flex flex-col gap-1 text-sm">
-        Buscar
-        <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="nome" />
-      </label>
-
-      {customers.length === 0 ? (
-        <p>Nenhum cliente encontrado.</p>
-      ) : (
-        <DataTable
-          columns={COLUMNS}
-          rows={customers}
+      <Card title={`${customers.length} ${customers.length === 1 ? "cliente" : "clientes"}`}>
+        {customers.length === 0 ? (
+          <EmptyState>Nenhum cliente encontrado.</EmptyState>
+        ) : (
+          <DataTable
+            columns={COLUMNS}
+            rows={customers}
+            isInactive={(row) => !row.active}
           getRowId={(customer) => customer.id}
-          renderActions={
-            editable
-              ? (customer) => (
-                  <div className="flex flex-col gap-1">
-                    <div className="flex gap-2">
-                      <button type="button" onClick={() => startEdit(customer)}>
-                        Editar
-                      </button>
-                      <button type="button" onClick={() => setConfirmTarget(customer)}>
-                        {customer.active ? "Desativar" : "Reativar"}
-                      </button>
+            renderActions={
+              editable
+                ? (customer) => (
+                    <div className="flex flex-col items-end gap-1">
+                      <div className="flex gap-1">
+                        <IconButton icon={Pencil} label="Editar" size="sm" onClick={() => startEdit(customer)} />
+                        <IconButton
+                          icon={Power}
+                          label={customer.active ? "Desativar" : "Reativar"}
+                          size="sm"
+                          onClick={() => setConfirmTarget(customer)}
+                        />
+                      </div>
+                      {rowError[customer.id] && (
+                      <p role="alert" className="bf-field__error" style={{ margin: 0 }}>
+                        {rowError[customer.id]}
+                      </p>
+                    )}
                     </div>
-                    {rowError[customer.id] && <p role="alert">{rowError[customer.id]}</p>}
-                  </div>
-                )
-              : undefined
-          }
-        />
-      )}
+                  )
+                : undefined
+            }
+          />
+        )}
+      </Card>
 
       {confirmTarget && (
         <ConfirmDialog
+          tone={confirmTarget.active ? "danger" : "neutral"}
           message={`${confirmTarget.active ? "Desativar" : "Reativar"} "${confirmTarget.name}"?`}
           confirmLabel={confirmTarget.active ? "Desativar" : "Reativar"}
           onConfirm={() => void confirmToggle()}
@@ -252,8 +262,7 @@ export default function CustomersPage() {
 
       {editable &&
         (editingId && editForm ? (
-          <div className="flex flex-col gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-            <h2 className="text-lg font-semibold">Editar cliente</h2>
+          <Card title="Editar cliente" icon={Pencil}>
             <EntityForm
               fields={FORM_FIELDS}
               values={editForm}
@@ -261,14 +270,12 @@ export default function CustomersPage() {
               onSubmit={submitEdit}
               submitting={editSubmitting}
               error={editError}
+              onCancel={cancelEdit}
+              cancelLabel="Cancelar edição"
             />
-            <button type="button" onClick={cancelEdit}>
-              Cancelar edição
-            </button>
-          </div>
+          </Card>
         ) : (
-          <div className="flex flex-col gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-            <h2 className="text-lg font-semibold">Novo cliente</h2>
+          <Card title="Novo cliente" icon={Plus}>
             <EntityForm
               fields={FORM_FIELDS}
               values={createForm}
@@ -277,8 +284,8 @@ export default function CustomersPage() {
               submitting={creating}
               error={createError}
             />
-          </div>
+          </Card>
         ))}
-    </section>
+    </>
   );
 }

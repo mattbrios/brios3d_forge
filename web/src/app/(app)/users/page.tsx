@@ -4,6 +4,15 @@ import { type FormEvent, useEffect, useState } from "react";
 import { ApiError, apiFetch } from "@/lib/api";
 import type { AuthUser, UserRole } from "@/lib/auth";
 import { ROLE_LABELS, type PublicUser } from "@/lib/users";
+import { Pencil, Power, UserPlus } from "lucide-react";
+import { ActiveBadge, Badge, type BadgeTone } from "@/components/ui/badge";
+import { Button, IconButton } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Avatar } from "@/components/ui/data";
+import { Alert, EmptyState, Loading, PageError } from "@/components/ui/feedback";
+import { Field, Input, Select } from "@/components/ui/form";
+
+const ROLE_TONES: Record<UserRole, BadgeTone> = { admin: "violet", production: "accent", sales: "info" };
 
 type Status =
   | { kind: "loading" }
@@ -158,183 +167,194 @@ export default function UsersPage() {
   }
 
   if (status.kind === "loading") {
-    return <p>Carregando usuários…</p>;
+    return <Loading>Carregando usuários…</Loading>;
   }
 
   if (status.kind === "error") {
-    return (
-      <div className="flex flex-col items-start gap-3">
-        <p role="alert">{status.message}</p>
-        <button
-          type="button"
-          onClick={retry}
-          className="rounded border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
-        >
-          Tentar novamente
-        </button>
-      </div>
-    );
+    return <PageError message={status.message} onRetry={retry} />;
   }
 
   const { currentUserId, users } = status;
 
   return (
-    <section className="flex max-w-3xl flex-col gap-6">
-      <h1 className="text-2xl font-semibold">Usuários</h1>
-
-      {users.length === 0 ? (
-        <p>Nenhum usuário cadastrado</p>
-      ) : (
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left">
-              <th>Nome</th>
-              <th>E-mail</th>
-              <th>Papel</th>
-              <th>Situação</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((user) => {
-              const isSelf = user.id === currentUserId;
-              const isEditing = editingId === user.id;
-              return (
-                <tr key={user.id}>
-                  {isEditing && editForm ? (
-                    <>
-                      <td>
-                        <label>
-                          Nome
-                          <input
-                            value={editForm.name}
-                            onChange={(event) =>
-                              setEditForm({ ...editForm, name: event.target.value })
-                            }
-                          />
-                        </label>
-                      </td>
-                      <td>
-                        <label>
-                          E-mail
-                          <input
-                            value={editForm.email}
-                            onChange={(event) =>
-                              setEditForm({ ...editForm, email: event.target.value })
-                            }
-                          />
-                        </label>
-                      </td>
-                      <td>
-                        {!isSelf && (
-                          <label>
-                            Papel
-                            <select
-                              value={editForm.role}
-                              onChange={(event) =>
-                                setEditForm({ ...editForm, role: event.target.value as UserRole })
-                              }
-                            >
-                              <option value="admin">Administrador</option>
-                              <option value="production">Produção</option>
-                              <option value="sales">Vendas</option>
-                            </select>
-                          </label>
-                        )}
-                      </td>
-                      <td>{user.active ? "Ativo" : "Inativo"}</td>
-                      <td>
-                        <label>
-                          Nova senha
-                          <input
-                            type="password"
-                            value={editForm.password}
-                            onChange={(event) =>
-                              setEditForm({ ...editForm, password: event.target.value })
-                            }
-                          />
-                        </label>
-                        <button type="button" disabled={editSubmitting} onClick={() => saveEdit(user)}>
-                          Salvar
-                        </button>
-                        <button type="button" onClick={cancelEdit}>
-                          Cancelar
-                        </button>
-                        {editError && <p role="alert">{editError}</p>}
-                      </td>
-                    </>
-                  ) : (
-                    <>
-                      <td>{user.name}</td>
-                      <td>{user.email}</td>
-                      <td>{ROLE_LABELS[user.role]}</td>
-                      <td>{user.active ? "Ativo" : "Inativo"}</td>
-                      <td>
-                        <button type="button" onClick={() => startEdit(user)}>
-                          Editar
-                        </button>
-                        {!isSelf && (
-                          <button
-                            type="button"
-                            disabled={toggling === user.id}
-                            onClick={() => toggleActive(user)}
-                          >
-                            {user.active ? "Desativar" : "Ativar"}
-                          </button>
-                        )}
-                        {rowError[user.id] && <p role="alert">{rowError[user.id]}</p>}
-                      </td>
-                    </>
-                  )}
+    <>
+      <Card title="Equipe" subtitle={`${users.length} ${users.length === 1 ? "usuário" : "usuários"}`}>
+        {users.length === 0 ? (
+          <EmptyState>Nenhum usuário cadastrado</EmptyState>
+        ) : (
+          <div className="bf-table-wrap">
+            <table className="bf-table">
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>E-mail</th>
+                  <th>Papel</th>
+                  <th>Situação</th>
+                  <th aria-label="Ações" />
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      )}
+              </thead>
+              <tbody>
+                {users.map((user) => {
+                  const isSelf = user.id === currentUserId;
+                  const isEditing = editingId === user.id;
+                  return (
+                    <tr key={user.id} className={user.active ? undefined : "is-inactive"}>
+                      {isEditing && editForm ? (
+                        <>
+                          <td data-label="Nome">
+                            <Field label="Nome">
+                              <Input
+                                inputSize="sm"
+                                value={editForm.name}
+                                onChange={(event) => setEditForm({ ...editForm, name: event.target.value })}
+                              />
+                            </Field>
+                          </td>
+                          <td data-label="E-mail">
+                            <Field label="E-mail">
+                              <Input
+                                inputSize="sm"
+                                value={editForm.email}
+                                onChange={(event) => setEditForm({ ...editForm, email: event.target.value })}
+                              />
+                            </Field>
+                          </td>
+                          <td data-label="Papel">
+                            {!isSelf && (
+                              <Field label="Papel">
+                                <Select
+                                  selectSize="sm"
+                                  value={editForm.role}
+                                  onChange={(event) => setEditForm({ ...editForm, role: event.target.value as UserRole })}
+                                >
+                                  <option value="admin">Administrador</option>
+                                  <option value="production">Produção</option>
+                                  <option value="sales">Vendas</option>
+                                </Select>
+                              </Field>
+                            )}
+                          </td>
+                          <td data-label="Situação">
+                            <ActiveBadge active={user.active} />
+                          </td>
+                          <td className="bf-table__actions-cell">
+                            <div className="flex flex-col gap-2">
+                              <Field label="Nova senha">
+                                <Input
+                                  inputSize="sm"
+                                  type="password"
+                                  value={editForm.password}
+                                  onChange={(event) => setEditForm({ ...editForm, password: event.target.value })}
+                                />
+                              </Field>
+                              <div className="flex gap-2">
+                                <Button size="sm" disabled={editSubmitting} onClick={() => saveEdit(user)}>
+                                  Salvar
+                                </Button>
+                                <Button size="sm" variant="secondary" onClick={cancelEdit}>
+                                  Cancelar
+                                </Button>
+                              </div>
+                              {editError && (
+                                <p role="alert" className="bf-field__error" style={{ margin: 0 }}>
+                                  {editError}
+                                </p>
+                              )}
+                            </div>
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td data-label="Nome">
+                            <span className="flex items-center gap-2.5" style={{ fontWeight: 800 }}>
+                              <Avatar name={user.name} size={32} />
+                              {user.name}
+                            </span>
+                          </td>
+                          <td data-label="E-mail">{user.email}</td>
+                          <td data-label="Papel">
+                            <Badge tone={ROLE_TONES[user.role]}>{ROLE_LABELS[user.role]}</Badge>
+                          </td>
+                          <td data-label="Situação">
+                            <ActiveBadge active={user.active} />
+                          </td>
+                          <td className="bf-table__actions-cell">
+                            <div className="flex flex-col items-end gap-1">
+                              <div className="bf-table__actions">
+                                <IconButton icon={Pencil} label="Editar" size="sm" onClick={() => startEdit(user)} />
+                                {!isSelf && (
+                                  <IconButton
+                                    icon={Power}
+                                    label={user.active ? "Desativar" : "Ativar"}
+                                    size="sm"
+                                    disabled={toggling === user.id}
+                                    onClick={() => toggleActive(user)}
+                                  />
+                                )}
+                              </div>
+                              {rowError[user.id] && (
+                                <p role="alert" className="bf-field__error" style={{ margin: 0 }}>
+                                  {rowError[user.id]}
+                                </p>
+                              )}
+                            </div>
+                          </td>
+                        </>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
 
-      <form onSubmit={submitCreate} className="flex flex-col gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-        <h2 className="text-lg font-semibold">Novo usuário</h2>
-        <label>
-          Nome
-          <input
-            value={createForm.name}
-            onChange={(event) => setCreateForm({ ...createForm, name: event.target.value })}
-          />
-        </label>
-        <label>
-          E-mail
-          <input
-            value={createForm.email}
-            onChange={(event) => setCreateForm({ ...createForm, email: event.target.value })}
-          />
-        </label>
-        <label>
-          Senha
-          <input
-            type="password"
-            value={createForm.password}
-            onChange={(event) => setCreateForm({ ...createForm, password: event.target.value })}
-          />
-        </label>
-        <label>
-          Papel
-          <select
-            value={createForm.role}
-            onChange={(event) =>
-              setCreateForm({ ...createForm, role: event.target.value as UserRole })
-            }
-          >
-            <option value="admin">Administrador</option>
-            <option value="production">Produção</option>
-            <option value="sales">Vendas</option>
-          </select>
-        </label>
-        {createError && <p role="alert">{createError}</p>}
-        <button type="submit" disabled={creating}>
-          {creating ? "Criando…" : "Criar usuário"}
-        </button>
-      </form>
-    </section>
+      <Card title="Novo usuário" icon={UserPlus}>
+        <form onSubmit={submitCreate} className="flex flex-col gap-5">
+          <div className="bf-form-grid">
+            <Field label="Nome">
+              <Input
+                value={createForm.name}
+                onChange={(event) => setCreateForm({ ...createForm, name: event.target.value })}
+              />
+            </Field>
+            <Field label="E-mail">
+              <Input
+                value={createForm.email}
+                onChange={(event) => setCreateForm({ ...createForm, email: event.target.value })}
+              />
+            </Field>
+            <Field label="Senha">
+              <Input
+                type="password"
+                value={createForm.password}
+                onChange={(event) => setCreateForm({ ...createForm, password: event.target.value })}
+              />
+            </Field>
+            <Field label="Papel">
+              <Select
+                value={createForm.role}
+                onChange={(event) => setCreateForm({ ...createForm, role: event.target.value as UserRole })}
+              >
+                <option value="admin">Administrador</option>
+                <option value="production">Produção</option>
+                <option value="sales">Vendas</option>
+              </Select>
+            </Field>
+          </div>
+          {createError && (
+            <Alert tone="danger" role="alert">
+              {createError}
+            </Alert>
+          )}
+          <div className="flex justify-end">
+            <Button type="submit" loading={creating}>
+              {creating ? "Criando…" : "Criar usuário"}
+            </Button>
+          </div>
+        </form>
+      </Card>
+    </>
   );
 }

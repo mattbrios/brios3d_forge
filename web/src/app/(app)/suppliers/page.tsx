@@ -7,6 +7,12 @@ import { EntityForm, type FieldConfig } from "@/components/crud/entity-form";
 import { ApiError, apiFetch } from "@/lib/api";
 import type { AuthUser } from "@/lib/auth";
 import type { Supplier, SuppliersPage } from "@/lib/suppliers";
+import { Pencil, Plus, Power, Search } from "lucide-react";
+import { ActiveBadge } from "@/components/ui/badge";
+import { IconButton } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { EmptyState, Loading, PageError } from "@/components/ui/feedback";
+import { Field, Input } from "@/components/ui/form";
 
 type Status =
   | { kind: "loading" }
@@ -36,7 +42,7 @@ const COLUMNS: Column<Supplier>[] = [
   { key: "document", label: "CPF/CNPJ" },
   { key: "phone", label: "Telefone" },
   { key: "email", label: "E-mail" },
-  { key: "active", label: "Situação", render: (row) => (row.active ? "Ativo" : "Inativo") },
+  { key: "active", label: "Situação", render: (row) => <ActiveBadge active={row.active} /> },
 ];
 
 function messageOf(error: unknown): string {
@@ -183,65 +189,69 @@ export default function SuppliersPage() {
   }
 
   if (status.kind === "loading") {
-    return <p>Carregando…</p>;
+    return <Loading />;
   }
 
   if (status.kind === "error") {
-    return (
-      <div className="flex flex-col items-start gap-3">
-        <p role="alert">{status.message}</p>
-        <button
-          type="button"
-          onClick={retry}
-          className="rounded border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
-        >
-          Tentar novamente
-        </button>
-      </div>
-    );
+    return <PageError message={status.message} onRetry={retry} />;
   }
 
   const { role, suppliers } = status;
   const editable = role === "admin";
 
   return (
-    <section className="flex max-w-4xl flex-col gap-6">
-      <h1 className="text-2xl font-semibold">Fornecedores</h1>
+    <>
+      <div className="bf-page-head">
+        <div style={{ flex: "1 1 220px", maxWidth: 360 }}>
+          <Field label="Buscar">
+            <Input
+              icon={Search}
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="nome"
+            />
+          </Field>
+        </div>
+      </div>
 
-      <label className="flex flex-col gap-1 text-sm">
-        Buscar
-        <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="nome" />
-      </label>
-
-      {suppliers.length === 0 ? (
-        <p>Nenhum fornecedor encontrado.</p>
-      ) : (
-        <DataTable
-          columns={COLUMNS}
-          rows={suppliers}
+      <Card title={`${suppliers.length} ${suppliers.length === 1 ? "fornecedor" : "fornecedores"}`}>
+        {suppliers.length === 0 ? (
+          <EmptyState>Nenhum fornecedor encontrado.</EmptyState>
+        ) : (
+          <DataTable
+            columns={COLUMNS}
+            rows={suppliers}
+            isInactive={(row) => !row.active}
           getRowId={(supplier) => supplier.id}
-          renderActions={
-            editable
-              ? (supplier) => (
-                  <div className="flex flex-col gap-1">
-                    <div className="flex gap-2">
-                      <button type="button" onClick={() => startEdit(supplier)}>
-                        Editar
-                      </button>
-                      <button type="button" onClick={() => setConfirmTarget(supplier)}>
-                        {supplier.active ? "Desativar" : "Reativar"}
-                      </button>
+            renderActions={
+              editable
+                ? (supplier) => (
+                    <div className="flex flex-col items-end gap-1">
+                      <div className="flex gap-1">
+                        <IconButton icon={Pencil} label="Editar" size="sm" onClick={() => startEdit(supplier)} />
+                        <IconButton
+                          icon={Power}
+                          label={supplier.active ? "Desativar" : "Reativar"}
+                          size="sm"
+                          onClick={() => setConfirmTarget(supplier)}
+                        />
+                      </div>
+                      {rowError[supplier.id] && (
+                      <p role="alert" className="bf-field__error" style={{ margin: 0 }}>
+                        {rowError[supplier.id]}
+                      </p>
+                    )}
                     </div>
-                    {rowError[supplier.id] && <p role="alert">{rowError[supplier.id]}</p>}
-                  </div>
-                )
-              : undefined
-          }
-        />
-      )}
+                  )
+                : undefined
+            }
+          />
+        )}
+      </Card>
 
       {confirmTarget && (
         <ConfirmDialog
+          tone={confirmTarget.active ? "danger" : "neutral"}
           message={`${confirmTarget.active ? "Desativar" : "Reativar"} "${confirmTarget.name}"?`}
           confirmLabel={confirmTarget.active ? "Desativar" : "Reativar"}
           onConfirm={() => void confirmToggle()}
@@ -252,8 +262,7 @@ export default function SuppliersPage() {
 
       {editable &&
         (editingId && editForm ? (
-          <div className="flex flex-col gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-            <h2 className="text-lg font-semibold">Editar fornecedor</h2>
+          <Card title="Editar fornecedor" icon={Pencil}>
             <EntityForm
               fields={FORM_FIELDS}
               values={editForm}
@@ -261,14 +270,12 @@ export default function SuppliersPage() {
               onSubmit={submitEdit}
               submitting={editSubmitting}
               error={editError}
+              onCancel={cancelEdit}
+              cancelLabel="Cancelar edição"
             />
-            <button type="button" onClick={cancelEdit}>
-              Cancelar edição
-            </button>
-          </div>
+          </Card>
         ) : (
-          <div className="flex flex-col gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-            <h2 className="text-lg font-semibold">Novo fornecedor</h2>
+          <Card title="Novo fornecedor" icon={Plus}>
             <EntityForm
               fields={FORM_FIELDS}
               values={createForm}
@@ -277,8 +284,8 @@ export default function SuppliersPage() {
               submitting={creating}
               error={createError}
             />
-          </div>
+          </Card>
         ))}
-    </section>
+    </>
   );
 }

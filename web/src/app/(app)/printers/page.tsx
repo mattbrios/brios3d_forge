@@ -7,6 +7,12 @@ import { EntityForm, type FieldConfig } from "@/components/crud/entity-form";
 import { ApiError, apiFetch } from "@/lib/api";
 import type { AuthUser } from "@/lib/auth";
 import type { Nozzle, Printer, PrintersPage } from "@/lib/printers";
+import { Gauge, Pencil, Power, Printer as PrinterIcon, Search } from "lucide-react";
+import { ActiveBadge, Badge } from "@/components/ui/badge";
+import { Button, IconButton } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { EmptyState, Loading, PageError } from "@/components/ui/feedback";
+import { Field, Input } from "@/components/ui/form";
 
 type Status =
   | { kind: "loading" }
@@ -44,13 +50,22 @@ const FORM_FIELDS: FieldConfig<PrinterFormValues>[] = [
 ];
 
 const COLUMNS: Column<Printer>[] = [
-  { key: "name", label: "Nome" },
-  { key: "acquisitionCostCents", label: "Custo (centavos)" },
-  { key: "lifespanHours", label: "Vida útil (h)" },
-  { key: "powerWatts", label: "Potência (W)" },
-  { key: "hourmeterHours", label: "Horímetro (h)" },
-  { key: "hasAms", label: "AMS", render: (row) => (row.hasAms ? `Sim (${row.amsSlots})` : "Não") },
-  { key: "active", label: "Situação", render: (row) => (row.active ? "Ativo" : "Inativo") },
+  { key: "name", label: "Nome", render: (row) => <span style={{ fontWeight: 800 }}>{row.name}</span> },
+  { key: "acquisitionCostCents", label: "Custo (centavos)", numeric: true },
+  { key: "lifespanHours", label: "Vida útil (h)", numeric: true },
+  { key: "powerWatts", label: "Potência (W)", numeric: true },
+  { key: "hourmeterHours", label: "Horímetro (h)", numeric: true },
+  {
+    key: "hasAms",
+    label: "AMS",
+    render: (row) =>
+      row.hasAms ? (
+        <Badge tone="violet" size="sm">{`Sim (${row.amsSlots})`}</Badge>
+      ) : (
+        <span className="bf-muted">Não</span>
+      ),
+  },
+  { key: "active", label: "Situação", render: (row) => <ActiveBadge active={row.active} /> },
 ];
 
 function messageOf(error: unknown): string {
@@ -248,22 +263,11 @@ export default function PrintersPage() {
   }
 
   if (status.kind === "loading") {
-    return <p>Carregando…</p>;
+    return <Loading />;
   }
 
   if (status.kind === "error") {
-    return (
-      <div className="flex flex-col items-start gap-3">
-        <p role="alert">{status.message}</p>
-        <button
-          type="button"
-          onClick={retry}
-          className="rounded border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
-        >
-          Tentar novamente
-        </button>
-      </div>
-    );
+    return <PageError message={status.message} onRetry={retry} />;
   }
 
   const { role, printers } = status;
@@ -271,66 +275,84 @@ export default function PrintersPage() {
   const canAdjustHourmeter = role === "admin" || role === "production";
 
   return (
-    <section className="flex max-w-4xl flex-col gap-6">
-      <h1 className="text-2xl font-semibold">Impressoras</h1>
+    <>
+      <div className="bf-page-head">
+        <div style={{ flex: "1 1 220px", maxWidth: 360 }}>
+          <Field label="Buscar">
+            <Input
+              icon={Search}
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="nome"
+            />
+          </Field>
+        </div>
+      </div>
 
-      <label className="flex flex-col gap-1 text-sm">
-        Buscar
-        <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="nome" />
-      </label>
-
-      {printers.length === 0 ? (
-        <p>Nenhuma impressora encontrada.</p>
-      ) : (
-        <DataTable
-          columns={COLUMNS}
-          rows={printers}
+      <Card title={`${printers.length} ${printers.length === 1 ? "impressora" : "impressoras"}`}>
+        {printers.length === 0 ? (
+          <EmptyState>Nenhuma impressora encontrada.</EmptyState>
+        ) : (
+          <DataTable
+            columns={COLUMNS}
+            rows={printers}
+            isInactive={(row) => !row.active}
           getRowId={(printer) => printer.id}
-          renderActions={
-            editable || canAdjustHourmeter
-              ? (printer) => (
-                  <div className="flex flex-col gap-1">
-                    {editable && (
-                      <div className="flex gap-2">
-                        <button type="button" onClick={() => startEdit(printer)}>
-                          Editar
-                        </button>
-                        <button type="button" onClick={() => setConfirmTarget(printer)}>
-                          {printer.active ? "Desativar" : "Reativar"}
-                        </button>
-                      </div>
+            renderActions={
+              editable || canAdjustHourmeter
+                ? (printer) => (
+                    <div className="flex flex-col items-end gap-1">
+                      {editable && (
+                        <div className="flex gap-1">
+                          <IconButton icon={Pencil} label="Editar" size="sm" onClick={() => startEdit(printer)} />
+                          <IconButton
+                          icon={Power}
+                          label={printer.active ? "Desativar" : "Reativar"}
+                          size="sm"
+                          onClick={() => setConfirmTarget(printer)}
+                        />
+                        </div>
+                      )}
+                      {canAdjustHourmeter && (
+                        <div className="flex items-end gap-2">
+                          <Field label="Horímetro (h)">
+                            <Input
+                              inputSize="sm"
+                              style={{ width: 110 }}
+                              type="number"
+                              value={hourmeterDraft[printer.id] ?? String(printer.hourmeterHours)}
+                              onChange={(event) =>
+                                setHourmeterDraft((current) => ({ ...current, [printer.id]: event.target.value }))
+                              }
+                            />
+                          </Field>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            icon={Gauge}
+                            onClick={() => void adjustHourmeter(printer)}
+                            disabled={hourmeterSubmitting[printer.id] === true}
+                          >
+                            Ajustar horímetro
+                          </Button>
+                        </div>
+                      )}
+                      {rowError[printer.id] && (
+                      <p role="alert" className="bf-field__error" style={{ margin: 0 }}>
+                        {rowError[printer.id]}
+                      </p>
                     )}
-                    {canAdjustHourmeter && (
-                      <div className="flex items-center gap-2">
-                        <label className="flex items-center gap-1 text-xs">
-                          Horímetro (h)
-                          <input
-                            type="number"
-                            value={hourmeterDraft[printer.id] ?? String(printer.hourmeterHours)}
-                            onChange={(event) =>
-                              setHourmeterDraft((current) => ({ ...current, [printer.id]: event.target.value }))
-                            }
-                          />
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => void adjustHourmeter(printer)}
-                          disabled={hourmeterSubmitting[printer.id] === true}
-                        >
-                          Ajustar horímetro
-                        </button>
-                      </div>
-                    )}
-                    {rowError[printer.id] && <p role="alert">{rowError[printer.id]}</p>}
-                  </div>
-                )
-              : undefined
-          }
-        />
-      )}
+                    </div>
+                  )
+                : undefined
+            }
+          />
+        )}
+      </Card>
 
       {confirmTarget && (
         <ConfirmDialog
+          tone={confirmTarget.active ? "danger" : "neutral"}
           message={`${confirmTarget.active ? "Desativar" : "Reativar"} "${confirmTarget.name}"?`}
           confirmLabel={confirmTarget.active ? "Desativar" : "Reativar"}
           onConfirm={() => void confirmToggle()}
@@ -341,8 +363,7 @@ export default function PrintersPage() {
 
       {editable &&
         (editingId && editForm ? (
-          <div className="flex flex-col gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-            <h2 className="text-lg font-semibold">Editar impressora</h2>
+          <Card title="Editar impressora" icon={Pencil}>
             <EntityForm
               fields={FORM_FIELDS}
               values={editForm}
@@ -350,14 +371,12 @@ export default function PrintersPage() {
               onSubmit={submitEdit}
               submitting={editSubmitting}
               error={editError}
+              onCancel={cancelEdit}
+              cancelLabel="Cancelar edição"
             />
-            <button type="button" onClick={cancelEdit}>
-              Cancelar edição
-            </button>
-          </div>
+          </Card>
         ) : (
-          <div className="flex flex-col gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-            <h2 className="text-lg font-semibold">Nova impressora</h2>
+          <Card title="Nova impressora" icon={PrinterIcon}>
             <EntityForm
               fields={FORM_FIELDS}
               values={createForm}
@@ -366,8 +385,8 @@ export default function PrintersPage() {
               submitting={creating}
               error={createError}
             />
-          </div>
+          </Card>
         ))}
-    </section>
+    </>
   );
 }

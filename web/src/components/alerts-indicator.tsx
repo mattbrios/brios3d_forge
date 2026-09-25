@@ -1,5 +1,6 @@
 "use client";
 
+import { TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
@@ -29,12 +30,10 @@ export function AlertsIndicator() {
     return null;
   }
 
+  const label = `${count} ${count === 1 ? "item" : "itens"} abaixo do mínimo`;
   return (
-    <Link
-      href="/inventory/alerts"
-      aria-label={`${count} ${count === 1 ? "item" : "itens"} abaixo do mínimo`}
-      className="rounded border border-amber-500 px-2 py-0.5 text-amber-700 dark:text-amber-400"
-    >
+    <Link href="/inventory/alerts" aria-label={label} title={label} className="bf-alerts">
+      <TriangleAlert size={16} strokeWidth={2} aria-hidden="true" />
       {count}
     </Link>
   );

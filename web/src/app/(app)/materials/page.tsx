@@ -7,6 +7,12 @@ import { EntityForm, type FieldConfig } from "@/components/crud/entity-form";
 import { ApiError, apiFetch } from "@/lib/api";
 import type { AuthUser } from "@/lib/auth";
 import type { Material, MaterialsPage } from "@/lib/materials";
+import { Droplet, Layers, Pencil, Plus, Power, Search } from "lucide-react";
+import { ActiveBadge, Badge } from "@/components/ui/badge";
+import { IconButton } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { EmptyState, Loading, PageError } from "@/components/ui/feedback";
+import { Field, Input } from "@/components/ui/form";
 
 type Status =
   | { kind: "loading" }
@@ -54,18 +60,31 @@ const FORM_FIELDS: FieldConfig<MaterialFormValues>[] = [
 ];
 
 const COLUMNS: Column<Material>[] = [
-  { key: "type", label: "Tipo" },
+  { key: "type", label: "Tipo", render: (row) => <span style={{ fontWeight: 800 }}>{row.type}</span> },
   { key: "brand", label: "Marca" },
   { key: "color", label: "Cor" },
-  { key: "densityGCm3", label: "Densidade" },
-  { key: "nozzleTempC", label: "Bico °C" },
-  { key: "bedTempC", label: "Mesa °C" },
+  { key: "densityGCm3", label: "Densidade", numeric: true },
+  { key: "nozzleTempC", label: "Bico °C", numeric: true },
+  { key: "bedTempC", label: "Mesa °C", numeric: true },
   {
     key: "minimumStockGrams",
     label: "Mínimo",
+    numeric: true,
     render: (row) => (row.minimumStockGrams === null ? "—" : `${row.minimumStockGrams} g`),
   },
-  { key: "active", label: "Situação", render: (row) => (row.active ? "Ativo" : "Inativo") },
+  {
+    key: "needsDrying",
+    label: "Secagem",
+    render: (row) =>
+      row.needsDrying ? (
+        <Badge tone="warning" icon={Droplet} size="sm">
+          {row.dryingTemperatureC} °C · {row.dryingHours} h
+        </Badge>
+      ) : (
+        <span className="bf-muted">—</span>
+      ),
+  },
+  { key: "active", label: "Situação", render: (row) => <ActiveBadge active={row.active} /> },
 ];
 
 function messageOf(error: unknown): string {
@@ -227,69 +246,89 @@ export default function MaterialsPage() {
   }
 
   if (status.kind === "loading") {
-    return <p>Carregando…</p>;
+    return <Loading />;
   }
 
   if (status.kind === "error") {
-    return (
-      <div className="flex flex-col items-start gap-3">
-        <p role="alert">{status.message}</p>
-        <button
-          type="button"
-          onClick={retry}
-          className="rounded border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
-        >
-          Tentar novamente
-        </button>
-      </div>
-    );
+    return <PageError message={status.message} onRetry={retry} />;
   }
 
   const { role, materials } = status;
   const editable = role === "admin";
+  const activeCount = materials.filter((material) => material.active).length;
 
   return (
-    <section className="flex max-w-4xl flex-col gap-6">
-      <h1 className="text-2xl font-semibold">Materiais</h1>
+    <>
+      <div className="bf-page-head">
+        <div style={{ flex: "1 1 220px", maxWidth: 360 }}>
+          <Field label="Buscar">
+            <Input
+              icon={Search}
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="tipo, marca ou cor"
+            />
+          </Field>
+        </div>
+      </div>
 
-      <label className="flex flex-col gap-1 text-sm">
-        Buscar
-        <input
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="tipo, marca ou cor"
-        />
-      </label>
-
-      {materials.length === 0 ? (
-        <p>Nenhum material encontrado.</p>
-      ) : (
-        <DataTable
-          columns={COLUMNS}
-          rows={materials}
-          getRowId={(material) => material.id}
-          renderActions={
-            editable
-              ? (material) => (
-                  <div className="flex flex-col gap-1">
-                    <div className="flex gap-2">
-                      <button type="button" onClick={() => startEdit(material)}>
-                        Editar
-                      </button>
-                      <button type="button" onClick={() => setConfirmTarget(material)}>
-                        {material.active ? "Desativar" : "Reativar"}
-                      </button>
-                    </div>
-                    {rowError[material.id] && <p role="alert">{rowError[material.id]}</p>}
-                  </div>
-                )
-              : undefined
-          }
-        />
+      {editable && editingId && editForm && (
+        <Card title="Editar material" icon={Layers}>
+          <EntityForm
+            fields={FORM_FIELDS}
+            values={editForm}
+            onChange={setEditForm}
+            onSubmit={submitEdit}
+            submitting={editSubmitting}
+            error={editError}
+            onCancel={cancelEdit}
+            cancelLabel="Cancelar edição"
+          />
+        </Card>
       )}
+
+      <Card
+        title={`${materials.length} ${materials.length === 1 ? "material" : "materiais"}`}
+        subtitle={`${activeCount} ${activeCount === 1 ? "ativo" : "ativos"}`}
+      >
+        {materials.length === 0 ? (
+          <EmptyState>Nenhum material encontrado.</EmptyState>
+        ) : (
+          <DataTable
+            columns={COLUMNS}
+            rows={materials}
+            getRowId={(material) => material.id}
+            isInactive={(material) => !material.active}
+            renderActions={
+              editable
+                ? (material) => (
+                    <div className="flex flex-col items-end gap-1">
+                      <div className="flex gap-1">
+                        <IconButton icon={Pencil} label="Editar" size="sm" onClick={() => startEdit(material)} />
+                        <IconButton
+                          icon={Power}
+                          label={material.active ? "Desativar" : "Reativar"}
+                          size="sm"
+                          onClick={() => setConfirmTarget(material)}
+                        />
+                      </div>
+                      {rowError[material.id] && (
+                        <p role="alert" className="bf-field__error" style={{ margin: 0 }}>
+                          {rowError[material.id]}
+                        </p>
+                      )}
+                    </div>
+                  )
+                : undefined
+            }
+          />
+        )}
+      </Card>
 
       {confirmTarget && (
         <ConfirmDialog
+          title={confirmTarget.active ? "Desativar material" : "Reativar material"}
+          tone={confirmTarget.active ? "danger" : "neutral"}
           message={`${confirmTarget.active ? "Desativar" : "Reativar"} "${confirmTarget.type} · ${confirmTarget.brand}"?`}
           confirmLabel={confirmTarget.active ? "Desativar" : "Reativar"}
           onConfirm={() => void confirmToggle()}
@@ -298,35 +337,18 @@ export default function MaterialsPage() {
         />
       )}
 
-      {editable &&
-        (editingId && editForm ? (
-          <div className="flex flex-col gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-            <h2 className="text-lg font-semibold">Editar material</h2>
-            <EntityForm
-              fields={FORM_FIELDS}
-              values={editForm}
-              onChange={setEditForm}
-              onSubmit={submitEdit}
-              submitting={editSubmitting}
-              error={editError}
-            />
-            <button type="button" onClick={cancelEdit}>
-              Cancelar edição
-            </button>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-            <h2 className="text-lg font-semibold">Novo material</h2>
-            <EntityForm
-              fields={FORM_FIELDS}
-              values={createForm}
-              onChange={setCreateForm}
-              onSubmit={submitCreate}
-              submitting={creating}
-              error={createError}
-            />
-          </div>
-        ))}
-    </section>
+      {editable && !editingId && (
+        <Card title="Novo material" icon={Plus}>
+          <EntityForm
+            fields={FORM_FIELDS}
+            values={createForm}
+            onChange={setCreateForm}
+            onSubmit={submitCreate}
+            submitting={creating}
+            error={createError}
+          />
+        </Card>
+      )}
+    </>
   );
 }

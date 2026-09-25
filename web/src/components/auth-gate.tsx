@@ -4,8 +4,18 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { ApiError, UNAUTHORIZED_EVENT, apiFetch } from "@/lib/api";
 import type { AuthUser } from "@/lib/auth";
+import { LogOut } from "lucide-react";
 import { AlertsIndicator } from "./alerts-indicator";
 import { AppShell } from "./app-shell";
+import { IconButton } from "./ui/button";
+import { Avatar } from "./ui/data";
+import { Loading, PageError } from "./ui/feedback";
+
+const ROLE_LABELS: Record<AuthUser["role"], string> = {
+  admin: "Administrador",
+  production: "Produção",
+  sales: "Vendas",
+};
 
 type GateState =
   | { status: "loading" }
@@ -73,21 +83,18 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
   if (state.status === "error") {
     return (
-      <main className="flex flex-1 flex-col items-center justify-center gap-3 p-6">
-        <p role="alert">{state.message}</p>
-        <button
-          type="button"
-          onClick={retry}
-          className="rounded border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
-        >
-          Tentar novamente
-        </button>
+      <main className="flex flex-1 items-center justify-center p-6">
+        <PageError message={state.message} onRetry={retry} />
       </main>
     );
   }
 
   if (state.status !== "ready") {
-    return <p className="p-6">Carregando…</p>;
+    return (
+      <div className="flex flex-1 items-center justify-center p-6">
+        <Loading />
+      </div>
+    );
   }
 
   return (
@@ -97,20 +104,18 @@ export function AuthGate({ children }: { children: ReactNode }) {
       // derrubar a tela que o usuário foi ver (AC 28).
       alerts={<AlertsIndicator />}
       account={
-        <div className="flex items-center gap-3 text-sm">
+        <div className="bf-topbar__account">
           {signOutError && (
-            <span role="alert" className="text-red-700 dark:text-red-400">
+            <span role="alert" className="bf-topbar__account-error">
               {signOutError}
             </span>
           )}
-          <span>{state.user.name}</span>
-          <button
-            type="button"
-            onClick={() => void signOut()}
-            className="rounded border border-zinc-300 px-2 py-0.5 dark:border-zinc-700"
-          >
-            Sair
-          </button>
+          <Avatar name={state.user.name} />
+          <span className="bf-topbar__user-text">
+            <span className="bf-topbar__name">{state.user.name}</span>
+            <span className="bf-topbar__role">{ROLE_LABELS[state.user.role]}</span>
+          </span>
+          <IconButton icon={LogOut} label="Sair" onClick={() => void signOut()} />
         </div>
       }
     >

@@ -1,26 +1,180 @@
 @import "tailwindcss";
+@import "./forge.css";
 
+/* Fontes do Design System: Nunito (UI) e Geist Mono (códigos), carregadas por next/font. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --font-sans: var(--font-nunito), ui-rounded, "SF Pro Rounded", system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--surface-page);
+  --color-foreground: var(--text-primary);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* Ajustes do shell para o app real: ocupa a viewport e rola só a coluna de conteúdo. */
+.bf-shell {
+  height: 100dvh;
+  min-height: 0;
+}
+.bf-navitem,
+.bf-navitem:hover,
+.bf-bottomnav__item,
+.bf-bottomnav__item:hover,
+.bf-alerts,
+.bf-alerts:hover,
+.bf-btn,
+.bf-btn:hover {
+  text-decoration: none;
+}
+a.bf-btn--primary,
+a.bf-btn--primary:hover {
+  color: var(--white);
+}
+a.bf-btn--secondary,
+a.bf-btn--secondary:hover,
+a.bf-btn--ghost,
+a.bf-btn--ghost:hover {
+  color: var(--text-primary);
+}
+.bf-page-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+.bf-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+.bf-mono {
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+.bf-section-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.bf-muted {
+  color: var(--text-secondary);
+}
+
+@media print {
+  body {
+    background: #fff;
+  }
+  .bf-shell,
+  .bf-shell__grid,
+  .bf-main {
+    height: auto;
+    overflow: visible;
+    background: #fff;
+  }
+  .bf-content {
+    padding: 0;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+.bf-sidebar__navwrap {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.bf-topbar__account {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.bf-topbar__account-error {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--danger);
+  max-width: 220px;
+}
+
+/* DataTable no celular: cada linha vira cartão, com o rótulo da coluna em data-label. */
+@container (max-width: 640px) {
+  .bf-table thead {
+    display: none;
+  }
+  .bf-table,
+  .bf-table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .bf-table tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 12px;
+    padding: 14px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    background: var(--surface-card);
+  }
+  .bf-table tbody tr:hover {
+    background: var(--surface-card);
+  }
+  .bf-table tbody tr.is-inactive {
+    opacity: 0.7;
+  }
+  .bf-table tbody td {
+    padding: 0;
+    border: 0;
+    text-align: left;
+    min-width: 0;
+  }
+  .bf-table tbody td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-caps);
+    margin-bottom: 2px;
+  }
+  .bf-table tbody td:first-child {
+    grid-column: 1 / -1;
+    font-weight: 800;
+    font-size: 15px;
+  }
+  .bf-table tbody td:first-child::before {
+    display: none;
+  }
+  .bf-table td.is-num {
+    text-align: left;
+  }
+  .bf-table tbody td.bf-table__actions-cell {
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--border-subtle);
+    padding-top: 10px;
+  }
+  .bf-table tbody td.bf-table__actions-cell::before {
+    display: none;
+  }
+  .bf-table__actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+}
+
+.bf-roll-card,
+.bf-roll-card:hover {
+  color: inherit;
+  text-decoration: none;
+  font-weight: inherit;
+}
+.bf-roll-card:hover {
+  border-color: var(--border-strong);
+}
+
+.bf-breadcrumb a {
+  font-weight: 700;
 }

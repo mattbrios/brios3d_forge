@@ -4,6 +4,10 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { type StockAlert, type StockAlertsResponse, stockHrefOf } from "@/lib/alerts";
 import { ApiError, apiFetch } from "@/lib/api";
+import { TriangleAlert } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { StockMeter } from "@/components/ui/data";
+import { EmptyState, Loading, PageError } from "@/components/ui/feedback";
 
 type Status =
   | { kind: "loading" }
@@ -41,57 +45,57 @@ export default function StockAlertsPage() {
   }
 
   if (status.kind === "loading") {
-    return <p>Carregando…</p>;
+    return <Loading />;
   }
 
   // Erro não mostra tabela pela metade: ou a lista inteira, ou o erro.
   if (status.kind === "error") {
-    return (
-      <div className="flex flex-col items-start gap-3">
-        <p role="alert">{status.message}</p>
-        <button
-          type="button"
-          onClick={retry}
-          className="rounded border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
-        >
-          Tentar novamente
-        </button>
-      </div>
-    );
+    return <PageError message={status.message} onRetry={retry} />;
   }
 
   const { alerts } = status;
 
   return (
-    <section className="flex max-w-4xl flex-col gap-6">
-      <h1 className="text-2xl font-semibold">Abaixo do mínimo</h1>
-
+    <Card
+      title={`${alerts.length} ${alerts.length === 1 ? "item" : "itens"} abaixo do mínimo`}
+      icon={TriangleAlert}
+      subtitle="Filamento soma todos os rolos do material"
+    >
       {alerts.length === 0 ? (
-        <p>Nenhum item está abaixo do mínimo.</p>
+        <EmptyState>Nenhum item está abaixo do mínimo.</EmptyState>
       ) : (
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left">
-              <th>Item</th>
-              <th>Saldo</th>
-              <th>Mínimo</th>
-              <th>Unidade</th>
-            </tr>
-          </thead>
-          <tbody>
-            {alerts.map((alert) => (
-              <tr key={`${alert.kind}-${alert.id}`}>
-                <td>
-                  <Link href={stockHrefOf(alert)}>{alert.label}</Link>
-                </td>
-                <td>{alert.balance}</td>
-                <td>{alert.minimum}</td>
-                <td>{alert.unit}</td>
+        <div className="bf-table-wrap">
+          <table className="bf-table">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Saldo</th>
+                <th className="is-num">Mínimo</th>
+                <th>Unidade</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {alerts.map((alert) => (
+                <tr key={`${alert.kind}-${alert.id}`}>
+                  <td data-label="Item">
+                    <Link href={stockHrefOf(alert)}>{alert.label}</Link>
+                  </td>
+                  <td data-label="Saldo">
+                    <div className="flex flex-col gap-1.5" style={{ minWidth: 140 }}>
+                      <StockMeter value={alert.balance} max={alert.minimum * 1.5} minimum={alert.minimum} />
+                      <span className="bf-meter__text">{alert.balance}</span>
+                    </div>
+                  </td>
+                  <td data-label="Mínimo" className="is-num">
+                    {alert.minimum}
+                  </td>
+                  <td data-label="Unidade">{alert.unit}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
-    </section>
+    </Card>
   );
 }
