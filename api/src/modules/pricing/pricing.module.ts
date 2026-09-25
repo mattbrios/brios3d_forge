@@ -13,6 +13,7 @@ import { SettingsModule } from '../settings/settings.module.js';
   imports: [InventoryModule, MaterialsModule, PrintersModule, SettingsModule],
   controllers: [PricingController],
   providers: [PricingService, QuotePreviewService],
-  exports: [PricingService],
+  // Fase 13 (door 1): o catálogo calcula o custo de cada ficha pelo mesmo QuotePreviewService.
+  exports: [PricingService, QuotePreviewService],
 })
 export class PricingModule {}

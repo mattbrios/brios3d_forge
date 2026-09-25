@@ -31,8 +31,17 @@
 | AD-025 | Piso de estoque ("estoque mínimo") é uma coluna nula da própria tabela do cadastro (`materials.minimum_stock_grams`, `stock_items.minimum_quantity`), sem `DEFAULT`, com `CHECK` de não negatividade; `NULL` significa "sem política de reposição", nunca "mínimo zero". O alerta compara `saldo < piso` (estritamente abaixo) e é leitura derivada, nunca persistida, exposta só por `GET /inventory/alerts` | Fase 11 introduz o padrão; a Fase 15 (produto acabado) e a Fase 27 (projeção de compra) devem reusar a mesma coluna-por-dono e o mesmo `kind` de `StockAlert` em vez de criar tabela polimórfica de mínimos ou uma terceira lista na resposta | active | 2026-09-24 |
 | AD-026 | Dado acessório do cabeçalho (hoje a contagem de alertas) é buscado pelo próprio componente do cabeçalho, nunca pelo `AuthGate`, e a falha degrada em silêncio - sem indicador e sem `role="alert"`, com a tela continuando a renderizar | Fase 11: o cabeçalho aparece em toda tela autenticada, então um erro ali apareceria no sistema inteiro por causa de um dado que o usuário não foi ver; buscar no `AuthGate` deixaria a sessão esperando por ele | active | 2026-09-24 |
 | AD-027 | `POST /pricing/quote-preview` mapeia o cadastro de canal (Fase 5: `taxRate` e `feeRate` por canal, validado contra `defaultMarginRate`) para o `PricingInput` puro (Fase 1: um `taxRate` global e um `feeRate` por canal) assim: `marginRate` = `settings.defaultMarginRate`, `taxRate` do `PricingInput` fica em `0`, e o `feeRate` enviado a cada canal é `channel.taxRate + channel.feeRate` do cadastro | o `pricing` puro não tem um `taxRate` por canal e não deveria ganhar um só para esta integração (mudaria a Fase 1); somar preserva exatamente a mesma regra de 100% que a Fase 5 já valida no cadastro (`marginRate + channel.taxRate + channel.feeRate < 1`), sem introduzir uma segunda leitura da mesma soma | active | 2026-09-25 |
+| AD-028 | Identidade do modelo no catálogo: `products.model_platform` (enum `printables`, `makerworld`, `thingiverse`) + `model_external_id` (texto) com `UNIQUE (model_platform, model_external_id)`, e `model_url` canônica (`https://www.printables.com/model/<id>`, `https://makerworld.com/models/<id>`, `https://www.thingiverse.com/thing:<id>`); um produto por modelo, cores e tamanhos como `ProductVariant` | Fase 13, aprovado pelo usuário; a Fase 14 busca metadados por esse id, e as Fases 15 e 16 referenciam `ProductVariant` como unidade vendável | active | 2026-09-25 |
+| AD-029 | Ficha técnica em tabelas filhas da variação (`product_variant_materials`, `product_variant_supplies`) com FK `RESTRICT` para `materials`, `stock_items` e `printers`; produto e variação só se desativam. O custo do produto é calculado sob demanda por `QuotePreviewService` (Fase 12), uma entrada por variação ativa com `pricing` ou `error` | Fase 13; as Fases 16 (snapshot do orçamento) e 27 (consumo por material) agregam por FK em vez de ler `jsonb`, e o AD-024 continua valendo para o custo | active | 2026-09-25 |
 
 ## Handoff
+
+**Feature**: phase-13-catalog - plano aprovado e `checks.md` escrito (52 checks, `validate_checks.py` exit 0); build ainda não começou
+**Next step**: construir a partir de `.specs/features/phase-13-catalog/checks.md` (um builder, ~59k tokens estimados)
+**Uncommitted**: `.specs/features/phase-13-catalog/`, `.specs/STATE.md`
+**Branch**: main
+
+## Handoff anterior (Fase 12)
 
 **Feature**: phase-12-integrated-calculator - concluída (Verifier PASS na rodada 1)
 **Where**: C1-C19 em 3 commits (`c49d142` API, `acc1b32` web, `cbbc3cf` ROADMAP.md). Um builder só

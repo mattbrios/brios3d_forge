@@ -9,6 +9,7 @@ import { InventoryModule } from './modules/inventory/inventory.module.js';
 import { MaterialsModule } from './modules/materials/materials.module.js';
 import { PricingModule } from './modules/pricing/pricing.module.js';
 import { PrintersModule } from './modules/printers/printers.module.js';
+import { ProductsModule } from './modules/products/products.module.js';
 import { PrintProfilesModule } from './modules/print-profiles/print-profiles.module.js';
 import { SettingsModule } from './modules/settings/settings.module.js';
 import { SuppliersModule } from './modules/suppliers/suppliers.module.js';
@@ -35,6 +36,7 @@ import { UsersModule } from './modules/users/users.module.js';
     CustomersModule,
     SuppliersModule,
     InventoryModule,
+    ProductsModule,
   ],
 })
 export class AppModule {}
