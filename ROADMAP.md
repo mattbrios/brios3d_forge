@@ -47,8 +47,8 @@ As fases seguem os quatro marcos do `CONTEXT.md` (MVP → Operação diária →
 | 8 | Clientes e fornecedores | Cadastros de clientes e fornecedores | ✅ |
 | 9 | Estoque de filamento por rolo | Rolos, movimentações, pesagem com tara, custo médio ponderado | ✅ |
 | 10 | Insumos e peças de reposição | Itens controlados por quantidade, com movimentações e custo médio | ✅ |
-| 11 | Estoque mínimo, alertas e etiqueta QR | Alertas de reposição e etiqueta com QR code para o rolo | ⬜ |
-| 12 | Calculadora integrada | Tela de precificação usando cadastros, estoque e os dados importados pela URL do MakerWorld | ⬜ |
+| 11 | Estoque mínimo, alertas e etiqueta QR | Alertas de reposição e etiqueta com QR code para o rolo | ✅ |
+| 12 | Calculadora integrada | Tela de precificação usando cadastros, estoque e os dados importados pela URL do MakerWorld | ✅ |
 | **Marco 2** | | *Operação diária no sistema* | |
 | 13 | Catálogo e ficha técnica | Produtos com URL do modelo, variações, ficha técnica, licença e custo sempre atualizado | ⬜ |
 | 14 | Metadados do modelo por URL | Buscar imagem, título e licença no Printables, MakerWorld ou Thingiverse | ⬜ |
