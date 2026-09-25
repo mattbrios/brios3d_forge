@@ -4,6 +4,12 @@ import { type FormEvent, useEffect, useState } from "react";
 import { ApiError, apiFetch } from "@/lib/api";
 import type { AuthUser } from "@/lib/auth";
 import type { SalesChannel } from "@/lib/sales-channels";
+import { Pencil, Plus, Power, Store } from "lucide-react";
+import { ActiveBadge } from "@/components/ui/badge";
+import { Button, IconButton } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Alert, Loading, PageError } from "@/components/ui/feedback";
+import { Field, Input } from "@/components/ui/form";
 
 type Status =
   | { kind: "loading" }
@@ -147,148 +153,171 @@ export default function SalesChannelsPage() {
   }
 
   if (status.kind === "loading") {
-    return <p>Carregando…</p>;
+    return <Loading />;
   }
 
   if (status.kind === "error") {
-    return (
-      <div className="flex flex-col items-start gap-3">
-        <p role="alert">{status.message}</p>
-        <button
-          type="button"
-          onClick={retry}
-          className="rounded border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
-        >
-          Tentar novamente
-        </button>
-      </div>
-    );
+    return <PageError message={status.message} onRetry={retry} />;
   }
 
   const { role, channels } = status;
   const editable = role === "admin";
 
   return (
-    <section className="flex max-w-3xl flex-col gap-6">
-      <h1 className="text-2xl font-semibold">Canais de venda</h1>
-
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="text-left">
-            <th>Nome</th>
-            <th>% imposto</th>
-            <th>% taxa</th>
-            <th>Situação</th>
-            {editable && <th />}
-          </tr>
-        </thead>
-        <tbody>
-          {channels.map((channel) => {
-            const isEditing = editingId === channel.id;
-            return (
-              <tr key={channel.id}>
-                {isEditing && editForm ? (
-                  <>
-                    <td>
-                      <label>
-                        Nome
-                        <input
-                          value={editForm.name}
-                          onChange={(event) => setEditForm({ ...editForm, name: event.target.value })}
-                        />
-                      </label>
-                    </td>
-                    <td>
-                      <label>
-                        % imposto
-                        <input
-                          value={editForm.taxRate}
-                          onChange={(event) => setEditForm({ ...editForm, taxRate: event.target.value })}
-                        />
-                      </label>
-                    </td>
-                    <td>
-                      <label>
-                        % taxa
-                        <input
-                          value={editForm.feeRate}
-                          onChange={(event) => setEditForm({ ...editForm, feeRate: event.target.value })}
-                        />
-                      </label>
-                    </td>
-                    <td>{channel.active ? "Ativo" : "Inativo"}</td>
-                    <td>
-                      <button type="button" disabled={editSubmitting} onClick={() => saveEdit(channel)}>
-                        Salvar
-                      </button>
-                      <button type="button" onClick={cancelEdit}>
-                        Cancelar
-                      </button>
-                      {editError && <p role="alert">{editError}</p>}
-                    </td>
-                  </>
-                ) : (
-                  <>
-                    <td>{channel.name}</td>
-                    <td>{channel.taxRate}</td>
-                    <td>{channel.feeRate}</td>
-                    <td>{channel.active ? "Ativo" : "Inativo"}</td>
-                    {editable && (
-                      <td>
-                        <button type="button" onClick={() => startEdit(channel)}>
-                          Editar
-                        </button>
-                        <button
-                          type="button"
-                          disabled={toggling === channel.id}
-                          onClick={() => toggleActive(channel)}
-                        >
-                          {channel.active ? "Desativar" : "Ativar"}
-                        </button>
-                        {rowError[channel.id] && <p role="alert">{rowError[channel.id]}</p>}
-                      </td>
-                    )}
-                  </>
-                )}
+    <>
+      <Card title={`${channels.length} ${channels.length === 1 ? "canal" : "canais"}`} icon={Store}>
+        <div className="bf-table-wrap">
+          <table className="bf-table">
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th className="is-num">% imposto</th>
+                <th className="is-num">% taxa</th>
+                <th>Situação</th>
+                {editable && <th aria-label="Ações" />}
               </tr>
-            );
-          })}
-        </tbody>
-      </table>
+            </thead>
+            <tbody>
+              {channels.map((channel) => {
+                const isEditing = editingId === channel.id;
+                return (
+                  <tr key={channel.id} className={channel.active ? undefined : "is-inactive"}>
+                    {isEditing && editForm ? (
+                      <>
+                        <td data-label="Nome">
+                          <Field label="Nome">
+                            <Input
+                              inputSize="sm"
+                              value={editForm.name}
+                              onChange={(event) => setEditForm({ ...editForm, name: event.target.value })}
+                            />
+                          </Field>
+                        </td>
+                        <td data-label="% imposto">
+                          <Field label="% imposto">
+                            <Input
+                              inputSize="sm"
+                              value={editForm.taxRate}
+                              onChange={(event) => setEditForm({ ...editForm, taxRate: event.target.value })}
+                            />
+                          </Field>
+                        </td>
+                        <td data-label="% taxa">
+                          <Field label="% taxa">
+                            <Input
+                              inputSize="sm"
+                              value={editForm.feeRate}
+                              onChange={(event) => setEditForm({ ...editForm, feeRate: event.target.value })}
+                            />
+                          </Field>
+                        </td>
+                        <td data-label="Situação">
+                          <ActiveBadge active={channel.active} />
+                        </td>
+                        <td className="bf-table__actions-cell">
+                          <div className="flex flex-col items-end gap-1">
+                            <div className="flex gap-2">
+                              <Button size="sm" disabled={editSubmitting} onClick={() => saveEdit(channel)}>
+                                Salvar
+                              </Button>
+                              <Button size="sm" variant="secondary" onClick={cancelEdit}>
+                                Cancelar
+                              </Button>
+                            </div>
+                            {editError && (
+                              <p role="alert" className="bf-field__error" style={{ margin: 0 }}>
+                                {editError}
+                              </p>
+                            )}
+                          </div>
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        <td data-label="Nome" style={{ fontWeight: 800 }}>
+                          {channel.name}
+                        </td>
+                        <td data-label="% imposto" className="is-num">
+                          {channel.taxRate}
+                        </td>
+                        <td data-label="% taxa" className="is-num">
+                          {channel.feeRate}
+                        </td>
+                        <td data-label="Situação">
+                          <ActiveBadge active={channel.active} />
+                        </td>
+                        {editable && (
+                          <td className="bf-table__actions-cell">
+                            <div className="flex flex-col items-end gap-1">
+                              <div className="bf-table__actions">
+                                <IconButton
+                                  icon={Pencil}
+                                  label="Editar"
+                                  size="sm"
+                                  onClick={() => startEdit(channel)}
+                                />
+                                <IconButton
+                                  icon={Power}
+                                  label={channel.active ? "Desativar" : "Ativar"}
+                                  size="sm"
+                                  disabled={toggling === channel.id}
+                                  onClick={() => toggleActive(channel)}
+                                />
+                              </div>
+                              {rowError[channel.id] && (
+                                <p role="alert" className="bf-field__error" style={{ margin: 0 }}>
+                                  {rowError[channel.id]}
+                                </p>
+                              )}
+                            </div>
+                          </td>
+                        )}
+                      </>
+                    )}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </Card>
 
       {editable && (
-        <form
-          onSubmit={submitCreate}
-          className="flex flex-col gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800"
-        >
-          <h2 className="text-lg font-semibold">Novo canal</h2>
-          <label>
-            Nome
-            <input
-              value={createForm.name}
-              onChange={(event) => setCreateForm({ ...createForm, name: event.target.value })}
-            />
-          </label>
-          <label>
-            % imposto
-            <input
-              value={createForm.taxRate}
-              onChange={(event) => setCreateForm({ ...createForm, taxRate: event.target.value })}
-            />
-          </label>
-          <label>
-            % taxa
-            <input
-              value={createForm.feeRate}
-              onChange={(event) => setCreateForm({ ...createForm, feeRate: event.target.value })}
-            />
-          </label>
-          {createError && <p role="alert">{createError}</p>}
-          <button type="submit" disabled={creating}>
-            {creating ? "Criando…" : "Criar canal"}
-          </button>
-        </form>
+        <Card title="Novo canal" icon={Plus}>
+          <form onSubmit={submitCreate} className="flex flex-col gap-5">
+            <div className="bf-form-grid">
+              <Field label="Nome">
+                <Input
+                  value={createForm.name}
+                  onChange={(event) => setCreateForm({ ...createForm, name: event.target.value })}
+                />
+              </Field>
+              <Field label="% imposto">
+                <Input
+                  value={createForm.taxRate}
+                  onChange={(event) => setCreateForm({ ...createForm, taxRate: event.target.value })}
+                />
+              </Field>
+              <Field label="% taxa">
+                <Input
+                  value={createForm.feeRate}
+                  onChange={(event) => setCreateForm({ ...createForm, feeRate: event.target.value })}
+                />
+              </Field>
+            </div>
+            {createError && (
+              <Alert tone="danger" role="alert">
+                {createError}
+              </Alert>
+            )}
+            <div className="flex justify-end">
+              <Button type="submit" loading={creating}>
+                {creating ? "Criando…" : "Criar canal"}
+              </Button>
+            </div>
+          </form>
+        </Card>
       )}
-    </section>
+    </>
   );
 }

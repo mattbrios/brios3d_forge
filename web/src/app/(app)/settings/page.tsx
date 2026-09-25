@@ -4,6 +4,12 @@ import { type FormEvent, useEffect, useState } from "react";
 import { ApiError, apiFetch } from "@/lib/api";
 import type { AuthUser } from "@/lib/auth";
 import type { Settings } from "@/lib/settings";
+import { Calculator, ReceiptText } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Alert, Loading, PageError } from "@/components/ui/feedback";
+import { Field, Input } from "@/components/ui/form";
+import { formatCents } from "@/lib/format";
 
 interface FieldsForm {
   energyTariffCentsPerKwh: string;
@@ -112,67 +118,79 @@ export default function SettingsPage() {
   }
 
   if (status.kind === "loading") {
-    return <p>Carregando…</p>;
+    return <Loading />;
   }
 
   if (status.kind === "error") {
-    return (
-      <div className="flex flex-col items-start gap-3">
-        <p role="alert">{status.message}</p>
-        <button
-          type="button"
-          onClick={retry}
-          className="rounded border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
-        >
-          Tentar novamente
-        </button>
-      </div>
-    );
+    return <PageError message={status.message} onRetry={retry} />;
   }
 
   const { role, settings, form } = status;
   const editable = role === "admin";
+  const fixedTotal = settings.fixedCostItems.reduce((sum, item) => sum + item.monthlyCents, 0);
 
   return (
-    <section className="flex max-w-xl flex-col gap-6">
-      <h1 className="text-2xl font-semibold">Configurações</h1>
-
-      {editable ? (
-        <form onSubmit={submit} className="flex flex-col gap-3">
-          {FIELDS.map(({ key, label }) => (
-            <label key={key}>
-              {label}
-              <input value={form[key]} onChange={(event) => setField(key, event.target.value)} />
-            </label>
-          ))}
-          {saveError && <p role="alert">{saveError}</p>}
-          <button type="submit" disabled={saving}>
-            {saving ? "Salvando…" : "Salvar"}
-          </button>
-        </form>
-      ) : (
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-          {FIELDS.map(({ key, label }) => (
-            <div key={key} className="contents">
-              <dt className="text-zinc-500">{label}</dt>
-              <dd>{settings[key as keyof Settings] as number}</dd>
+    <div
+      className="bf-grid-2"
+      style={{ alignItems: "start", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,380px),1fr))" }}
+    >
+      <Card title="Parâmetros da calculadora" icon={Calculator} subtitle="Usados em todo orçamento">
+        {editable ? (
+          <form onSubmit={submit} className="flex flex-col gap-5">
+            <div className="bf-form-grid">
+              {FIELDS.map(({ key, label }) => (
+                <Field key={key} label={label}>
+                  <Input value={form[key]} onChange={(event) => setField(key, event.target.value)} />
+                </Field>
+              ))}
             </div>
-          ))}
-        </dl>
-      )}
+            {saveError && (
+              <Alert tone="danger" role="alert">
+                {saveError}
+              </Alert>
+            )}
+            <div className="flex justify-end">
+              <Button type="submit" loading={saving}>
+                {saving ? "Salvando…" : "Salvar"}
+              </Button>
+            </div>
+          </form>
+        ) : (
+          <dl className="bf-dl">
+            {FIELDS.map(({ key, label }) => (
+              <div key={key}>
+                <dt>{label}</dt>
+                <dd>{settings[key as keyof Settings] as number}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </Card>
 
       {settings.fixedCostItems.length > 0 && (
-        <div className="flex flex-col gap-2">
-          <h2 className="text-lg font-semibold">Custos fixos mensais</h2>
-          <ul className="text-sm">
+        <Card title="Custos fixos mensais" icon={ReceiptText}>
+          <ul className="flex flex-col" style={{ margin: 0, padding: 0, listStyle: "none" }}>
             {settings.fixedCostItems.map((item) => (
-              <li key={item.id}>
-                {item.name}: {item.monthlyCents}
+              <li
+                key={item.id}
+                className="flex items-center gap-2.5"
+                style={{ padding: "12px 0", borderBottom: "1px solid var(--border-subtle)" }}
+              >
+                <span style={{ flex: 1, fontWeight: 700 }}>{item.name}</span>
+                <span className="bf-num" style={{ fontWeight: 800 }}>
+                  {formatCents(item.monthlyCents)}
+                </span>
               </li>
             ))}
           </ul>
-        </div>
+          <div className="flex justify-between" style={{ fontWeight: 800 }}>
+            <span>Total</span>
+            <span className="bf-num" style={{ color: "var(--forge-orange-600)", fontSize: 18 }}>
+              {formatCents(fixedTotal)}
+            </span>
+          </div>
+        </Card>
       )}
-    </section>
+    </div>
   );
 }

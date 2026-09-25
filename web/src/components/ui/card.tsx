@@ -29,7 +29,7 @@ export function Card({
   return (
     <section className={cx("bf-card", variant !== "default" && `bf-card--${variant}`, tight && "bf-card--tight", className)} style={style}>
       {hasHead ? (
-        <header className="bf-card__head">
+        <div className="bf-card__head">
           {IconCmp ? (
             <span className="bf-card__icon">
               <IconCmp size={18} strokeWidth={1.75} aria-hidden="true" />
@@ -40,7 +40,7 @@ export function Card({
             {subtitle ? <p className="bf-card__sub">{subtitle}</p> : null}
           </div>
           {action}
-        </header>
+        </div>
       ) : null}
       {children}
     </section>

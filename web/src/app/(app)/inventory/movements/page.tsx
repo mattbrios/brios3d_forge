@@ -5,6 +5,9 @@ import Link from "next/link";
 import { ApiError, apiFetch } from "@/lib/api";
 import type { InventoryMovement } from "@/lib/inventory";
 import type { MovementsPage } from "@/lib/stock-items";
+import { MovementBadge } from "@/components/movement-badge";
+import { Card } from "@/components/ui/card";
+import { EmptyState, Loading, PageError } from "@/components/ui/feedback";
 
 type Status =
   | { kind: "loading" }
@@ -40,65 +43,62 @@ export default function MovementsPageScreen() {
   }
 
   if (status.kind === "loading") {
-    return <p>Carregando…</p>;
+    return <Loading />;
   }
 
   if (status.kind === "error") {
-    return (
-      <div className="flex flex-col items-start gap-3">
-        <p role="alert">{status.message}</p>
-        <button
-          type="button"
-          onClick={retry}
-          className="rounded border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
-        >
-          Tentar novamente
-        </button>
-      </div>
-    );
+    return <PageError message={status.message} onRetry={retry} />;
   }
 
   const { movements } = status;
 
   return (
-    <section className="flex max-w-4xl flex-col gap-6">
-      <h1 className="text-2xl font-semibold">Movimentações</h1>
-
+    <Card title="Movimentações" subtitle="Rolos e itens, mais recentes primeiro">
       {movements.length === 0 ? (
-        <p>Nenhuma movimentação registrada.</p>
+        <EmptyState>Nenhuma movimentação registrada.</EmptyState>
       ) : (
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left">
-              <th>Dono</th>
-              <th>Tipo</th>
-              <th>Quantidade</th>
-              <th>Custo unitário</th>
-              <th>Usuário</th>
-              <th>Data</th>
-            </tr>
-          </thead>
-          <tbody>
-            {movements.map((movement) => (
-              <tr key={movement.id}>
-                {/* Dono único (door 3): a linha é de rolo ou de item, nunca dos dois. */}
-                <td>
-                  {movement.rollId !== null ? (
-                    <Link href={`/inventory/${movement.rollId}`}>Rolo</Link>
-                  ) : (
-                    <Link href={`/inventory/items/${movement.stockItemId}`}>Item</Link>
-                  )}
-                </td>
-                <td>{movement.type}</td>
-                <td>{movement.quantity}</td>
-                <td>{movement.unitCostCents !== null ? (movement.unitCostCents / 100).toFixed(2) : "—"}</td>
-                <td>{movement.userId}</td>
-                <td>{new Date(movement.createdAt).toLocaleString("pt-BR")}</td>
+        <div className="bf-table-wrap">
+          <table className="bf-table">
+            <thead>
+              <tr>
+                <th>Dono</th>
+                <th>Tipo</th>
+                <th className="is-num">Quantidade</th>
+                <th className="is-num">Custo unitário</th>
+                <th>Usuário</th>
+                <th>Data</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {movements.map((movement) => (
+                <tr key={movement.id}>
+                  {/* Dono único (door 3): a linha é de rolo ou de item, nunca dos dois. */}
+                  <td data-label="Dono">
+                    {movement.rollId !== null ? (
+                      <Link href={`/inventory/${movement.rollId}`}>Rolo</Link>
+                    ) : (
+                      <Link href={`/inventory/items/${movement.stockItemId}`}>Item</Link>
+                    )}
+                  </td>
+                  <td data-label="Tipo">
+                    <MovementBadge type={movement.type} />
+                  </td>
+                  <td data-label="Quantidade" className="is-num">
+                    {movement.quantity}
+                  </td>
+                  <td data-label="Custo unitário" className="is-num">
+                    {movement.unitCostCents !== null ? (movement.unitCostCents / 100).toFixed(2) : "—"}
+                  </td>
+                  <td data-label="Usuário" className="bf-mono" style={{ fontSize: 12 }}>
+                    {movement.userId}
+                  </td>
+                  <td data-label="Data">{new Date(movement.createdAt).toLocaleString("pt-BR")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
-    </section>
+    </Card>
   );
 }
