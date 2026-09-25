@@ -46,6 +46,15 @@ export class PrintersService {
     return { items: rows.map(toPrinterResponse), total, page, pageSize };
   }
 
+  // Consumido pela Fase 12 (quote-preview) para validar o printerId recebido no corpo.
+  async getById(id: string): Promise<PrinterResponse> {
+    const printer = await this.printers.findOne({ where: { id } });
+    if (!printer) {
+      throw new NotFoundException(PRINTER_NOT_FOUND);
+    }
+    return toPrinterResponse(printer);
+  }
+
   async create(dto: CreatePrinterDto): Promise<PrinterResponse> {
     if (dto.hasAms && (dto.amsSlots === undefined || dto.amsSlots < 1)) {
       throw new BadRequestException(AMS_SLOTS_REQUIRED);

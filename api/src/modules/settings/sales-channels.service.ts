@@ -26,6 +26,15 @@ export class SalesChannelsService {
     return rows.map(toSalesChannelResponse);
   }
 
+  // Consumido pela Fase 12 (quote-preview) para validar o channelId recebido no corpo.
+  async getById(id: string): Promise<SalesChannelResponse> {
+    const channel = await this.channels.findOne({ where: { id } });
+    if (!channel) {
+      throw new NotFoundException(CHANNEL_NOT_FOUND);
+    }
+    return toSalesChannelResponse(channel);
+  }
+
   async create(dto: CreateSalesChannelDto): Promise<SalesChannelResponse> {
     const settings = await this.settings.findOneOrFail({ where: { id: SETTINGS_ID } });
     if (settings.defaultMarginRate + dto.taxRate + dto.feeRate >= 1) {
