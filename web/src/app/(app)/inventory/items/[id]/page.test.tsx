@@ -283,6 +283,10 @@ describe("Stock item detail page", () => {
     render(<StockItemDetailPage params={Promise.resolve({ id: "i2" })} />);
 
     await screen.findByText("entrada");
+    // Fase 11: definir o piso é só de admin, mesmo para produção - que já é liberada para Baixa e
+    // Contagem na mesma tela, então é o papel mais fácil de vazar para este controle por acidente.
+    expect(screen.queryByRole("button", { name: "Salvar mínimo" })).toBeNull();
+    expect(screen.queryByText("Estoque mínimo", { selector: "h2" })).toBeNull();
     fireEvent.change(screen.getByLabelText("Quantidade (un)"), { target: { value: "2" } });
     fireEvent.click(screen.getByRole("button", { name: "Dar baixa" }));
     await vi.waitFor(() => expect(callsTo(fetchMock, "/inventory/items/i2/movements")).toHaveLength(1));
