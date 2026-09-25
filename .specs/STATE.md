@@ -93,8 +93,14 @@ rodadas anteriores
 **Next step**: nenhum bloqueio. Fase 12 (calculadora) consome `GET /inventory/materials-summary` e
 `GET /inventory/items`; Fase 15 (produto acabado) e Fase 27 (projeção de compra) reusam AD-025; Fase
 19 (baixa automática) e Fase 21 (recebimento de compra) escrevem nas mesmas colunas de saldo
-**Riscos abertos**: (0) o prefill dos formulários de edição está guardado por teste (C62, C63) mas
-**nunca foi observado em navegador** — a caminhada da rodada 1 digitou o valor sem olhar o campo antes;
+**Riscos abertos**: (0) [FECHADO em 2026-09-25, fora de rodada] o prefill dos formulários de edição
+estava guardado só por teste (C62, C63) e nunca tinha sido observado em navegador. Validado agora com
+Playwright MCP contra o app em docker: material com piso (PLA, 1000 g) abre "Editar" com o spinbutton
+mostrando `1000`; material sem piso (criado e depois desativado no teste) abre com o campo vazio
+(`""`, nunca `"0"`); item de estoque com piso (Ímã 6x3, 20 un) mostra `20` no campo "Mínimo (un),
+vazio para nenhum"; item sem piso (criado e desativado no teste) mostra `""`. Os dois lados dos dois
+formulários confirmados via `input.value` lido no DOM, não só pela snapshot de acessibilidade. Nenhum
+dado de teste ficou ativo (os dois registros criados para o teste foram desativados ao final).
 (1) com zero alertas o indicador desaparece (AC 27) e não existe item de menu
 para `/inventory/alerts`, então a tela de estado vazio só é alcançável por URL - inconsistência
 entre o AC 25 e o AC 27 que pertence ao produto, não ao código; nenhum check pede o item de menu, e
