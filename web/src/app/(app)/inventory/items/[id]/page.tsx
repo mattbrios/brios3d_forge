@@ -6,6 +6,15 @@ import { ApiError, apiFetch } from "@/lib/api";
 import type { AuthUser } from "@/lib/auth";
 import type { Printer, PrintersPage } from "@/lib/printers";
 import { CATEGORY_LABELS, formatAvgCost, type StockItemDetail } from "@/lib/stock-items";
+import Link from "next/link";
+import { CircleMinus, ClipboardCheck, Gauge, History, Power, Printer as PrinterIcon } from "lucide-react";
+import { MovementBadge } from "@/components/movement-badge";
+import { ActiveBadge, Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { StockMeter } from "@/components/ui/data";
+import { Alert, EmptyState, Loading, PageError } from "@/components/ui/feedback";
+import { Field, Input, Select } from "@/components/ui/form";
 
 type Status =
   | { kind: "loading" }
@@ -174,22 +183,11 @@ function StockItemDetailContent({ id }: { id: string }) {
   }
 
   if (status.kind === "loading") {
-    return <p>Carregando…</p>;
+    return <Loading />;
   }
 
   if (status.kind === "error") {
-    return (
-      <div className="flex flex-col items-start gap-3">
-        <p role="alert">{status.message}</p>
-        <button
-          type="button"
-          onClick={retry}
-          className="rounded border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
-        >
-          Tentar novamente
-        </button>
-      </div>
-    );
+    return <PageError message={status.message} onRetry={retry} />;
   }
 
   const { role, item, printers } = status;
@@ -198,132 +196,182 @@ function StockItemDetailContent({ id }: { id: string }) {
   const canDeactivate = role === "admin" && item.active;
 
   return (
-    <section className="flex max-w-3xl flex-col gap-6">
-      <h1 className="text-2xl font-semibold">{item.name}</h1>
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-        <dt>Categoria</dt>
-        <dd>{CATEGORY_LABELS[item.category]}</dd>
-        <dt>Saldo</dt>
-        <dd>
-          {item.balanceQuantity} {item.unitOfMeasure}
-        </dd>
-        <dt>Estoque mínimo</dt>
-        <dd>
-          {item.minimumQuantity === null ? "—" : `${item.minimumQuantity} ${item.unitOfMeasure}`}
-        </dd>
-        <dt>Custo médio</dt>
-        <dd>{formatAvgCost(item.avgCostCents, item.unitOfMeasure)}</dd>
-        <dt>SKU</dt>
-        <dd>{item.sku ?? "—"}</dd>
-        <dt>Localização</dt>
-        <dd>{item.location ?? "—"}</dd>
-        <dt>Situação</dt>
-        <dd>{item.active ? "Ativo" : "Inativo"}</dd>
-      </dl>
+    <>
+      <nav aria-label="Trilha" className="bf-breadcrumb">
+        <Link href="/inventory/items">Insumos e peças</Link>
+        <span aria-hidden="true">/</span>
+        <span>{item.sku ?? item.id.slice(0, 8)}</span>
+      </nav>
+
+      <Card>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800 }}>{item.name}</h2>
+          <ActiveBadge active={item.active} />
+        </div>
+        <StockMeter
+          value={item.balanceQuantity}
+          max={Math.max(item.balanceQuantity, (item.minimumQuantity ?? 0) * 2, 1)}
+          minimum={item.minimumQuantity}
+        />
+        <dl className="bf-dl">
+          <div>
+            <dt>Categoria</dt>
+            <dd>{CATEGORY_LABELS[item.category]}</dd>
+          </div>
+          <div>
+            <dt>Saldo</dt>
+            <dd>
+              {item.balanceQuantity} {item.unitOfMeasure}
+            </dd>
+          </div>
+          <div>
+            <dt>Estoque mínimo</dt>
+            <dd>{item.minimumQuantity === null ? "—" : `${item.minimumQuantity} ${item.unitOfMeasure}`}</dd>
+          </div>
+          <div>
+            <dt>Custo médio</dt>
+            <dd>{formatAvgCost(item.avgCostCents, item.unitOfMeasure)}</dd>
+          </div>
+          <div>
+            <dt>SKU</dt>
+            <dd className="bf-mono">{item.sku ?? "—"}</dd>
+          </div>
+          <div>
+            <dt>Localização</dt>
+            <dd>{item.location ?? "—"}</dd>
+          </div>
+        </dl>
+      </Card>
 
       {item.category === "peca_reposicao" && (
-        <div className="flex flex-col gap-2 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-          <h2 className="text-lg font-semibold">Impressoras compatíveis</h2>
+        <Card title="Impressoras compatíveis" icon={PrinterIcon}>
           {item.compatiblePrinterIds.length === 0 ? (
-            <p>Nenhuma impressora vinculada.</p>
+            <EmptyState>Nenhuma impressora vinculada.</EmptyState>
           ) : (
-            <ul className="flex flex-col gap-1 text-sm">
+            <ul className="flex flex-wrap gap-2" style={{ margin: 0, padding: 0, listStyle: "none" }}>
               {item.compatiblePrinterIds.map((printerId) => (
-                <li key={printerId}>{printerLabel(printers, printerId)}</li>
+                <li key={printerId}>
+                  <Badge tone="neutral">{printerLabel(printers, printerId)}</Badge>
+                </li>
               ))}
             </ul>
           )}
-        </div>
+        </Card>
       )}
 
-      {actionError && <p role="alert">{actionError}</p>}
-
-      {role === "admin" && (
-        <div className="flex flex-col gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-          <h2 className="text-lg font-semibold">Estoque mínimo</h2>
-          <form onSubmit={submitMinimum} className="flex flex-col gap-3">
-            <label className="flex flex-col gap-1 text-sm">
-              Mínimo ({item.unitOfMeasure}), vazio para nenhum
-              <input
-                type="number"
-                value={minimumQuantity ?? ""}
-                onChange={(event) => setMinimumQuantity(event.target.value)}
-              />
-            </label>
-            {minimumError && <p role="alert">{minimumError}</p>}
-            <button type="submit" disabled={minimumSubmitting}>
-              {minimumSubmitting ? "Salvando…" : "Salvar mínimo"}
-            </button>
-          </form>
-        </div>
+      {actionError && (
+        <Alert tone="danger" role="alert">
+          {actionError}
+        </Alert>
       )}
 
-      {operational && (
-        <div className="flex flex-col gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-          <h2 className="text-lg font-semibold">Baixa</h2>
-          <form onSubmit={submitMovement} className="flex flex-col gap-3">
-            <label className="flex flex-col gap-1 text-sm">
-              Tipo
-              <select
-                value={movementType}
-                onChange={(event) => setMovementType(event.target.value as "consumo" | "perda")}
-              >
-                <option value="consumo">Consumo</option>
-                <option value="perda">Perda</option>
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              Quantidade ({item.unitOfMeasure})
-              <input
-                type="number"
-                value={movementQuantity}
-                onChange={(event) => setMovementQuantity(event.target.value)}
-                required
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              Motivo
-              <input value={movementReason} onChange={(event) => setMovementReason(event.target.value)} />
-            </label>
-            {movementError && <p role="alert">{movementError}</p>}
-            <button type="submit" disabled={movementSubmitting}>
-              {movementSubmitting ? "Salvando…" : "Dar baixa"}
-            </button>
-          </form>
-        </div>
-      )}
+      {(role === "admin" || operational) && (
+        <div
+          className="grid items-start"
+          style={{ gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,300px),1fr))", gap: "var(--layout-gutter)" }}
+        >
+          {role === "admin" && (
+            <Card title="Estoque mínimo" icon={Gauge}>
+              <form onSubmit={submitMinimum} className="flex flex-col gap-3">
+                <Field label={`Mínimo (${item.unitOfMeasure}), vazio para nenhum`}>
+                  <Input
+                    type="number"
+                    value={minimumQuantity ?? ""}
+                    onChange={(event) => setMinimumQuantity(event.target.value)}
+                  />
+                </Field>
+                {minimumError && (
+                  <Alert tone="danger" role="alert">
+                    {minimumError}
+                  </Alert>
+                )}
+                <Button type="submit" loading={minimumSubmitting} style={{ alignSelf: "flex-start" }}>
+                  {minimumSubmitting ? "Salvando…" : "Salvar mínimo"}
+                </Button>
+              </form>
+            </Card>
+          )}
 
-      {operational && (
-        <div className="flex flex-col gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-          <h2 className="text-lg font-semibold">Contagem de inventário</h2>
-          <form onSubmit={submitCount} className="flex flex-col gap-3">
-            <label className="flex flex-col gap-1 text-sm">
-              Quantidade contada ({item.unitOfMeasure})
-              <input
-                type="number"
-                value={countedQuantity}
-                onChange={(event) => setCountedQuantity(event.target.value)}
-                required
-              />
-            </label>
-            {countError && <p role="alert">{countError}</p>}
-            <button type="submit" disabled={countSubmitting}>
-              {countSubmitting ? "Salvando…" : "Registrar contagem"}
-            </button>
-          </form>
-        </div>
-      )}
+          {operational && (
+            <Card title="Baixa" icon={CircleMinus}>
+              <form onSubmit={submitMovement} className="flex flex-col gap-3">
+                <div
+                  className="bf-form-grid"
+                  style={{ gridTemplateColumns: "repeat(auto-fill,minmax(min(100%,120px),1fr))" }}
+                >
+                  <Field label="Tipo">
+                    <Select
+                      value={movementType}
+                      onChange={(event) => setMovementType(event.target.value as "consumo" | "perda")}
+                    >
+                      <option value="consumo">Consumo</option>
+                      <option value="perda">Perda</option>
+                    </Select>
+                  </Field>
+                  <Field label={`Quantidade (${item.unitOfMeasure})`}>
+                    <Input
+                      type="number"
+                      value={movementQuantity}
+                      onChange={(event) => setMovementQuantity(event.target.value)}
+                      required
+                    />
+                  </Field>
+                </div>
+                <Field label="Motivo">
+                  <Input value={movementReason} onChange={(event) => setMovementReason(event.target.value)} />
+                </Field>
+                {movementError && (
+                  <Alert tone="danger" role="alert">
+                    {movementError}
+                  </Alert>
+                )}
+                <Button type="submit" loading={movementSubmitting} style={{ alignSelf: "flex-start" }}>
+                  {movementSubmitting ? "Salvando…" : "Dar baixa"}
+                </Button>
+              </form>
+            </Card>
+          )}
 
-      {canDeactivate && (
-        <div className="flex flex-col gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-          <button type="button" onClick={() => setConfirmingDeactivate(true)}>
-            Desativar
-          </button>
+          {operational && (
+            <Card title="Contagem de inventário" icon={ClipboardCheck}>
+              <form onSubmit={submitCount} className="flex flex-col gap-3">
+                <Field label={`Quantidade contada (${item.unitOfMeasure})`}>
+                  <Input
+                    type="number"
+                    value={countedQuantity}
+                    onChange={(event) => setCountedQuantity(event.target.value)}
+                    required
+                  />
+                </Field>
+                {countError && (
+                  <Alert tone="danger" role="alert">
+                    {countError}
+                  </Alert>
+                )}
+                <Button type="submit" loading={countSubmitting} style={{ alignSelf: "flex-start" }}>
+                  {countSubmitting ? "Salvando…" : "Registrar contagem"}
+                </Button>
+              </form>
+              {canDeactivate && (
+                <div style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: 14 }}>
+                  <Button
+                    variant="ghost"
+                    icon={Power}
+                    style={{ color: "var(--danger)" }}
+                    onClick={() => setConfirmingDeactivate(true)}
+                  >
+                    Desativar
+                  </Button>
+                </div>
+              )}
+            </Card>
+          )}
         </div>
       )}
 
       {confirmingDeactivate && (
         <ConfirmDialog
+          title="Desativar item"
           message={`Desativar "${item.name}"? O histórico e o saldo continuam, mas o item não aceita mais entrada.`}
           confirmLabel="Desativar"
           onConfirm={() => void confirmDeactivate()}
@@ -332,37 +380,46 @@ function StockItemDetailContent({ id }: { id: string }) {
         />
       )}
 
-      <div className="flex flex-col gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-        <h2 className="text-lg font-semibold">Histórico</h2>
+      <Card title="Histórico" icon={History}>
         {item.movements.length === 0 ? (
-          <p>Nenhuma movimentação.</p>
+          <EmptyState>Nenhuma movimentação.</EmptyState>
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left">
-                <th>Tipo</th>
-                <th>Quantidade</th>
-                <th>Custo unitário</th>
-                <th>Motivo</th>
-                <th>Usuário</th>
-                <th>Data</th>
-              </tr>
-            </thead>
-            <tbody>
-              {item.movements.map((movement) => (
-                <tr key={movement.id}>
-                  <td>{movement.type}</td>
-                  <td>{movement.quantity}</td>
-                  <td>{movement.unitCostCents !== null ? (movement.unitCostCents / 100).toFixed(2) : "—"}</td>
-                  <td>{movement.reason ?? "—"}</td>
-                  <td>{movement.userId}</td>
-                  <td>{new Date(movement.createdAt).toLocaleString("pt-BR")}</td>
+          <div className="bf-table-wrap">
+            <table className="bf-table">
+              <thead>
+                <tr>
+                  <th>Tipo</th>
+                  <th className="is-num">Quantidade</th>
+                  <th className="is-num">Custo unitário</th>
+                  <th>Motivo</th>
+                  <th>Usuário</th>
+                  <th>Data</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {item.movements.map((movement) => (
+                  <tr key={movement.id}>
+                    <td data-label="Tipo">
+                      <MovementBadge type={movement.type} />
+                    </td>
+                    <td data-label="Quantidade" className="is-num">
+                      {movement.quantity}
+                    </td>
+                    <td data-label="Custo unitário" className="is-num">
+                      {movement.unitCostCents !== null ? (movement.unitCostCents / 100).toFixed(2) : "—"}
+                    </td>
+                    <td data-label="Motivo">{movement.reason ?? "—"}</td>
+                    <td data-label="Usuário" className="bf-mono" style={{ fontSize: 12 }}>
+                      {movement.userId}
+                    </td>
+                    <td data-label="Data">{new Date(movement.createdAt).toLocaleString("pt-BR")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
-      </div>
-    </section>
+      </Card>
+    </>
   );
 }

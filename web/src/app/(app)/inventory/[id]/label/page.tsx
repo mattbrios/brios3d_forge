@@ -5,6 +5,10 @@ import { useEffect, useState } from "react";
 import { ApiError, apiFetch } from "@/lib/api";
 import type { FilamentRoll } from "@/lib/inventory";
 import type { Material, MaterialsPage } from "@/lib/materials";
+import Link from "next/link";
+import { Printer } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Alert, Loading } from "@/components/ui/feedback";
 
 // Door 3: a etiqueta é física e sobrevive a qualquer refactor, então o QR carrega a rota que já
 // existe com o uuid do rolo - nada de um segundo identificador.
@@ -72,12 +76,16 @@ function RollLabelContent({ id }: { id: string }) {
   }, [id]);
 
   if (status.kind === "loading") {
-    return <p>Carregando…</p>;
+    return <Loading />;
   }
 
   // Rolo inexistente não rende meia etiqueta: nenhum QR é gerado.
   if (status.kind === "error") {
-    return <p role="alert">{status.message}</p>;
+    return (
+      <Alert tone="danger" role="alert">
+        {status.message}
+      </Alert>
+    );
   }
 
   const { roll, materials } = status;
@@ -86,16 +94,24 @@ function RollLabelContent({ id }: { id: string }) {
   const qrValue = `${origin}/inventory/${roll.id}`;
 
   return (
-    <section className="flex flex-col gap-4">
-      <h1 className="text-2xl font-semibold print:hidden">Etiqueta do rolo</h1>
+    <section className="bf-card flex flex-col gap-4 print:p-0 print:shadow-none">
+      <nav aria-label="Trilha" className="bf-breadcrumb print:hidden">
+        <Link href="/inventory">Filamento</Link>
+        <span aria-hidden="true">/</span>
+        <Link href={`/inventory/${roll.id}`} className="bf-mono">
+          {roll.id.slice(0, 8)}
+        </Link>
+        <span aria-hidden="true">/</span>
+        <span>Etiqueta</span>
+      </nav>
+      <h2 className="bf-card__title print:hidden">Etiqueta do rolo</h2>
+      <p className="bf-muted print:hidden" style={{ margin: 0, fontWeight: 600 }}>
+        70 × 40 mm. Escolha A4 ou impressora térmica no diálogo de impressão.
+      </p>
       <div className="flex gap-2 print:hidden">
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="rounded border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
-        >
+        <Button variant="accent" icon={Printer} onClick={() => window.print()}>
           Imprimir
-        </button>
+        </Button>
       </div>
 
       {/* Bloco de 70 × 40 mm, sem @page size fixo: o usuário escolhe A4 ou térmica no diálogo de

@@ -7,6 +7,23 @@ import { ApiError, apiFetch } from "@/lib/api";
 import type { AuthUser } from "@/lib/auth";
 import type { RollDetail } from "@/lib/inventory";
 import type { Material, MaterialsPage } from "@/lib/materials";
+import {
+  CircleMinus,
+  Droplet,
+  History,
+  PackageOpen,
+  QrCode,
+  Thermometer,
+  Trash2,
+  Weight,
+} from "lucide-react";
+import { MovementBadge } from "@/components/movement-badge";
+import { RollStatusBadge } from "@/components/roll-status-badge";
+import { Button, ButtonLink } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { StockMeter } from "@/components/ui/data";
+import { Alert, EmptyState, Loading, PageError } from "@/components/ui/feedback";
+import { Field, Input, Select } from "@/components/ui/form";
 
 type Status =
   | { kind: "loading" }
@@ -175,22 +192,11 @@ function RollDetailContent({ id }: { id: string }) {
   }
 
   if (status.kind === "loading") {
-    return <p>Carregando…</p>;
+    return <Loading />;
   }
 
   if (status.kind === "error") {
-    return (
-      <div className="flex flex-col items-start gap-3">
-        <p role="alert">{status.message}</p>
-        <button
-          type="button"
-          onClick={retry}
-          className="rounded border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
-        >
-          Tentar novamente
-        </button>
-      </div>
-    );
+    return <PageError message={status.message} onRetry={retry} />;
   }
 
   const { role, roll, materials } = status;
@@ -198,104 +204,160 @@ function RollDetailContent({ id }: { id: string }) {
   const discarded = roll.status === "descartado";
 
   return (
-    <section className="flex max-w-3xl flex-col gap-6">
-      <div className="flex items-baseline justify-between gap-4">
-        <h1 className="text-2xl font-semibold">{materialLabel(materials, roll.materialId)}</h1>
-        {/* Fase 11: o rolo na prateleira ganha um caminho de volta para esta página. */}
-        <Link href={`/inventory/${id}/label`} className="text-sm underline">
-          Imprimir etiqueta
-        </Link>
-      </div>
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-        <dt>Status</dt>
-        <dd>{roll.status}</dd>
-        <dt>Saldo</dt>
-        <dd>{roll.balanceGrams} g</dd>
-        <dt>Tara do carretel</dt>
-        <dd>{roll.spoolTareGrams} g</dd>
-        <dt>Peso inicial</dt>
-        <dd>{roll.initialWeightGrams} g</dd>
-      </dl>
+    <>
+      <nav aria-label="Trilha" className="bf-breadcrumb">
+        <Link href="/inventory">Filamento</Link>
+        <span aria-hidden="true">/</span>
+        <span className="bf-mono">{roll.id.slice(0, 8)}</span>
+      </nav>
 
-      {actionError && <p role="alert">{actionError}</p>}
-
-      {editable && !discarded && (
-        <div className="flex flex-col gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-          <h2 className="text-lg font-semibold">Pesagem</h2>
-          <form onSubmit={submitWeigh} className="flex flex-col gap-3">
-            <label className="flex flex-col gap-1 text-sm">
-              Peso bruto na balança (g)
-              <input
-                type="number"
-                value={grossWeightGrams}
-                onChange={(event) => setGrossWeightGrams(event.target.value)}
-                required
-              />
-            </label>
-            {weighError && <p role="alert">{weighError}</p>}
-            <button type="submit" disabled={weighSubmitting}>
-              {weighSubmitting ? "Salvando…" : "Pesar"}
-            </button>
-          </form>
+      <Card>
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="min-w-0" style={{ flex: "1 1 240px" }}>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800 }}>{materialLabel(materials, roll.materialId)}</h2>
+              <RollStatusBadge status={roll.status} />
+            </div>
+            <p className="bf-muted" style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>
+              {roll.location ?? "Sem localização"}
+              {roll.batch ? ` · lote ${roll.batch}` : ""}
+            </p>
+          </div>
+          {/* Fase 11: o rolo na prateleira ganha um caminho de volta para esta página. */}
+          <ButtonLink href={`/inventory/${id}/label`} icon={QrCode}>
+            Imprimir etiqueta
+          </ButtonLink>
         </div>
+        <StockMeter value={roll.balanceGrams} max={roll.initialWeightGrams} minimum={null} />
+        <dl className="bf-dl">
+          <div>
+            <dt>Saldo</dt>
+            <dd>{roll.balanceGrams} g</dd>
+          </div>
+          <div>
+            <dt>Tara do carretel</dt>
+            <dd>{roll.spoolTareGrams} g</dd>
+          </div>
+          <div>
+            <dt>Peso inicial</dt>
+            <dd>{roll.initialWeightGrams} g</dd>
+          </div>
+        </dl>
+      </Card>
+
+      {actionError && (
+        <Alert tone="danger" role="alert">
+          {actionError}
+        </Alert>
       )}
 
-      {editable && !discarded && (
-        <div className="flex flex-col gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-          <h2 className="text-lg font-semibold">Baixa</h2>
-          <form onSubmit={submitMovement} className="flex flex-col gap-3">
-            <label className="flex flex-col gap-1 text-sm">
-              Tipo
-              <select value={movementType} onChange={(event) => setMovementType(event.target.value as "consumo" | "perda")}>
-                <option value="consumo">Consumo</option>
-                <option value="perda">Perda</option>
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              Gramas
-              <input
-                type="number"
-                value={movementQuantity}
-                onChange={(event) => setMovementQuantity(event.target.value)}
-                required
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              Motivo
-              <input value={movementReason} onChange={(event) => setMovementReason(event.target.value)} />
-            </label>
-            {movementError && <p role="alert">{movementError}</p>}
-            <button type="submit" disabled={movementSubmitting}>
-              {movementSubmitting ? "Salvando…" : "Dar baixa"}
-            </button>
-          </form>
-        </div>
+      {discarded && (
+        <Alert tone="neutral" title="Rolo descartado">
+          O saldo restante virou perda. O histórico continua disponível.
+        </Alert>
       )}
 
       {editable && (
-        <div className="flex flex-col gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-          <h2 className="text-lg font-semibold">Abertura e secagem</h2>
-          <div className="flex gap-2">
-            <button type="button" onClick={() => void submitOpen()} disabled={openSubmitting || roll.openedAt !== null}>
-              {roll.openedAt !== null ? "Já aberto" : "Abrir rolo"}
-            </button>
-            <button type="button" onClick={() => void submitDry()} disabled={drySubmitting}>
-              Registrar secagem
-            </button>
-          </div>
-        </div>
-      )}
+        <div
+          className="grid items-start"
+          style={{ gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,300px),1fr))", gap: "var(--layout-gutter)" }}
+        >
+          {!discarded && (
+            <Card title="Pesagem" icon={Weight} subtitle={`Saldo = peso bruto − tara (${roll.spoolTareGrams} g)`}>
+              <form onSubmit={submitWeigh} className="flex flex-col gap-3">
+                <Field label="Peso bruto na balança (g)">
+                  <Input
+                    type="number"
+                    value={grossWeightGrams}
+                    onChange={(event) => setGrossWeightGrams(event.target.value)}
+                    required
+                  />
+                </Field>
+                {weighError && (
+                  <Alert tone="danger" role="alert">
+                    {weighError}
+                  </Alert>
+                )}
+                <Button type="submit" loading={weighSubmitting} style={{ alignSelf: "flex-start" }}>
+                  {weighSubmitting ? "Salvando…" : "Pesar"}
+                </Button>
+              </form>
+            </Card>
+          )}
 
-      {editable && !discarded && (
-        <div className="flex flex-col gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-          <button type="button" onClick={() => setConfirmingDiscard(true)}>
-            Descartar
-          </button>
+          {!discarded && (
+            <Card title="Baixa" icon={CircleMinus}>
+              <form onSubmit={submitMovement} className="flex flex-col gap-3">
+                <div
+                  className="bf-form-grid"
+                  style={{ gridTemplateColumns: "repeat(auto-fill,minmax(min(100%,120px),1fr))" }}
+                >
+                  <Field label="Tipo">
+                    <Select
+                      value={movementType}
+                      onChange={(event) => setMovementType(event.target.value as "consumo" | "perda")}
+                    >
+                      <option value="consumo">Consumo</option>
+                      <option value="perda">Perda</option>
+                    </Select>
+                  </Field>
+                  <Field label="Gramas">
+                    <Input
+                      type="number"
+                      value={movementQuantity}
+                      onChange={(event) => setMovementQuantity(event.target.value)}
+                      required
+                    />
+                  </Field>
+                </div>
+                <Field label="Motivo">
+                  <Input value={movementReason} onChange={(event) => setMovementReason(event.target.value)} />
+                </Field>
+                {movementError && (
+                  <Alert tone="danger" role="alert">
+                    {movementError}
+                  </Alert>
+                )}
+                <Button type="submit" loading={movementSubmitting} style={{ alignSelf: "flex-start" }}>
+                  {movementSubmitting ? "Salvando…" : "Dar baixa"}
+                </Button>
+              </form>
+            </Card>
+          )}
+
+          <Card title="Abertura e secagem" icon={Droplet}>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="secondary"
+                icon={PackageOpen}
+                onClick={() => void submitOpen()}
+                disabled={openSubmitting || roll.openedAt !== null}
+              >
+                {roll.openedAt !== null ? "Já aberto" : "Abrir rolo"}
+              </Button>
+              <Button variant="secondary" icon={Thermometer} onClick={() => void submitDry()} disabled={drySubmitting}>
+                Registrar secagem
+              </Button>
+            </div>
+            {!discarded && (
+              <div style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: 14 }}>
+                <Button
+                  variant="ghost"
+                  icon={Trash2}
+                  style={{ color: "var(--danger)" }}
+                  onClick={() => setConfirmingDiscard(true)}
+                >
+                  Descartar
+                </Button>
+              </div>
+            )}
+          </Card>
         </div>
       )}
 
       {confirmingDiscard && (
         <ConfirmDialog
+          title="Descartar rolo"
           message={`Descartar este rolo? O saldo restante (${roll.balanceGrams} g) vira perda.`}
           confirmLabel="Descartar"
           onConfirm={() => void confirmDiscard()}
@@ -304,35 +366,42 @@ function RollDetailContent({ id }: { id: string }) {
         />
       )}
 
-      <div className="flex flex-col gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-        <h2 className="text-lg font-semibold">Histórico</h2>
+      <Card title="Histórico" icon={History}>
         {roll.movements.length === 0 ? (
-          <p>Nenhuma movimentação.</p>
+          <EmptyState>Nenhuma movimentação.</EmptyState>
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left">
-                <th>Tipo</th>
-                <th>Gramas</th>
-                <th>Custo (R$/g)</th>
-                <th>Data</th>
-              </tr>
-            </thead>
-            <tbody>
-              {/* Chaves renomeadas na Fase 10 (door 4): a unidade do rolo continua sendo grama,
-                  mas o nome do campo no contrato não fala mais de grama. */}
-              {roll.movements.map((movement) => (
-                <tr key={movement.id}>
-                  <td>{movement.type}</td>
-                  <td>{movement.quantity}</td>
-                  <td>{movement.unitCostCents !== null ? (movement.unitCostCents / 100).toFixed(2) : "—"}</td>
-                  <td>{new Date(movement.createdAt).toLocaleString("pt-BR")}</td>
+          <div className="bf-table-wrap">
+            <table className="bf-table">
+              <thead>
+                <tr>
+                  <th>Tipo</th>
+                  <th className="is-num">Gramas</th>
+                  <th className="is-num">Custo (R$/g)</th>
+                  <th>Data</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {/* Chaves renomeadas na Fase 10 (door 4): a unidade do rolo continua sendo grama,
+                    mas o nome do campo no contrato não fala mais de grama. */}
+                {roll.movements.map((movement) => (
+                  <tr key={movement.id}>
+                    <td data-label="Tipo">
+                      <MovementBadge type={movement.type} />
+                    </td>
+                    <td data-label="Gramas" className="is-num">
+                      {movement.quantity}
+                    </td>
+                    <td data-label="Custo (R$/g)" className="is-num">
+                      {movement.unitCostCents !== null ? (movement.unitCostCents / 100).toFixed(2) : "—"}
+                    </td>
+                    <td data-label="Data">{new Date(movement.createdAt).toLocaleString("pt-BR")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
-      </div>
-    </section>
+      </Card>
+    </>
   );
 }

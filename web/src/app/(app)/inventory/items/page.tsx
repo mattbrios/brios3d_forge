@@ -13,6 +13,13 @@ import {
   type StockItemCategory,
   type StockItemsPage,
 } from "@/lib/stock-items";
+import { Boxes, PackagePlus, Plus } from "lucide-react";
+import { ActiveBadge, Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { StockMeter } from "@/components/ui/data";
+import { EmptyState, Loading, PageError } from "@/components/ui/feedback";
+import { Field, Select } from "@/components/ui/form";
 
 type Status =
   | { kind: "loading" }
@@ -68,21 +75,44 @@ const COLUMNS: Column<StockItem>[] = [
     label: "Item",
     render: (item) => <Link href={`/inventory/items/${item.id}`}>{item.name}</Link>,
   },
-  { key: "category", label: "Categoria", render: (item) => CATEGORY_LABELS[item.category] },
+  {
+    key: "category",
+    label: "Categoria",
+    render: (item) => (
+      <Badge tone={item.category === "insumo" ? "neutral" : "violet"} size="sm">
+        {CATEGORY_LABELS[item.category]}
+      </Badge>
+    ),
+  },
   { key: "unitOfMeasure", label: "Unidade" },
-  { key: "balanceQuantity", label: "Saldo", render: (item) => `${item.balanceQuantity} ${item.unitOfMeasure}` },
+  {
+    key: "balanceQuantity",
+    label: "Saldo",
+    render: (item) => (
+      <div className="flex flex-col gap-1.5" style={{ minWidth: 120 }}>
+        <StockMeter
+          value={item.balanceQuantity}
+          max={Math.max(item.balanceQuantity, (item.minimumQuantity ?? 0) * 2, 1)}
+          minimum={item.minimumQuantity}
+        />
+        <span className="bf-meter__text">{`${item.balanceQuantity} ${item.unitOfMeasure}`}</span>
+      </div>
+    ),
+  },
   {
     key: "minimumQuantity",
     label: "Mínimo",
+    numeric: true,
     render: (item) =>
       item.minimumQuantity === null ? "—" : `${item.minimumQuantity} ${item.unitOfMeasure}`,
   },
   {
     key: "avgCostCents",
     label: "Custo médio",
+    numeric: true,
     render: (item) => formatAvgCost(item.avgCostCents, item.unitOfMeasure),
   },
-  { key: "active", label: "Situação", render: (item) => (item.active ? "Ativo" : "Inativo") },
+  { key: "active", label: "Situação", render: (item) => <ActiveBadge active={item.active} /> },
 ];
 
 export default function StockItemsPageScreen() {
@@ -177,22 +207,11 @@ export default function StockItemsPageScreen() {
   }
 
   if (status.kind === "loading") {
-    return <p>Carregando…</p>;
+    return <Loading />;
   }
 
   if (status.kind === "error") {
-    return (
-      <div className="flex flex-col items-start gap-3">
-        <p role="alert">{status.message}</p>
-        <button
-          type="button"
-          onClick={retry}
-          className="rounded border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
-        >
-          Tentar novamente
-        </button>
-      </div>
-    );
+    return <PageError message={status.message} onRetry={retry} />;
   }
 
   const { role, items } = status;
@@ -200,80 +219,35 @@ export default function StockItemsPageScreen() {
   const canManage = role === "admin";
 
   return (
-    <section className="flex max-w-4xl flex-col gap-6">
-      <h1 className="text-2xl font-semibold">Insumos e peças</h1>
-
-      <label className="flex flex-col gap-1 text-sm">
-        Categoria
-        <select value={category} onChange={(event) => setCategory(event.target.value as CategoryFilter)}>
-          <option value="todas">Todas</option>
-          <option value="insumo">{CATEGORY_LABELS.insumo}</option>
-          <option value="peca_reposicao">{CATEGORY_LABELS.peca_reposicao}</option>
-        </select>
-      </label>
-
-      {items.length === 0 ? (
-        <div className="flex flex-col items-start gap-3">
-          <p>Nenhum item cadastrado.</p>
-          {canManage && (
-            <button type="button" onClick={() => setShowCreateForm(true)}>
-              Cadastrar item
-            </button>
-          )}
+    <>
+      <div className="bf-page-head">
+        <div style={{ flex: "1 1 200px", maxWidth: 280 }}>
+          <Field label="Categoria">
+            <Select value={category} onChange={(event) => setCategory(event.target.value as CategoryFilter)}>
+              <option value="todas">Todas</option>
+              <option value="insumo">{CATEGORY_LABELS.insumo}</option>
+              <option value="peca_reposicao">{CATEGORY_LABELS.peca_reposicao}</option>
+            </Select>
+          </Field>
         </div>
-      ) : (
-        <DataTable
-          columns={COLUMNS}
-          rows={items}
-          getRowId={(item) => item.id}
-          renderActions={
-            canManage
-              ? (item) => (
-                  <button type="button" onClick={() => setEntryTarget(item)}>
-                    Registrar entrada
-                  </button>
-                )
-              : undefined
-          }
-        />
-      )}
-
-      {canManage && entryTarget && (
-        <div className="flex flex-col gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-          <h2 className="text-lg font-semibold">Entrada de {entryTarget.name}</h2>
-          <EntityForm
-            fields={ENTRY_FIELDS}
-            values={entryForm}
-            onChange={setEntryForm}
-            onSubmit={submitEntry}
-            submitting={entrySubmitting}
-            error={entryError}
-          />
-          <button type="button" onClick={() => setEntryTarget(null)}>
-            Cancelar entrada
-          </button>
-        </div>
-      )}
-
-      {canManage && items.length > 0 && !showCreateForm && (
-        <button type="button" onClick={() => setShowCreateForm(true)}>
-          Cadastrar item
-        </button>
-      )}
+        {canManage && items.length > 0 && !showCreateForm && (
+          <Button icon={Plus} onClick={() => setShowCreateForm(true)}>
+            Cadastrar item
+          </Button>
+        )}
+      </div>
 
       {canManage && showCreateForm && (
-        <div className="flex flex-col gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-          <h2 className="text-lg font-semibold">Novo item</h2>
-          <label className="flex flex-col gap-1 text-sm">
-            Categoria do item
-            <select
+        <Card title="Novo item" icon={Boxes}>
+          <Field label="Categoria do item" style={{ maxWidth: 280 }}>
+            <Select
               value={createCategory}
               onChange={(event) => setCreateCategory(event.target.value as StockItemCategory)}
             >
               <option value="insumo">{CATEGORY_LABELS.insumo}</option>
               <option value="peca_reposicao">{CATEGORY_LABELS.peca_reposicao}</option>
-            </select>
-          </label>
+            </Select>
+          </Field>
           <EntityForm
             fields={FORM_FIELDS}
             values={createForm}
@@ -281,12 +255,54 @@ export default function StockItemsPageScreen() {
             onSubmit={submitCreate}
             submitting={creating}
             error={createError}
+            onCancel={() => setShowCreateForm(false)}
           />
-          <button type="button" onClick={() => setShowCreateForm(false)}>
-            Cancelar
-          </button>
-        </div>
+        </Card>
       )}
-    </section>
+
+      {canManage && entryTarget && (
+        <Card title={`Entrada de ${entryTarget.name}`} icon={PackagePlus}>
+          <EntityForm
+            fields={ENTRY_FIELDS}
+            values={entryForm}
+            onChange={setEntryForm}
+            onSubmit={submitEntry}
+            submitting={entrySubmitting}
+            error={entryError}
+            onCancel={() => setEntryTarget(null)}
+            cancelLabel="Cancelar entrada"
+          />
+        </Card>
+      )}
+
+      <Card title={`${items.length} ${items.length === 1 ? "item" : "itens"}`}>
+        {items.length === 0 ? (
+          <div className="flex flex-col items-center gap-3">
+            <EmptyState>Nenhum item cadastrado.</EmptyState>
+            {canManage && !showCreateForm && (
+              <Button icon={Plus} onClick={() => setShowCreateForm(true)}>
+                Cadastrar item
+              </Button>
+            )}
+          </div>
+        ) : (
+          <DataTable
+            columns={COLUMNS}
+            rows={items}
+            getRowId={(item) => item.id}
+            isInactive={(item) => !item.active}
+            renderActions={
+              canManage
+                ? (item) => (
+                    <Button size="sm" variant="secondary" icon={PackagePlus} onClick={() => setEntryTarget(item)}>
+                      Registrar entrada
+                    </Button>
+                  )
+                : undefined
+            }
+          />
+        )}
+      </Card>
+    </>
   );
 }
