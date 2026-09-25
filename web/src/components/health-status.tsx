@@ -31,19 +31,27 @@ export function HealthStatus() {
   }, []);
 
   if (state.kind === "loading") {
-    return <p role="status">Verificando a API…</p>;
+    return (
+      <p role="status" className="bf-health bf-health--loading" style={{ margin: 0 }}>
+        <span className="bf-health__dot" />
+        Verificando a API…
+      </p>
+    );
   }
   if (state.kind === "ok") {
     return (
-      <p role="status" className="font-medium text-green-700 dark:text-green-400">
+      <p role="status" className="bf-health bf-health--ok" style={{ margin: 0 }}>
+        <span className="bf-health__dot" />
         API ok
       </p>
     );
   }
   return (
-    <div role="alert" className="text-red-700 dark:text-red-400">
-      <p className="font-medium">API indisponível</p>
-      <p className="text-sm">{state.message}</p>
+    <div role="alert" className="bf-health bf-health--error">
+      <span className="bf-health__dot" />
+      <span>API indisponível</span>
+      <span aria-hidden="true">·</span>
+      <span style={{ fontWeight: 500 }}>{state.message}</span>
     </div>
   );
 }

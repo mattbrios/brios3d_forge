@@ -5,6 +5,10 @@ import { useEffect, useState, type FormEvent } from "react";
 import { ApiError, apiFetch } from "@/lib/api";
 import type { AuthUser } from "@/lib/auth";
 import { safeNext } from "@/lib/safe-next";
+import { Lock, Mail } from "lucide-react";
+import { Button } from "./ui/button";
+import { Alert, Loading } from "./ui/feedback";
+import { Field, Input } from "./ui/form";
 
 function messageOf(error: unknown): string {
   return error instanceof ApiError ? error.message : "Não foi possível conectar à API";
@@ -52,47 +56,42 @@ export function LoginForm() {
   }
 
   if (checking) {
-    return <p>Carregando…</p>;
+    return <Loading />;
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-3">
-      <label className="flex flex-col gap-1 text-sm">
-        E-mail
-        <input
+    <form onSubmit={submit} className="flex flex-col gap-4">
+      <Field label="E-mail">
+        <Input
           type="email"
           name="email"
+          icon={Mail}
           autoComplete="username"
           required
           value={email}
           onChange={(event) => setEmail(event.target.value)}
-          className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+          placeholder="voce@brios3d.com.br"
         />
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        Senha
-        <input
+      </Field>
+      <Field label="Senha">
+        <Input
           type="password"
           name="password"
+          icon={Lock}
           autoComplete="current-password"
           required
           value={password}
           onChange={(event) => setPassword(event.target.value)}
-          className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
         />
-      </label>
+      </Field>
       {error && (
-        <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+        <Alert tone="danger" role="alert">
           {error}
-        </p>
+        </Alert>
       )}
-      <button
-        type="submit"
-        disabled={submitting}
-        className="rounded bg-zinc-900 px-3 py-1.5 text-sm text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
-      >
+      <Button type="submit" size="lg" block loading={submitting}>
         {submitting ? "Entrando…" : "Entrar"}
-      </button>
+      </Button>
     </form>
   );
 }

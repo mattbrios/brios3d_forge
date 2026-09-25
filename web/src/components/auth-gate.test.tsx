@@ -151,7 +151,7 @@ describe("AuthGate", () => {
       </AuthGate>,
     );
     expect(await screen.findByText("conteúdo da página")).toBeTruthy();
-    const nav = screen.getByRole("navigation");
+    const nav = screen.getByRole("navigation", { name: "Navegação principal" });
     const link = within(nav).getByRole("link", { name: "Importar do MakerWorld" });
     expect(link.getAttribute("href")).toBe("/print-profiles");
     const header = screen.getByRole("banner");
