@@ -56,6 +56,7 @@ describe("AppShell", () => {
     const links = within(nav).getAllByRole("link");
     expect(links.map((link) => link.textContent)).toEqual([
       "Importar do MakerWorld",
+      "Calculadora",
       "Materiais",
       "Impressoras",
       "Clientes",
@@ -70,6 +71,7 @@ describe("AppShell", () => {
     ]);
     expect(links.map((link) => link.getAttribute("href"))).toEqual([
       "/print-profiles",
+      "/pricing",
       "/materials",
       "/printers",
       "/customers",
@@ -94,6 +96,7 @@ describe("AppShell", () => {
       const nav = screen.getByRole("navigation");
       expect(within(nav).getAllByRole("link").map((link) => link.textContent)).toEqual([
         "Importar do MakerWorld",
+        "Calculadora",
         "Materiais",
         "Impressoras",
         "Clientes",
@@ -106,6 +109,20 @@ describe("AppShell", () => {
       expect(within(nav).queryByRole("link", { name: "Usuários" })).toBeNull();
       expect(within(nav).queryByRole("link", { name: "Configurações" })).toBeNull();
       expect(within(nav).queryByRole("link", { name: "Canais de venda" })).toBeNull();
+      cleanup();
+    }
+  });
+
+  it("calculator appears for every role", () => {
+    for (const role of ["admin", "production", "sales"] as const) {
+      render(
+        <AppShell role={role}>
+          <p>conteúdo</p>
+        </AppShell>,
+      );
+      const nav = screen.getByRole("navigation");
+      const link = within(nav).getByRole("link", { name: "Calculadora" });
+      expect(link.getAttribute("href")).toBe("/pricing");
       cleanup();
     }
   });

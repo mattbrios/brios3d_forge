@@ -1,9 +1,18 @@
 "use client";
 
-import { type FormEvent, useRef, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import { ApiError, apiFetch } from "@/lib/api";
 import { formatPrintTime, splitPrintTime } from "@/lib/format-print-time";
 import type { PrintProfile, PrintProfileImportResult } from "@/lib/print-profiles";
+
+// Fase 12: forma que a calculadora precisa de cada linha, decimal já convertido (o formulário
+// desta tela guarda tudo como texto para aceitar "7,5" digitado à mão).
+export interface ImportedFilament {
+  key: number;
+  type: string;
+  color: string;
+  grams: number | null;
+}
 
 // Todos os campos são texto para aceitar o que o usuário digitar (ex.: "7,5"). Nesta fase o
 // formulário não é salvo: a calculadora (Fase 12) vai consumi-lo.
@@ -53,11 +62,37 @@ function profileLabel(profile: PrintProfile): string {
   return `${profile.title ?? `Perfil ${profile.id}`} · ${time} · ${grams}`;
 }
 
-export function PrintProfileImport() {
+export function PrintProfileImport({
+  onFilamentsChange,
+}: {
+  // Fase 12: a calculadora precisa saber, a cada mudança, o tempo de impressão (em horas
+  // decimais) e a lista de filamentos, para preencher o mapeamento material->filamento.
+  onFilamentsChange?: (filaments: ImportedFilament[], printHours: number | null) => void;
+} = {}) {
   const [url, setUrl] = useState("");
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [form, setForm] = useState<FormState>(BLANK_FORM);
   const nextKey = useRef(0);
+
+  useEffect(() => {
+    if (!onFilamentsChange) {
+      return;
+    }
+    const filaments: ImportedFilament[] = form.filaments.map((row) => ({
+      key: row.key,
+      type: row.type,
+      color: row.color,
+      grams: row.grams === "" ? null : Number(row.grams.replace(",", ".")),
+    }));
+    const hours = Number(form.hours.replace(",", "."));
+    const minutes = Number(form.minutes.replace(",", "."));
+    const printHours = form.hours === "" && form.minutes === "" ? null : hours + minutes / 60;
+    onFilamentsChange(filaments, printHours);
+    // form é recriado a cada alteração de campo; comparar pelos próprios valores (via
+    // JSON.stringify) evitaria o efeito rodar por referência, mas o array de filaments já muda
+    // de identidade a cada edição, então rodar a cada render de form é o comportamento certo.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form]);
 
   function formFromProfile(profile: PrintProfile): FormState {
     const time = profile.printSeconds === null ? null : splitPrintTime(profile.printSeconds);

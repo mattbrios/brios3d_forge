@@ -39,6 +39,14 @@ export function AppShell({
                 Importar do MakerWorld
               </Link>
             </li>
+            {/* Fase 12: mesma política de papéis de POST /pricing/calculate e /pricing/quote-preview. */}
+            {(role === "admin" || role === "production" || role === "sales") && (
+              <li>
+                <Link href="/pricing" className={LINK_CLASS}>
+                  Calculadora
+                </Link>
+              </li>
+            )}
             {(role === "admin" || role === "production" || role === "sales") && (
               <li>
                 <Link href="/materials" className={LINK_CLASS}>
