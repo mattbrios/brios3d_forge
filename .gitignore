@@ -11,3 +11,6 @@ coverage
 
 # Claude Code agent worktrees
 .claude/worktrees/
+
+# Skills do kiro (duplicado do ./claude)
+.kiro/skills/
