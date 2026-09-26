@@ -36,10 +36,10 @@
 
 ## Handoff
 
-**Feature**: phase-13-catalog - plano aprovado e `checks.md` escrito (52 checks, `validate_checks.py` exit 0); build ainda não começou
-**Next step**: construir a partir de `.specs/features/phase-13-catalog/checks.md` (um builder, ~59k tokens estimados)
-**Uncommitted**: `.specs/features/phase-13-catalog/`, `.specs/STATE.md`
-**Branch**: main
+**Feature**: phase-13-catalog - concluída (Verifier PASS na rodada 2, `validate_verification.py` exit 0)
+**Where**: 53 checks em 3 commits (`76cf572` API, `c614ed6` web, `d0ccf1c` prova do `PricingError`). A rodada 1 reprovou C31 (d), cuja redação contradizia o AC 24; o usuário aprovou reescrever (d) e acrescentar C31 (e) e C53. Rodada 1 em `verification-history.md`
+**Next step**: push e PR da branch, quando o usuário pedir; depois a Fase 14 (metadados do modelo por URL)
+**Branch**: feat/phase-13-catalog
 
 ## Handoff anterior (Fase 12)
 

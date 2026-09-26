@@ -50,7 +50,7 @@ As fases seguem os quatro marcos do `CONTEXT.md` (MVP → Operação diária →
 | 11 | Estoque mínimo, alertas e etiqueta QR | Alertas de reposição e etiqueta com QR code para o rolo | ✅ |
 | 12 | Calculadora integrada | Tela de precificação usando cadastros, estoque e os dados importados pela URL do MakerWorld | ✅ |
 | **Marco 2** | | *Operação diária no sistema* | |
-| 13 | Catálogo e ficha técnica | Produtos com URL do modelo, variações, ficha técnica, licença e custo sempre atualizado | ⬜ |
+| 13 | Catálogo e ficha técnica | Produtos com URL do modelo, variações, ficha técnica, licença e custo sempre atualizado | ✅ |
 | 14 | Metadados do modelo por URL | Buscar imagem, título e licença no Printables, MakerWorld ou Thingiverse | ⬜ |
 | 15 | Estoque de produtos acabados | Saldo de pronta-entrega por produto/variação | ⬜ |
 | 16 | Orçamentos | Criar orçamento com itens, canal, desconto por quantidade e preço mínimo | ⬜ |
@@ -241,7 +241,7 @@ outros papéis (door 1, Fase 4: uma rota sem `@Roles()` é só de admin).
 | `suppliers` | x | leitura | leitura |
 | `inventory` | x | leitura + pesagem/baixa/descarte/abertura/secagem do rolo, e consumo/perda/contagem do item (a entrada do item é admin, porque carrega custo). Os alertas de estoque mínimo são leitura dos três papéis; definir o piso é só admin | leitura |
 | `purchasing` | a definir na Fase 21 | a definir na Fase 21 | a definir na Fase 21 |
-| `products` | a definir na Fase 13 | a definir na Fase 13 | a definir na Fase 13 |
+| `products` | x | leitura (lista, detalhe, custo e preço) | leitura (lista, detalhe, custo e preço) |
 | `pricing` | x | x | x |
 | `quotes` | a definir na Fase 16 | a definir na Fase 16 | a definir na Fase 16 |
 | `orders` | a definir na Fase 18 | a definir na Fase 18 | a definir na Fase 18 |
@@ -437,21 +437,21 @@ sem `@page size` fixo, então a mesma página serve A4 e térmica (questão aber
 **Dependências:** Fase 12.
 
 **Tarefas:**
-- [ ] Entidade `Product`: nome, descrição, URL do modelo (obrigatória), plataforma de origem detectada pelo domínio (Printables, MakerWorld, Thingiverse), metadados do modelo (título, URL da imagem, designer, licença), flag "permite uso comercial", data da última busca de metadados, ativo
-- [ ] Validar a URL: aceitar só os domínios do Printables, do MakerWorld e do Thingiverse, e normalizar para o endereço canônico do modelo (sem parâmetros de rastreio). Outros domínios retornam 400 `{ error }`
-- [ ] Não há upload de STL/3MF no catálogo. Nesta fase, os metadados podem ser preenchidos à mão; a busca automática vem na Fase 14
-- [ ] Variações (cor, tamanho), cada uma com a própria ficha técnica
-- [ ] Ficha técnica: materiais + gramas, tempo de impressão, impressora de referência, horas de mão de obra, insumos + quantidades. Para modelos do MakerWorld, ela pode ser pré-preenchida com o perfil escolhido (Fase 2)
-- [ ] Custo e preço sugerido calculados sob demanda pelo `pricing`, para refletir sempre o custo médio atual do filamento
-- [ ] Aviso visível para produto cuja licença não permite uso comercial
-- [ ] Web: lista e detalhe do produto, editor de variações e ficha técnica, custo detalhado por variação
-- [ ] Testes: recálculo depois de mudar o custo do filamento; validação da ficha
+- [x] Entidade `Product`: nome, descrição, URL do modelo (obrigatória), plataforma de origem detectada pelo domínio (Printables, MakerWorld, Thingiverse), metadados do modelo (título, URL da imagem, designer, licença), flag "permite uso comercial", data da última busca de metadados, ativo
+- [x] Validar a URL: aceitar só os domínios do Printables, do MakerWorld e do Thingiverse, e normalizar para o endereço canônico do modelo (sem parâmetros de rastreio). Outros domínios retornam 400 `{ error }`
+- [x] Não há upload de STL/3MF no catálogo. Nesta fase, os metadados podem ser preenchidos à mão; a busca automática vem na Fase 14
+- [x] Variações (cor, tamanho), cada uma com a própria ficha técnica
+- [x] Ficha técnica: materiais + gramas, tempo de impressão, impressora de referência, horas de mão de obra, insumos + quantidades. Para modelos do MakerWorld, ela pode ser pré-preenchida com o perfil escolhido (Fase 2)
+- [x] Custo e preço sugerido calculados sob demanda pelo `pricing`, para refletir sempre o custo médio atual do filamento
+- [x] Aviso visível para produto cuja licença não permite uso comercial
+- [x] Web: lista e detalhe do produto, editor de variações e ficha técnica, custo detalhado por variação
+- [x] Testes: recálculo depois de mudar o custo do filamento; validação da ficha
 
 **Critérios de aceite:**
-- Uma entrada de rolo mais cara aumenta o custo exibido do produto sem nenhuma ação manual
-- Produto com licença não comercial mostra o aviso
-- Uma URL fora do Printables, do MakerWorld e do Thingiverse é rejeitada com 400 `{ error }`
-- As telas foram validadas com Playwright
+- [x] Uma entrada de rolo mais cara aumenta o custo exibido do produto sem nenhuma ação manual
+- [x] Produto com licença não comercial mostra o aviso
+- [x] Uma URL fora do Printables, do MakerWorld e do Thingiverse é rejeitada com 400 `{ error }`
+- [x] As telas foram validadas com Playwright
 
 ---
 

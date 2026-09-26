@@ -278,6 +278,18 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: .specs/features/phase-11-stock-alerts-qr/verification.md rounds 1-3 (three FAILs, same shape) (web-screens)
 - last seen: 2026-09-24T17:51:02Z
 
+### L-045 - When a catch block isolates more than one error class, give each class its own proof, since one sample cannot tell which classes are isolated and which are rethrown
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `api` · harmful: 0
+- features: phase-13-catalog
+- evidence: verification.md gap 1, C31, product-pricing.service.ts:61, product-pricing.service.spec.ts:104 (api)
+- last seen: 2026-09-25T23:47:19Z
+
+### L-046 - Name every error class a catch block handles in its check, since a claim about any other error is contradicted by a class the code also isolates
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `api` · harmful: 0
+- features: phase-13-catalog
+- evidence: checks.md C31 (d), product-pricing.service.ts:61 (api)
+- last seen: 2026-09-25T23:47:19Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
