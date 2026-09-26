@@ -5,7 +5,7 @@ Plan: `.specs/features/phase-13-catalog/plan.md`
 
 ## Intent
 
-52 checks em 5 fatias · 5 one-way doors · nenhuma questão aberta
+53 checks em 5 fatias · 5 one-way doors · nenhuma questão aberta
 
 O `AGENTS.md` não declara perfil, então vale o `light` do `tlc-spec-lean`. As duas decisões de
 produto do plano foram aprovadas pelo usuário na revisão: só `admin` escreve no catálogo, e há um
@@ -193,14 +193,20 @@ Proof: `npm --prefix api run test:e2e -- test/products-pricing.e2e-spec.ts -t "r
 **C30** - `GET /products/not-a-uuid/pricing` responde `400`, e um UUID inexistente responde `404` com `{ "error": "Produto não encontrado" }` (Surface)
 Proof: `npm --prefix api run test:e2e -- test/products-pricing.e2e-spec.ts -t "returns 400 for a malformed id and 404 for an unknown product"`
 
-**C31** - Serviço de preço do produto com `QuotePreviewService`, `SettingsService` e `SalesChannelsService` falsos (4 ramos, nível do arquivo):
+**C31** - Serviço de preço do produto com `QuotePreviewService`, `SettingsService` e `SalesChannelsService` falsos (5 ramos, nível do arquivo):
 - (a) variação inativa não gera chamada a `preview`
 - (b) o DTO enviado a `preview` tem `quantity: 1`, `channelIds` só dos canais com `active: true`, `labor.centsPerHour` igual ao `laborCentsPerHour` falso (`3000`) e nenhum `minimumOrderCents`
 - (c) `preview` rejeitando com `BadRequestException("x")` vira `{ pricing: null, error: "x" }`, e o mesmo vale para `NotFoundException("y")`
-- (d) um erro que não é `HttpException` é relançado, não engolido
+- (d) um erro que não é `HttpException` nem `PricingError` é relançado, não engolido
+- (e) `preview` rejeitando com `PricingError("z")` vira `{ pricing: null, error: "z" }`
 
 (AC 22, 24)
 Proof: `npm --prefix api run test -- src/modules/products/product-pricing.service.spec.ts -t "ProductPricingService"`
+
+> Renegociado com o usuário depois da rodada 1 do Verifier: a redação original de (d) ("um erro que não é `HttpException`") contradizia o AC 24 ("regra do pricing"), que o código segue isolando o `PricingError`. (e) e C53 provam esse ramo.
+
+**C53** - Com um canal ativo "Cem por cento QA" (`taxRate: 0.6`, `feeRate: 0.4`, margem `0`), `GET /products/:id/pricing` responde `200`, e a variação "Laranja" vem com `pricing: null` e `error: 'Channel "Cem por cento QA": margin + taxes + fee must be below 100%'` (AC 24, regra do pricing, door 2)
+Proof: `npm --prefix api run test:e2e -- test/products-pricing.e2e-spec.ts -t "isolates a pricing rule failure in the variant"`
 
 ### S5 - papéis, telas e navegação · ~12 files · ~90 KB · ~23k
 
@@ -295,7 +301,7 @@ Proof: `npm --prefix web run test -- src/components/app-shell.test.tsx -t "Catá
 | entidade inexistente na variação (4) | produto C15 · impressora C15 · material C15 · insumo C15 | - |
 | listas substituídas no PATCH (3) | `materials` C17 · `supplies` C17 · nenhuma C17 | - |
 | door 1 - `QuotePreviewService` exportado e consumido (1) | C26 (a rota só responde passando pelo `PricingModule` real) | - |
-| door 2 - resposta por variação (2 lados) | sucesso C26 · erro isolado C28 | - |
+| door 2 - resposta por variação (3 lados) | sucesso C26 · sem custo médio isolado C28 · regra do pricing isolada C53 | - |
 | door 3 - identidade do modelo (4) | canônica C2 · único na rota C5 · único no banco C22 · enum fechado C25 | - |
 | door 4 - ficha (4) | único na rota C16 · único no banco C23 · FK `RESTRICT` C24 · sem DELETE (desativar) C21 | - |
 | door 5 - licença tri-estado (3) | `null` padrão C1, C25 · `false` com aviso C38 · `true` sem aviso C38 | - |
@@ -303,7 +309,7 @@ Proof: `npm --prefix web run test -- src/components/app-shell.test.tsx -t "Catá
 | entidade `ProductVariant` (1) | C13 | - |
 | entidade `ProductVariantMaterial` (1) | C13, C17 | - |
 | entidade `ProductVariantSupply` (1) | C13, C17 | - |
-| ramos do serviço de preço do produto (4) | inativa C31 · DTO C31 · `HttpException` C31 · outro erro C31 | - |
+| ramos do serviço de preço do produto (5) | inativa C31 · DTO C31 · `HttpException` C31 · `PricingError` C31 · outro erro C31 | - |
 | papéis na leitura (3) | `admin` C26 · `production` C32 · `sales` C32 | - |
 | papéis na escrita (3) | `admin` C33 · `production` C33 · `sales` C33 | - |
 | estados da tela `/products` (4) | carregando C35 · vazio C36 · erro C37 · por papel C39 | - |
@@ -322,7 +328,7 @@ Proof: `npm --prefix web run test -- src/components/app-shell.test.tsx -t "Catá
 ## Swept
 
 - validation: C3, C4, C7, C14 - URL, limites do produto e da variação, dos dois lados
-- failure modes: C28, C31, C43, C44 - falha de uma variação isolada na API e na tela; falha total do preço sem esconder o produto
+- failure modes: C28, C31, C43, C44, C53 - falha de uma variação isolada na API e na tela; falha total do preço sem esconder o produto
 - idempotency, retry, duplicates: C5, C16 - repetir a criação de um produto ou variação responde `409` e não duplica
 - authorization: C32, C33, C34 - leitura para os três papéis, escrita só de admin, sessão obrigatória
 - concurrency and ordering: C18 - duas criações simultâneas do mesmo modelo; o índice único é o mecanismo. A substituição das listas da ficha roda numa transação só (C20)
@@ -352,7 +358,7 @@ Estimativa por analogia com os arquivos equivalentes medidos com `wc -c`:
 
 - Total: ~230 KB ÷ 4 ≈ 59k tokens, abaixo do orçamento padrão de 150k. Um builder só, sem pergunta de mecanismo
 - Mecanismo: um builder (estimativa dentro do orçamento)
-- Progresso: C1-C34 (API) fechados no commit `feat(products)`; C35-C52 (web) no commit `feat(web)`
+- Progresso: C1-C34 (API) fechados no commit `feat(products)`; C35-C52 (web) no commit `feat(web)`; C31 (d, e) e C53 no commit `test(products)` da rodada 2
 - Extração de placement prevista: o quadro de custo inline de `pricing/page.tsx` (`COST_ROWS` + JSX) pode virar um componente compartilhado para o detalhe do produto. A prova de `/pricing` (Fase 12) segue valendo sem mudança de asserção
 - `ROADMAP.md`: marcar as tarefas da Fase 13 e o status ✅ ao fechar, e preencher a linha `products` da matriz de permissões (`x` / leitura / leitura)
 - Validação final com o Playwright MCP (`AGENTS.md`):

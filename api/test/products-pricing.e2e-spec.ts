@@ -13,7 +13,7 @@ import { createProduct, createVariant, deleteProducts } from './products-helper.
 import { createSalesChannel, deleteSalesChannels, resetSettings } from './settings-helper.js';
 
 const EMAIL = 'products-pricing-admin@test.local';
-const CHANNELS = ['Balcão QA', 'Inativo QA'];
+const CHANNELS = ['Balcão QA', 'Inativo QA', 'Cem por cento QA'];
 const UNKNOWN_ID = '00000000-0000-0000-0000-000000000000';
 
 interface PricingEntry {
@@ -152,6 +152,19 @@ describe('GET /products/:id/pricing (e2e)', () => {
     expect(black?.error).toBe('Material sem custo médio disponível: PLA · Marca de teste · Preto');
     expect(orange?.error).toBeNull();
     expect(orange?.pricing?.costs.materialCents).toBe(550);
+  });
+
+  it('isolates a pricing rule failure in the variant', async () => {
+    const { productId } = await seedLaranja();
+    // Gravado direto no banco: a rota de canais recusaria a soma de 100% (Fase 5).
+    await createSalesChannel(dataSource, { name: 'Cem por cento QA', taxRate: 0.6, feeRate: 0.4, active: true });
+
+    const response = await getPricing(productId);
+    expect(response.status).toBe(200);
+    const entries = response.body.variants as PricingEntry[];
+    const orange = entries.find((entry) => entry.name === 'Laranja');
+    expect(orange?.pricing).toBeNull();
+    expect(orange?.error).toBe('Channel "Cem por cento QA": margin + taxes + fee must be below 100%');
   });
 
   it('returns an empty list when no variant is active', async () => {

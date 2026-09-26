@@ -1,5 +1,6 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import type { CreateQuotePreviewDto } from '../pricing/dto/create-quote-preview.dto.js';
+import { PricingError } from '../pricing/pricing.error.js';
 import type { QuotePreviewService } from '../pricing/quote-preview.service.js';
 import type { QuotePreviewResult } from '../pricing/quote-preview.types.js';
 import type { SalesChannelsService } from '../settings/sales-channels.service.js';
@@ -96,11 +97,20 @@ describe('ProductPricingService', () => {
     ]);
   });
 
-  it('(d) an error that is not an HttpException is rethrown', async () => {
+  it('(d) an error that is neither an HttpException nor a PricingError is rethrown', async () => {
     const defect = new Error('boom');
     const { service } = build([variant({})], async () => {
       throw defect;
     });
     await expect(service.pricing('p')).rejects.toBe(defect);
+  });
+
+  it('(e) a PricingError from preview becomes { pricing: null, error: message }', async () => {
+    const { service } = build([variant({})], async () => {
+      throw new PricingError('z');
+    });
+    expect((await service.pricing('p')).variants).toEqual([
+      { variantId: 'v-ativa', name: 'Laranja', pricing: null, error: 'z' },
+    ]);
   });
 });
