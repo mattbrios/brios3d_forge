@@ -83,12 +83,15 @@ function profileLabel(profile: PrintProfile): string {
 
 export function PrintProfileImport({
   onFilamentsChange,
+  initialUrl = "",
 }: {
   // Fase 12: a calculadora precisa saber, a cada mudança, o tempo de impressão (em horas
   // decimais) e a lista de filamentos, para preencher o mapeamento material->filamento.
   onFilamentsChange?: (filaments: ImportedFilament[], printHours: number | null) => void;
+  // Fase 13 (AC 19): o editor de variação já entra com a URL do produto.
+  initialUrl?: string;
 } = {}) {
-  const [url, setUrl] = useState("");
+  const [url, setUrl] = useState(initialUrl);
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [form, setForm] = useState<FormState>(BLANK_FORM);
   const nextKey = useRef(0);

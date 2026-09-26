@@ -12,6 +12,8 @@ const EXPECTED = new Set([
   'pricing.controller.ts',
   'printers.controller.ts',
   'print-profiles.controller.ts',
+  // Fase 13: leitura do catálogo para production e sales.
+  'products.controller.ts',
   'sales-channels.controller.ts',
   'settings.controller.ts',
   'suppliers.controller.ts',

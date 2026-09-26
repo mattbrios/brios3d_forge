@@ -12,6 +12,7 @@ import {
   Layers,
   LayoutGrid,
   Menu,
+  Package,
   PanelLeftClose,
   Printer,
   Settings,
@@ -47,6 +48,8 @@ const NAV: NavItem[] = [
   { href: "/print-profiles", label: "Importar do MakerWorld", short: "Importar", icon: Download, group: "Produção" },
   // Fase 12: mesma política de papéis de POST /pricing/calculate e /pricing/quote-preview.
   { href: "/pricing", label: "Calculadora", short: "Calcular", icon: Calculator, roles: EVERY_ROLE },
+  // Fase 13: leitura do catálogo, custo e preço para os três papéis; só admin escreve.
+  { href: "/products", label: "Catálogo", icon: Package, roles: EVERY_ROLE },
   { href: "/materials", label: "Materiais", icon: Layers, group: "Cadastros", roles: EVERY_ROLE },
   { href: "/printers", label: "Impressoras", icon: Printer, roles: EVERY_ROLE },
   { href: "/customers", label: "Clientes", icon: Contact, roles: EVERY_ROLE },
@@ -74,6 +77,8 @@ const TITLES: [RegExp, string][] = [
   [/^\/inventory$/, "Estoque de filamento"],
   [/^\/print-profiles$/, "Importar do MakerWorld"],
   [/^\/pricing$/, "Calculadora"],
+  [/^\/products\/[^/]+$/, "Produto"],
+  [/^\/products$/, "Catálogo"],
   [/^\/materials$/, "Materiais"],
   [/^\/printers$/, "Impressoras"],
   [/^\/customers$/, "Clientes"],

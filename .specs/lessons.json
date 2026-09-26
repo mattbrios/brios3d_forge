@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 45,
+  "next_id": 47,
   "lessons": [
     {
       "id": "L-001",
@@ -796,6 +796,42 @@
       ],
       "created": "2026-09-24T17:51:02Z",
       "last_seen": "2026-09-24T17:51:02Z"
+    },
+    {
+      "id": "L-045",
+      "key": "ac_gap::when a catch block isolates more than one error class give each class its own proof since one sample cannot tell which classes are isolated and which are rethrown",
+      "text": "When a catch block isolates more than one error class, give each class its own proof, since one sample cannot tell which classes are isolated and which are rethrown",
+      "signal": "ac_gap",
+      "scope": "api",
+      "status": "candidate",
+      "features": [
+        "phase-13-catalog"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "verification.md gap 1, C31, product-pricing.service.ts:61, product-pricing.service.spec.ts:104 (api)"
+      ],
+      "created": "2026-09-25T23:47:19Z",
+      "last_seen": "2026-09-25T23:47:19Z"
+    },
+    {
+      "id": "L-046",
+      "key": "spec_precision_gap::name every error class a catch block handles in its check since a claim about any other error is contradicted by a class the code also isolates",
+      "text": "Name every error class a catch block handles in its check, since a claim about any other error is contradicted by a class the code also isolates",
+      "signal": "spec_precision_gap",
+      "scope": "api",
+      "status": "candidate",
+      "features": [
+        "phase-13-catalog"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "checks.md C31 (d), product-pricing.service.ts:61 (api)"
+      ],
+      "created": "2026-09-25T23:47:19Z",
+      "last_seen": "2026-09-25T23:47:19Z"
     }
   ]
 }

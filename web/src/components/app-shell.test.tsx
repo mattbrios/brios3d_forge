@@ -67,6 +67,7 @@ describe("AppShell", () => {
       "Início",
       "Importar do MakerWorld",
       "Calculadora",
+      "Catálogo",
       "Materiais",
       "Impressoras",
       "Clientes",
@@ -83,6 +84,7 @@ describe("AppShell", () => {
       "/",
       "/print-profiles",
       "/pricing",
+      "/products",
       "/materials",
       "/printers",
       "/customers",
@@ -109,6 +111,7 @@ describe("AppShell", () => {
         "Início",
         "Importar do MakerWorld",
         "Calculadora",
+        "Catálogo",
         "Materiais",
         "Impressoras",
         "Clientes",
@@ -121,6 +124,20 @@ describe("AppShell", () => {
       expect(within(nav).queryByRole("link", { name: "Usuários" })).toBeNull();
       expect(within(nav).queryByRole("link", { name: "Configurações" })).toBeNull();
       expect(within(nav).queryByRole("link", { name: "Canais de venda" })).toBeNull();
+      cleanup();
+    }
+  });
+
+  it("Catálogo appears for every role and links to /products", () => {
+    for (const role of ["admin", "production", "sales"] as const) {
+      render(
+        <AppShell role={role}>
+          <p>conteúdo</p>
+        </AppShell>,
+      );
+      const nav = screen.getByRole("navigation", { name: "Navegação principal" });
+      const link = within(nav).getByRole("link", { name: "Catálogo" });
+      expect(link.getAttribute("href")).toBe("/products");
       cleanup();
     }
   });
@@ -215,6 +232,8 @@ describe("AppShell", () => {
       ["/inventory/items/i1", "Insumo"],
       ["/inventory/movements", "Movimentações"],
       ["/inventory/alerts", "Abaixo do mínimo"],
+      ["/products", "Catálogo"],
+      ["/products/p1", "Produto"],
       ["/rota-desconhecida", "Brios3D Forge"],
     ];
     for (const [pathname, title] of cases) {
