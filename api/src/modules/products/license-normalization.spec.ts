@@ -31,7 +31,7 @@ describe('normalizeLicense', () => {
     ['MIT License', 'MIT'],
     ['BSD 3-Clause', 'BSD'],
     ['GPL-3.0', 'GPL'],
-  ])('license C11: %s (%s) -> commercialUseAllowed true', (license) => {
+  ])('license C11: known permissive %s (%s) -> commercialUseAllowed true', (license) => {
     expect(normalizeLicense(license)).toEqual({ license, commercialUseAllowed: true });
   });
 
@@ -40,7 +40,7 @@ describe('normalizeLicense', () => {
     ['', 'vazio'],
     ['   ', 'só espaço'],
     ['Todos os direitos reservados', 'texto não reconhecido'],
-  ])('license C12: %s (%s) -> commercialUseAllowed null', (license) => {
+  ])('license C12: unknown or empty %s (%s) -> commercialUseAllowed null', (license) => {
     const result = normalizeLicense(license);
     expect(result.commercialUseAllowed).toBeNull();
   });
