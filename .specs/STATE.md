@@ -36,6 +36,60 @@
 
 ## Handoff
 
+**Feature**: phase-14-model-metadata - concluída (Verifier PASS na rodada 2, `validate_verification.py` exit 0)
+**Where**: 26 checks em 3 commits (`c5c31c9` API, `5876130` web, `b534f53` correção dos nomes de
+teste da rodada 1). Um builder só (estimativa de ~19k, abaixo do orçamento de 150k, sem pergunta
+de mecanismo). API: `ModelMetadataService` (novo) decide a plataforma via `parseModelUrl`
+(reaproveitado da Fase 13) e chama `HttpPrintablesClient` (novo, `node:https`, mesmo padrão AD-011
+do `HttpMakerWorldClient`) ou `MakerWorldClient.fetchDesign` (Fase 2, reaproveitado —
+`PrintProfilesModule` passou a `exports: [MAKERWORLD_CLIENT]`, que não existia antes desta fase);
+Thingiverse responde `400` direto, sem adaptador. `normalizeLicense` (novo, pura) decide
+`commercialUseAllowed` por prioridade fixa de palavra-chave. `POST /products/model-metadata`
+(preview, nada grava) e `POST /products/:id/model-metadata/refresh` (sobrescreve as 6 colunas de
+metadado + `modelMetadataFetchedAt`) no mesmo `ProductsController`, ambas admin-only sem
+`@Roles()` (mesma regra de `create`/`update`, AD-018). Web: botão "Buscar metadados" no
+`ProductForm` (preenche os campos sem gravar até "Salvar") e `ProductMetadataRefresh` (novo
+componente, diálogo com diff gravado/buscado antes de confirmar) no detalhe do produto, ausente
+para produtos do Thingiverse. `lint`, `test` e `build` verdes nas duas pastas (181 unit + 402 e2e
+na API, 208 no web)
+**Desvio do plano, registrado no diff**: o plano assumia que `PrintProfilesModule` já exportava
+`MAKERWORLD_CLIENT` ("reaproveitado da Fase 2, exportado pelo `PrintProfilesModule`") — não
+exportava nada; `exports: [MAKERWORLD_CLIENT]` foi adicionado nesta fase. Placement, não door:
+mesmo módulo, mesmo provider, só o bloco `exports` que faltava
+**Validação em navegador** (Playwright MCP, app em docker): URL real do MakerWorld
+(`makerworld.com/models/3007827`) preencheu título/designer/licença/imagem ao vivo contra a API
+JSON de produção, com "Uso comercial" decidido automaticamente para "Não permitido" (Standard
+Digital File License); URL real do Printables (`printables.com/model/123456`) preencheu um modelo
+genuíno ("Print In Place Rotating Hearts Bracelet") contra a GraphQL de produção, com "Permitido"
+(Creative Commons); URL do Thingiverse mostrou o erro "Busca automática não disponível" com o
+formulário preservado; "Atualizar metadados" no detalhe mostrou a tabela de diff gravado/buscado
+e confirmou a atualização; o produto de teste foi desativado ao final (nunca apagado)
+**Verificação**: 2 rodadas, perfil `light`, por sub-agentes independentes distintos. Rodada 1:
+FAIL — não por erro de implementação, mas porque os comandos de proof de C11 e C12 no `checks.md`
+(`-t "permissive"`, `-t "unknown or empty"`) não batiam com nenhum nome de teste real em
+`license-normalization.spec.ts` (0 testes executados, exit 0 — o mesmo risco de
+`passWithNoTests` que o `verify.md` nomeia). Fix: os títulos dos dois `it.each` foram renomeados
+para conter as substrings literais já congeladas no `checks.md`, sem tocar nenhuma asserção
+(`checks.md` é fixo, o nome do teste não). Rodada 2 (escopada ao fix): **PASS** — 26/26 checks
+provados, os 24 não tocados carregados da rodada 1 (`carried from`), C11 e C12 reverificados
+(`verified at`) com os comandos exatos do `checks.md` agora batendo. `validate_verification.py`
+exit 0. Lição L-047 registrada (nomear teste `it.each` com a substring literal que o proof usa,
+nunca uma paráfrase)
+**In progress**: nada
+**Next step**: nenhum bloqueio. Fase 15 (estoque de produtos acabados) e Fase 16 (orçamentos)
+dependem da Fase 13, não desta; push e PR da branch quando o usuário pedir
+**Riscos abertos**: (1) a API GraphQL do Printables não é documentada nem tem introspecção
+pública — descoberta por tentativa nesta conversa; um campo renomeado pela plataforma sem aviso
+quebraria o mapeamento silenciosamente até o próximo teste manual (mesmo risco que o MakerWorld já
+tinha desde a Fase 2). (2) Thingiverse continua sem busca automática (`api.thingiverse.com` exige
+App Token estático, sem OAuth de usuário final) — revisitar quando alguém gerar o token (questão
+34 do ROADMAP)
+**Blockers**: nenhum
+**Uncommitted**: `.specs/STATE.md` (esta atualização)
+**Branch**: feat/phase-14-model-metadata
+
+## Handoff anterior (Fase 13)
+
 **Feature**: phase-13-catalog - concluída (Verifier PASS na rodada 2, `validate_verification.py` exit 0)
 **Where**: 53 checks em 3 commits (`76cf572` API, `c614ed6` web, `d0ccf1c` prova do `PricingError`). A rodada 1 reprovou C31 (d), cuja redação contradizia o AC 24; o usuário aprovou reescrever (d) e acrescentar C31 (e) e C53. Rodada 1 em `verification-history.md`
 **Next step**: push e PR da branch, quando o usuário pedir; depois a Fase 14 (metadados do modelo por URL)
