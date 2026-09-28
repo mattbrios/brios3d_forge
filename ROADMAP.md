@@ -462,21 +462,23 @@ sem `@page size` fixo, então a mesma página serve A4 e térmica (questão aber
 **Dependências:** Fase 13.
 
 **Tarefas:**
-- [ ] Interface `ModelMetadataProvider` (adaptador) com uma implementação por plataforma: Printables, MakerWorld e Thingiverse. Cada uma devolve título, URL da imagem principal, designer, licença e se a licença permite uso comercial. A do MakerWorld reaproveita o `MakerWorldClient` da Fase 2
-- [ ] Buscar os metadados pela API pública da plataforma quando houver, ou pelas tags Open Graph/JSON-LD da página. Timeout, limite de tamanho da resposta e só HTTPS para os domínios permitidos (nada de seguir redirecionamento para outro host)
-- [ ] Mapear as licenças de cada plataforma (Creative Commons, "Standard Digital File License" do MakerWorld etc.) para um valor normalizado e para a flag "permite uso comercial"
-- [ ] `POST /products/model-metadata` recebendo a URL e devolvendo os metadados sem gravar nada, para pré-visualizar no formulário
-- [ ] Gravar os metadados no produto ao salvar, com a data da busca. A exibição usa os dados gravados, sem buscar de novo a cada acesso
-- [ ] Ação "atualizar metadados" no produto, mostrando o que mudou (principalmente a licença) antes de gravar
-- [ ] Quando a busca falhar (página fora do ar, bloqueio, formato mudou), retornar `{ error }` claro e permitir o preenchimento manual
-- [ ] Web: campo de URL no formulário do produto com pré-visualização de imagem, título e licença; imagem e licença na lista e no detalhe do produto
-- [ ] Testes: parsers de cada plataforma com respostas HTML/JSON salvas como fixture (sem acesso à rede na CI), validação de domínio, mapeamento de licenças e falha da busca
+- [x] Interface `ModelMetadataProvider` (adaptador) com uma implementação por plataforma: Printables, MakerWorld e Thingiverse. Cada uma devolve título, URL da imagem principal, designer, licença e se a licença permite uso comercial. A do MakerWorld reaproveita o `MakerWorldClient` da Fase 2 — sem uma interface `ModelMetadataProvider` comum: `PrintablesClient` (novo, `node:https`) e `MakerWorldClient` (Fase 2, reaproveitado via `PrintProfilesModule.exports`) continuam com a interface própria de cada um (`fetchModel`/`fetchDesign`), e o `ModelMetadataService` decide a plataforma e chama o client certo. O Thingiverse não ganhou implementação: ver "Fica para depois" abaixo
+- [x] Buscar os metadados pela API pública da plataforma quando houver, ou pelas tags Open Graph/JSON-LD da página. Timeout, limite de tamanho da resposta e só HTTPS para os domínios permitidos (nada de seguir redirecionamento para outro host) — Printables via `https://api.printables.com/graphql/` (verificada ao vivo, sem autenticação); nenhuma plataforma precisou do caminho Open Graph/JSON-LD
+- [x] Mapear as licenças de cada plataforma (Creative Commons, "Standard Digital File License" do MakerWorld etc.) para um valor normalizado e para a flag "permite uso comercial"
+- [x] `POST /products/model-metadata` recebendo a URL e devolvendo os metadados sem gravar nada, para pré-visualizar no formulário
+- [x] Gravar os metadados no produto ao salvar, com a data da busca. A exibição usa os dados gravados, sem buscar de novo a cada acesso — decisão do usuário nesta fase: `modelMetadataFetchedAt` só é gravado por `.../refresh` (nunca por `POST /products`), porque o preview e o "salvar" são chamadas HTTP separadas e o cliente poderia editar os campos entre uma e outra; os metadados em si (título, imagem etc.) continuam gravados na criação, como já era na Fase 13
+- [x] Ação "atualizar metadados" no produto, mostrando o que mudou (principalmente a licença) antes de gravar
+- [x] Quando a busca falhar (página fora do ar, bloqueio, formato mudou), retornar `{ error }` claro e permitir o preenchimento manual
+- [x] Web: campo de URL no formulário do produto com pré-visualização de imagem, título e licença; imagem e licença na lista e no detalhe do produto — a lista e o detalhe já mostravam isso desde a Fase 13 (`LicenseNotice`); esta fase adicionou o botão "Buscar metadados" ao formulário e "Atualizar metadados" ao detalhe
+- [x] Testes: parsers de cada plataforma com respostas HTML/JSON salvas como fixture (sem acesso à rede na CI), validação de domínio, mapeamento de licenças e falha da busca — Printables usa um servidor HTTP local (mesmo padrão do `HttpMakerWorldClient`) em vez de fixture de arquivo; MakerWorld reaproveita a fixture já existente da Fase 2
 
 **Critérios de aceite:**
-- Colar uma URL de cada plataforma preenche imagem, título e licença no formulário
+- Colar uma URL de cada plataforma preenche imagem, título e licença no formulário — Thingiverse fica fora (ver "Fica para depois")
 - Um modelo com licença não comercial ativa o aviso da Fase 13 automaticamente
-- Uma falha na busca mostra a mensagem de erro e deixa preencher à mão (Playwright, com os estados de carregamento, erro e vazio)
+- Uma falha na busca mostra a mensagem de erro e deixa preencher à mão (Playwright, com os estados de carregamento, erro e vazio) — validado com Playwright MCP contra o app em docker em 2026-09-28
 - Os testes rodam sem acesso à internet
+
+**Fica para depois:** busca automática de metadados no Thingiverse. A API oficial (`api.thingiverse.com`) responde `401` sem token, exige registrar um app no Thingiverse Developer Portal e gerar um App Token estático manualmente (sem fluxo OAuth de usuário final); o site também não carrega dados do modelo no HTML inicial (Next.js client-side), então não há Open Graph/JSON-LD como alternativa. `POST /products/model-metadata` e `.../refresh` respondem `400` para URLs do Thingiverse, e o preenchimento manual (Fase 13) continua disponível. Revisitar quando alguém gerar o token (questão 34 do ROADMAP).
 
 **Riscos ou observações:** as plataformas não têm um contrato estável para isso. A página do MakerWorld fica atrás do Cloudflare, mas a API JSON usada na Fase 2 respondia sem bloqueio em 2026-09-21. A API do Thingiverse exige token (se for usada, a variável vai para o `.env.example`). A imagem é exibida pela URL da plataforma; se o hotlink for bloqueado, será preciso guardar uma cópia (veja "Questões em aberto").
 

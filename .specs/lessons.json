@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 47,
+  "next_id": 48,
   "lessons": [
     {
       "id": "L-001",
@@ -832,6 +832,24 @@
       ],
       "created": "2026-09-25T23:47:19Z",
       "last_seen": "2026-09-25T23:47:19Z"
+    },
+    {
+      "id": "L-047",
+      "key": "gate_fail::when a check s proof is a t filter over it each cases use a substring that literally appears in the rendered test name e g the shared prefix license c11 not a paraphrase like permissive a non matching filter exits 0 with 0 tests run which reads as a pass",
+      "text": "When a check's proof is a -t filter over it.each cases, use a substring that literally appears in the rendered test name (e.g. the shared prefix 'license C11'), not a paraphrase like 'permissive' - a non-matching filter exits 0 with 0 tests run, which reads as a pass.",
+      "signal": "gate_fail",
+      "scope": "api/src/modules/products/license-normalization.spec.ts",
+      "status": "candidate",
+      "features": [
+        "phase-14-model-metadata"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "checks.md C11/C12 (api/src/modules/products/license-normalization.spec.ts)"
+      ],
+      "created": "2026-09-28T12:35:03Z",
+      "last_seen": "2026-09-28T12:35:03Z"
     }
   ]
 }
