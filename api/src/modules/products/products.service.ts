@@ -15,6 +15,7 @@ import { ProductVariantMaterial } from './entities/product-variant-material.enti
 import { ProductVariantSupply } from './entities/product-variant-supply.entity.js';
 import { ProductVariant } from './entities/product-variant.entity.js';
 import { Product } from './entities/product.entity.js';
+import { ModelMetadataService } from './model-metadata.service.js';
 import { canonicalModelUrl, parseModelUrl } from './model-url.js';
 import {
   DEFAULT_PAGE,
@@ -53,6 +54,7 @@ export class ProductsService {
     private readonly materials: MaterialsService,
     private readonly printers: PrintersService,
     private readonly inventory: InventoryService,
+    private readonly modelMetadata: ModelMetadataService,
   ) {}
 
   async list(query: ListProductsDto): Promise<ListProductsResponse> {
@@ -208,6 +210,25 @@ export class ProductsService {
       throw conflictOr(error, DUPLICATE_VARIANT_NAME);
     }
     return this.loadVariant(variantId);
+  }
+
+  // S3 (AC 12-17): busca os metadados atuais e sobrescreve as colunas de metadado do produto.
+  // Falha upstream (400/404/502) não altera nenhum campo (AC 14, AC 15) porque a busca acontece
+  // antes de qualquer escrita.
+  async refreshMetadata(id: string): Promise<ProductResponse> {
+    const product = await this.products.findOne({ where: { id } });
+    if (!product) {
+      throw new NotFoundException(PRODUCT_NOT_FOUND);
+    }
+    const preview = await this.modelMetadata.fetchByUrl(product.modelUrl);
+    product.modelTitle = preview.title;
+    product.modelImageUrl = preview.imageUrl;
+    product.modelDesigner = preview.designer;
+    product.modelLicense = preview.license;
+    product.commercialUseAllowed = preview.commercialUseAllowed;
+    product.modelMetadataFetchedAt = new Date();
+    await this.products.save(product);
+    return this.getById(id);
   }
 
   private async assertProductExists(productId: string): Promise<void> {
