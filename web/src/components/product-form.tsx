@@ -1,8 +1,9 @@
 "use client";
 
 import { type FormEvent, useState } from "react";
+import { Download } from "lucide-react";
 import { ApiError, apiFetch } from "@/lib/api";
-import type { Product, ProductBody, ProductSummary } from "@/lib/products";
+import type { ModelMetadataPreview, Product, ProductBody, ProductSummary } from "@/lib/products";
 import { Button } from "./ui/button";
 import { Alert } from "./ui/feedback";
 import { Field, Input, Select } from "./ui/form";
@@ -48,8 +49,12 @@ function bodyOf(values: Values): ProductBody {
   };
 }
 
-// Cadastro e edição do produto (Fase 13). Os metadados do modelo são digitados; a Fase 14 os
-// buscará pela URL.
+function messageOf(error: unknown): string {
+  return error instanceof ApiError ? error.message : "Não foi possível conectar à API";
+}
+
+// Cadastro e edição do produto (Fase 13). Fase 14 (AC 18-20): "Buscar metadados" chama o
+// preview e preenche os campos abaixo, sem gravar nada até "Salvar" ser acionado.
 export function ProductForm({
   product,
   onSaved,
@@ -63,9 +68,37 @@ export function ProductForm({
   const [values, setValues] = useState<Values>(() => valuesOf(product));
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fetchingMetadata, setFetchingMetadata] = useState(false);
+  const [metadataError, setMetadataError] = useState<string | null>(null);
 
   const set = (key: keyof Values) => (event: { target: { value: string } }) =>
     setValues((current) => ({ ...current, [key]: event.target.value }));
+
+  async function fetchMetadata() {
+    setFetchingMetadata(true);
+    setMetadataError(null);
+    try {
+      const preview = await apiFetch<ModelMetadataPreview>("/products/model-metadata", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ modelUrl: values.modelUrl }),
+      });
+      setValues((current) => ({
+        ...current,
+        modelTitle: preview.title ?? "",
+        modelImageUrl: preview.imageUrl ?? "",
+        modelDesigner: preview.designer ?? "",
+        modelLicense: preview.license ?? "",
+        commercialUse:
+          preview.commercialUseAllowed === true ? "true" : preview.commercialUseAllowed === false ? "false" : "",
+      }));
+    } catch (cause) {
+      // Os campos ficam como estão, editáveis à mão (AC 20).
+      setMetadataError(messageOf(cause));
+    } finally {
+      setFetchingMetadata(false);
+    }
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -81,7 +114,7 @@ export function ProductForm({
       onSaved(saved);
     } catch (cause) {
       // Os campos ficam como estão para o usuário corrigir (erro ao salvar).
-      setError(cause instanceof ApiError ? cause.message : "Não foi possível conectar à API");
+      setError(messageOf(cause));
     } finally {
       setSubmitting(false);
     }
@@ -93,8 +126,26 @@ export function ProductForm({
         <Field label="Nome">
           <Input value={values.name} onChange={set("name")} required />
         </Field>
-        <Field label="URL do modelo" hint="Printables, MakerWorld ou Thingiverse">
-          <Input type="url" value={values.modelUrl} onChange={set("modelUrl")} required />
+        <Field label="URL do modelo" hint="Printables, MakerWorld ou Thingiverse" style={{ gridColumn: "span 2" }}>
+          <div className="flex flex-wrap items-end gap-2">
+            <Input
+              type="url"
+              value={values.modelUrl}
+              onChange={set("modelUrl")}
+              required
+              style={{ flex: "1 1 220px" }}
+            />
+            <Button
+              type="button"
+              variant="secondary"
+              icon={Download}
+              loading={fetchingMetadata}
+              onClick={() => void fetchMetadata()}
+              disabled={values.modelUrl.trim() === ""}
+            >
+              Buscar metadados
+            </Button>
+          </div>
         </Field>
         <Field label="Título do modelo">
           <Input value={values.modelTitle} onChange={set("modelTitle")} />
@@ -119,6 +170,24 @@ export function ProductForm({
           <Input value={values.description} onChange={set("description")} />
         </Field>
       </div>
+      {fetchingMetadata && (
+        <p role="status" className="bf-loading" style={{ margin: 0 }}>
+          Buscando metadados…
+        </p>
+      )}
+      {metadataError && (
+        <Alert tone="danger" role="alert">
+          {metadataError}
+        </Alert>
+      )}
+      {values.modelImageUrl && (
+        // eslint-disable-next-line @next/next/no-img-element -- imagem remota do modelo (preview)
+        <img
+          src={values.modelImageUrl}
+          alt=""
+          style={{ width: 96, height: 96, objectFit: "cover", borderRadius: 10 }}
+        />
+      )}
       {error && (
         <Alert tone="danger" role="alert">
           {error}

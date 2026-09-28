@@ -290,6 +290,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: checks.md C31 (d), product-pricing.service.ts:61 (api)
 - last seen: 2026-09-25T23:47:19Z
 
+### L-047 - When a check's proof is a -t filter over it.each cases, use a substring that literally appears in the rendered test name (e.g. the shared prefix 'license C11'), not a paraphrase like 'permissive' - a non-matching filter exits 0 with 0 tests run, which reads as a pass.
+- signal: `gate_fail` · recurrence: 1 feature(s) · scope: `api/src/modules/products/license-normalization.spec.ts` · harmful: 0
+- features: phase-14-model-metadata
+- evidence: checks.md C11/C12 (api/src/modules/products/license-normalization.spec.ts)
+- last seen: 2026-09-28T12:35:03Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

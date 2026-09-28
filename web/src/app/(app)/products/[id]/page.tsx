@@ -6,6 +6,7 @@ import { CostBreakdown } from "@/components/cost-breakdown";
 import { ConfirmDialog } from "@/components/crud/confirm-dialog";
 import { LicenseNotice } from "@/components/license-notice";
 import { ProductForm } from "@/components/product-form";
+import { ProductMetadataRefresh } from "@/components/product-metadata-refresh";
 import { ProductVariantEditor } from "@/components/product-variant-editor";
 import { ActiveBadge, Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -179,6 +180,7 @@ function ProductDetailContent({ id }: { id: string }) {
               <Button size="sm" variant="secondary" icon={Pencil} onClick={() => setEditingProduct(true)}>
                 Editar
               </Button>
+              <ProductMetadataRefresh product={product} onUpdated={() => reload()} />
               <Button size="sm" variant="secondary" icon={Power} onClick={() => setConfirmTarget({ kind: "product" })}>
                 {product.active ? "Desativar" : "Reativar"}
               </Button>

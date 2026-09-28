@@ -7,6 +7,7 @@ import { ProductVariantMaterial } from './entities/product-variant-material.enti
 import { ProductVariantSupply } from './entities/product-variant-supply.entity.js';
 import { ProductVariant } from './entities/product-variant.entity.js';
 import type { Product } from './entities/product.entity.js';
+import type { ModelMetadataService } from './model-metadata.service.js';
 import { ProductsService } from './products.service.js';
 
 const PRODUCT_ID = 'b0000000-0000-0000-0000-000000000001';
@@ -21,6 +22,7 @@ function uniqueViolation(): QueryFailedError {
 const materials = { getById: async () => ({}) } as unknown as MaterialsService;
 const printers = { getById: async () => ({}) } as unknown as PrintersService;
 const inventory = { getItemById: async () => ({}) } as unknown as InventoryService;
+const modelMetadata = { fetchByUrl: async () => ({}) } as unknown as ModelMetadataService;
 
 describe('ProductsService', () => {
   describe('maps a unique violation on the model to 409 and rethrows anything else', () => {
@@ -32,7 +34,14 @@ describe('ProductsService', () => {
         },
         findOne: async () => ({ id: PRODUCT_ID, name: 'Estrela do mar' }),
       } as unknown as Repository<Product>;
-      return new ProductsService(products, {} as Repository<ProductVariant>, materials, printers, inventory);
+      return new ProductsService(
+        products,
+        {} as Repository<ProductVariant>,
+        materials,
+        printers,
+        inventory,
+        modelMetadata,
+      );
     }
 
     it('create: 23505 becomes ConflictException with the duplicate model message', async () => {
@@ -126,7 +135,7 @@ describe('ProductsService', () => {
         }),
       } as unknown as Repository<ProductVariant>;
       const products = { exists: async () => true } as unknown as Repository<Product>;
-      const service = new ProductsService(products, variants, materials, printers, inventory);
+      const service = new ProductsService(products, variants, materials, printers, inventory, modelMetadata);
       return { service, calls };
     }
 

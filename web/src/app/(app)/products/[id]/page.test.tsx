@@ -222,6 +222,33 @@ describe("Product detail page", () => {
     expect(await screen.findByText("Licença não permite uso comercial")).toBeTruthy();
   });
 
+  // C25: hides refresh button for thingiverse product.
+  it("hides refresh button for thingiverse product", async () => {
+    stubApi({
+      "/auth/me": ok(ADMIN_ME),
+      "/products/p1": ok({ ...product([]), modelPlatform: "thingiverse" }),
+      "/products/p1/pricing": ok({ variants: [] }),
+    });
+    renderPage();
+    await screen.findByText("Estrela do mar");
+    expect(screen.queryByRole("button", { name: "Atualizar metadados" })).toBeNull();
+  });
+
+  it("shows the refresh button for printables and makerworld products", async () => {
+    for (const platform of ["printables", "makerworld"] as const) {
+      stubApi({
+        "/auth/me": ok(ADMIN_ME),
+        "/products/p1": ok({ ...product([]), modelPlatform: platform }),
+        "/products/p1/pricing": ok({ variants: [] }),
+      });
+      renderPage();
+      await screen.findByText("Estrela do mar");
+      expect(screen.getByRole("button", { name: "Atualizar metadados" }), platform).toBeTruthy();
+      cleanup();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("only admin sees variant actions and deactivation confirms", async () => {
     for (const me of [PRODUCTION_ME, SALES_ME]) {
       stubApi({
