@@ -31,7 +31,6 @@ export interface RollResponse {
   batch: string | null;
   purchaseDate: string | null;
   openedAt: Date | null;
-  lastDriedAt: Date | null;
   discardedAt: Date | null;
   location: string | null;
   acquisitionCostCents: number;
@@ -132,7 +131,6 @@ export function toRollResponse(roll: FilamentRoll): RollResponse {
     batch: roll.batch,
     purchaseDate: roll.purchaseDate,
     openedAt: roll.openedAt,
-    lastDriedAt: roll.lastDriedAt,
     discardedAt: roll.discardedAt,
     location: roll.location,
     acquisitionCostCents: roll.acquisitionCostCents,

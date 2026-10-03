@@ -7,9 +7,6 @@ export interface Material {
   densityGCm3: number;
   nozzleTempC: number;
   bedTempC: number;
-  needsDrying: boolean;
-  dryingTemperatureC: number | null;
-  dryingHours: number | null;
   active: boolean;
   // Fase 11: piso de reposição em gramas, somando os rolos; null é "sem mínimo".
   minimumStockGrams: number | null;

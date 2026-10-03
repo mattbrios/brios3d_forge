@@ -20,7 +20,7 @@ const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? val
 
 // Campos opcionais (PATCH); nunca hourmeterHours (AC 20, fora do DTO -> forbidNonWhitelisted).
 // A obrigatoriedade condicional de amsSlots depende do valor final (campo enviado ou já
-// gravado), então é decidida no serviço, como o needsDrying de materials (AC 19).
+// gravado), então é decidida no serviço (AC 19).
 export class UpdatePrinterDto {
   @IsOptional()
   @Transform(trim)

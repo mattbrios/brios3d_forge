@@ -19,7 +19,7 @@ Sistema de gestão para uma empresa de **impressões 3D personalizadas em FDM (f
 ## Módulos do sistema
 
 ### 1. Cadastros base (fundação)
-- **Materiais:** tipo (PLA, PETG, ABS, ASA, TPU, Nylon…), marca, cor, densidade (g/cm³), temperaturas, necessidade de secagem
+- **Materiais:** tipo (PLA, PETG, ABS, ASA, TPU, Nylon…), marca, cor, densidade (g/cm³), temperaturas de bico e de mesa
 - **Impressoras:** modelo, custo de aquisição, vida útil estimada (horas), potência média (W), horímetro, bicos instalados, AMS/multicor
 - **Clientes e fornecedores**
 - **Configurações globais:** tarifa de energia (R$/kWh), valor da hora de trabalho, margem padrão, % de falha, % de purga/perda, impostos e taxas por canal de venda
@@ -35,10 +35,11 @@ Tipos de item:
 | **Produtos acabados** | peças de catálogo prontas | Estoque de pronta-entrega |
 
 Funcionalidades:
-- **Rastreio por rolo:** peso inicial, peso restante, **tara do carretel** (ajuste de saldo pesando na balança), lote, data de abertura, última secagem, localização. Etiqueta com QR code no rolo.
+- **Rastreio por rolo:** peso inicial, peso restante, **tara do carretel** (ajuste de saldo pesando na balança), lote, data de abertura, localização. Etiqueta com QR code no rolo.
 - **Baixa automática** ao concluir a impressão, usando os gramas do G-code, **mais** baixa por falha ou descarte
 - **Custo médio ponderado** por material
 - **Estoque mínimo com alertas**
+- **Secagem de filamento não é registrada:** nem a receita no material (se precisa secar, temperatura, horas), nem a data de secagem do rolo
 - **Histórico de movimentações:** entrada, consumo, perda, ajuste de inventário
 
 ### 3. Compras

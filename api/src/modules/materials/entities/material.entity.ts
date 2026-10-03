@@ -27,16 +27,6 @@ export class Material {
   @Column({ name: 'bed_temp_c', type: 'double precision' })
   bedTempC: number;
 
-  @Column({ name: 'needs_drying' })
-  needsDrying: boolean;
-
-  // null quando needsDrying é false (AC 5, invariante mantido também no PATCH).
-  @Column({ name: 'drying_temperature_c', type: 'double precision', nullable: true })
-  dryingTemperatureC: number | null;
-
-  @Column({ name: 'drying_hours', type: 'double precision', nullable: true })
-  dryingHours: number | null;
-
   @Column({ default: true })
   active: boolean;
 

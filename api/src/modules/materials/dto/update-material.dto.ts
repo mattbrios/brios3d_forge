@@ -13,9 +13,7 @@ import {
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
 
-// Campos opcionais (PATCH); a obrigatoriedade condicional de secagem depende do valor final
-// (campo enviado ou já gravado), então é decidida no serviço, como o combined-rate de
-// sales-channels (AC 16).
+// Campos opcionais (PATCH).
 export class UpdateMaterialDto {
   @IsOptional()
   @Transform(trim)
@@ -55,21 +53,6 @@ export class UpdateMaterialDto {
   @Min(0)
   @Max(150)
   bedTempC?: number;
-
-  @IsOptional()
-  @IsBoolean()
-  needsDrying?: boolean;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @Max(120)
-  dryingTemperatureC?: number;
-
-  @IsOptional()
-  @IsNumber()
-  @IsPositive()
-  dryingHours?: number;
 
   @IsOptional()
   @IsBoolean()

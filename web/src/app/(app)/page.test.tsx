@@ -21,9 +21,6 @@ const MATERIAL = {
   densityGCm3: 1.24,
   nozzleTempC: 215,
   bedTempC: 60,
-  needsDrying: false,
-  dryingTemperatureC: null,
-  dryingHours: null,
   active: true,
   minimumStockGrams: 1000,
 };

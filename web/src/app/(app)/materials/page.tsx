@@ -7,8 +7,8 @@ import { EntityForm, type FieldConfig } from "@/components/crud/entity-form";
 import { ApiError, apiFetch } from "@/lib/api";
 import type { AuthUser } from "@/lib/auth";
 import type { Material, MaterialsPage } from "@/lib/materials";
-import { Droplet, Layers, Pencil, Plus, Power, Search } from "lucide-react";
-import { ActiveBadge, Badge } from "@/components/ui/badge";
+import { Layers, Pencil, Plus, Power, Search } from "lucide-react";
+import { ActiveBadge } from "@/components/ui/badge";
 import { IconButton } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState, Loading, PageError } from "@/components/ui/feedback";
@@ -26,9 +26,6 @@ interface MaterialFormValues {
   densityGCm3: string;
   nozzleTempC: string;
   bedTempC: string;
-  needsDrying: boolean;
-  dryingTemperatureC: string;
-  dryingHours: string;
   minimumStockGrams: string;
 }
 
@@ -39,9 +36,6 @@ const BLANK_FORM: MaterialFormValues = {
   densityGCm3: "",
   nozzleTempC: "",
   bedTempC: "",
-  needsDrying: false,
-  dryingTemperatureC: "",
-  dryingHours: "",
   minimumStockGrams: "",
 };
 
@@ -52,9 +46,6 @@ const FORM_FIELDS: FieldConfig<MaterialFormValues>[] = [
   { key: "densityGCm3", label: "Densidade (g/cm³)", type: "number" },
   { key: "nozzleTempC", label: "Temperatura do bico (°C)", type: "number" },
   { key: "bedTempC", label: "Temperatura da mesa (°C)", type: "number" },
-  { key: "needsDrying", label: "Precisa secar", type: "checkbox" },
-  { key: "dryingTemperatureC", label: "Temperatura de secagem (°C)", type: "number" },
-  { key: "dryingHours", label: "Horas de secagem", type: "number" },
   // Fase 11: piso opcional; campo vazio limpa a política (envia null).
   { key: "minimumStockGrams", label: "Estoque mínimo (g, opcional)", type: "number" },
 ];
@@ -72,18 +63,6 @@ const COLUMNS: Column<Material>[] = [
     numeric: true,
     render: (row) => (row.minimumStockGrams === null ? "—" : `${row.minimumStockGrams} g`),
   },
-  {
-    key: "needsDrying",
-    label: "Secagem",
-    render: (row) =>
-      row.needsDrying ? (
-        <Badge tone="warning" icon={Droplet} size="sm">
-          {row.dryingTemperatureC} °C · {row.dryingHours} h
-        </Badge>
-      ) : (
-        <span className="bf-muted">—</span>
-      ),
-  },
   { key: "active", label: "Situação", render: (row) => <ActiveBadge active={row.active} /> },
 ];
 
@@ -99,12 +78,7 @@ function buildBody(values: MaterialFormValues): Record<string, unknown> {
     densityGCm3: Number(values.densityGCm3),
     nozzleTempC: Number(values.nozzleTempC),
     bedTempC: Number(values.bedTempC),
-    needsDrying: values.needsDrying,
   };
-  if (values.needsDrying) {
-    body.dryingTemperatureC = Number(values.dryingTemperatureC);
-    body.dryingHours = Number(values.dryingHours);
-  }
   // Campo vazio é "sem mínimo": `null` explícito, que é o que limpa a política no PATCH.
   body.minimumStockGrams = values.minimumStockGrams === "" ? null : Number(values.minimumStockGrams);
   return body;
@@ -118,9 +92,6 @@ function formFromMaterial(material: Material): MaterialFormValues {
     densityGCm3: String(material.densityGCm3),
     nozzleTempC: String(material.nozzleTempC),
     bedTempC: String(material.bedTempC),
-    needsDrying: material.needsDrying,
-    dryingTemperatureC: material.dryingTemperatureC !== null ? String(material.dryingTemperatureC) : "",
-    dryingHours: material.dryingHours !== null ? String(material.dryingHours) : "",
     minimumStockGrams: material.minimumStockGrams !== null ? String(material.minimumStockGrams) : "",
   };
 }

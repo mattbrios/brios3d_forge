@@ -23,7 +23,6 @@ const VALID_PLA = {
   densityGCm3: 1.24,
   nozzleTempC: 210,
   bedTempC: 60,
-  needsDrying: false,
 };
 
 const VALID_ITEM = { category: 'insumo' as const, name: 'Ímã 6x3', unitOfMeasure: 'un' };

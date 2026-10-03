@@ -59,3 +59,17 @@ Vale para toda linha acima:
 - Se a mudança toca em telas, valide no final com o Playwright MCP (configurado em `.mcp.json`): abra as páginas afetadas no app rodando e confira o fluxo alterado, incluindo os estados de carregamento, erro e vazio.
 - Não faça commit/push nem ações destrutivas sem pedido explícito.
 - Toda vez que um item do roadmap estiver completo, marcar ele como done no arquivo ROADMAP.md.
+
+## Agent skills
+
+### Issue tracker
+
+Issues vivem no GitHub Issues de `mattbrios/brios3d_forge` (via `gh`). Veja `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Os cinco labels canônicos padrão (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). Veja `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `CONTEXT.md` na raiz; decisões `AD-xxx` em `.specs/STATE.md`. Veja `docs/agents/domain.md`.

@@ -9,11 +9,9 @@ import type { RollDetail } from "@/lib/inventory";
 import type { Material, MaterialsPage } from "@/lib/materials";
 import {
   CircleMinus,
-  Droplet,
   History,
   PackageOpen,
   QrCode,
-  Thermometer,
   Trash2,
   Weight,
 } from "lucide-react";
@@ -75,7 +73,6 @@ function RollDetailContent({ id }: { id: string }) {
   const [movementError, setMovementError] = useState<string | null>(null);
 
   const [openSubmitting, setOpenSubmitting] = useState(false);
-  const [drySubmitting, setDrySubmitting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
@@ -161,19 +158,6 @@ function RollDetailContent({ id }: { id: string }) {
       setActionError(messageOf(error));
     } finally {
       setOpenSubmitting(false);
-    }
-  }
-
-  async function submitDry() {
-    setDrySubmitting(true);
-    setActionError(null);
-    try {
-      await apiFetch(`/inventory/rolls/${id}/dry`, { method: "PATCH" });
-      retry();
-    } catch (error) {
-      setActionError(messageOf(error));
-    } finally {
-      setDrySubmitting(false);
     }
   }
 
@@ -325,7 +309,7 @@ function RollDetailContent({ id }: { id: string }) {
             </Card>
           )}
 
-          <Card title="Abertura e secagem" icon={Droplet}>
+          <Card title="Abertura" icon={PackageOpen}>
             <div className="flex flex-wrap gap-2">
               <Button
                 variant="secondary"
@@ -334,9 +318,6 @@ function RollDetailContent({ id }: { id: string }) {
                 disabled={openSubmitting || roll.openedAt !== null}
               >
                 {roll.openedAt !== null ? "Já aberto" : "Abrir rolo"}
-              </Button>
-              <Button variant="secondary" icon={Thermometer} onClick={() => void submitDry()} disabled={drySubmitting}>
-                Registrar secagem
               </Button>
             </div>
             {!discarded && (

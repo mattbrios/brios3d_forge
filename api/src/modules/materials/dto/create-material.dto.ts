@@ -1,16 +1,5 @@
 import { Transform } from 'class-transformer';
-import {
-  IsBoolean,
-  IsNotEmpty,
-  IsNumber,
-  IsOptional,
-  IsPositive,
-  IsString,
-  Length,
-  Max,
-  Min,
-  ValidateIf,
-} from 'class-validator';
+import { IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString, Length, Max, Min } from 'class-validator';
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
 
@@ -50,23 +39,6 @@ export class CreateMaterialDto {
   @Min(0)
   @Max(150)
   bedTempC: number;
-
-  @IsBoolean()
-  needsDrying: boolean;
-
-  // Obrigatório e em [0, 120] °C só quando needsDrying é true (AC 4); ignorado e gravado null
-  // quando needsDrying é false (AC 5), decisão do serviço.
-  @ValidateIf((dto: CreateMaterialDto) => dto.needsDrying === true)
-  @IsNumber()
-  @Min(0)
-  @Max(120)
-  dryingTemperatureC?: number;
-
-  // Obrigatório e > 0 só quando needsDrying é true (AC 4).
-  @ValidateIf((dto: CreateMaterialDto) => dto.needsDrying === true)
-  @IsNumber()
-  @IsPositive()
-  dryingHours?: number;
 
   // Fase 11, door 1: piso opcional em gramas; omitir grava `null` ("sem política de reposição").
   @IsOptional()

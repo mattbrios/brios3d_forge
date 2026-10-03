@@ -12,7 +12,6 @@ export interface FilamentRoll {
   batch: string | null;
   purchaseDate: string | null;
   openedAt: string | null;
-  lastDriedAt: string | null;
   discardedAt: string | null;
   location: string | null;
   acquisitionCostCents: number;

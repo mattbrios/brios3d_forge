@@ -58,3 +58,39 @@ jobs:
       - run: npm --prefix web run lint
       - run: npm --prefix web run test
       - run: npm --prefix web run build
+
+  # Publica a API no servidor depois que o job `api` passa num push na main.
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: api
+    runs-on: ubuntu-latest
+    # Um deploy por vez; um push novo espera o anterior terminar.
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    steps:
+      - name: Configure SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
+      - name: Deploy
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        # Avança a main do servidor exatamente até o commit testado (nunca além dele).
+        # O serviço `migrate` roda as migrations antes de a API nova subir.
+        run: |
+          ssh -o StrictHostKeyChecking=yes "$DEPLOY_USER@$DEPLOY_HOST" bash -s -- "$GITHUB_SHA" <<'SCRIPT'
+          set -euo pipefail
+          cd ~/brios3d_forge
+          git fetch --quiet origin main
+          git merge --ff-only "$1"
+          cd deploy
+          docker compose -f docker-compose.prod.yml up -d --build --wait
+          docker image prune -f
+          SCRIPT

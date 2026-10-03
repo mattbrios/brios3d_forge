@@ -293,17 +293,6 @@ export class InventoryService {
     return toRollResponse(roll);
   }
 
-  async dry(id: string): Promise<RollResponse> {
-    const roll = await this.rolls.findOne({ where: { id } });
-    if (!roll) {
-      throw new NotFoundException(ROLL_NOT_FOUND);
-    }
-    // Sempre avança (AC 23): um rolo pode secar mais de uma vez.
-    roll.lastDriedAt = new Date();
-    await this.rolls.save(roll);
-    return toRollResponse(roll);
-  }
-
   async materialsSummary(query: MaterialsSummaryDto): Promise<MaterialsSummaryResponse> {
     const qb = this.rolls
       .createQueryBuilder('roll')
