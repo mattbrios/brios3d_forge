@@ -1,0 +1,96 @@
+# Produção numa única máquina (Lightsail/EC2): Postgres + API + Caddy (HTTPS).
+# Rode a partir de deploy/: docker compose -f docker-compose.prod.yml up -d --build
+# As variáveis vêm de deploy/.env (copie de deploy/.env.example).
+name: forge
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-api-env: &api-env
+  NODE_ENV: production
+  DB_HOST: db
+  DB_PORT: 5432
+  DB_USER: ${DB_USER:?defina DB_USER}
+  DB_PASSWORD: ${DB_PASSWORD:?defina DB_PASSWORD}
+  DB_NAME: ${DB_NAME:?defina DB_NAME}
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    # Sem "ports": o banco só é acessível pela rede interna do compose.
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    logging: *logging
+
+  # Roda as migrations pendentes e sai; a API só sobe depois que ele termina com sucesso.
+  migrate:
+    image: forge-api:latest
+    build:
+      context: ../api
+      target: prod
+    environment: *api-env
+    command: ["node_modules/.bin/typeorm", "migration:run", "-d", "dist/database/data-source.js"]
+    depends_on:
+      db:
+        condition: service_healthy
+    logging: *logging
+
+  api:
+    image: forge-api:latest
+    restart: unless-stopped
+    environment:
+      <<: *api-env
+      PORT: 3001
+      FRONTEND_URL: ${FRONTEND_URL:?defina FRONTEND_URL}
+      SESSION_COOKIE_SECURE: "true"
+      ADMIN_NAME: ${ADMIN_NAME:-}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 15s
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    logging: *logging
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      API_DOMAIN: ${API_DOMAIN:?defina API_DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+    logging: *logging
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:

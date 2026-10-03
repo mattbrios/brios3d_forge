@@ -1,0 +1,6 @@
+# HTTPS automático (Let's Encrypt) para o domínio da API.
+# O DNS de API_DOMAIN precisa apontar para o IP estático da máquina antes de subir.
+{$API_DOMAIN} {
+	encode gzip
+	reverse_proxy api:3001
+}
