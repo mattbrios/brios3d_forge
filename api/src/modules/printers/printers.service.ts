@@ -84,8 +84,7 @@ export class PrintersService {
         throw new NotFoundException(PRINTER_NOT_FOUND);
       }
 
-      // Valida com o valor final de hasAms/amsSlots, enviado ou já gravado (mesmo padrão do
-      // needsDrying de materials, AC 19).
+      // Valida com o valor final de hasAms/amsSlots, enviado ou já gravado (AC 19).
       const finalHasAms = dto.hasAms ?? printer.hasAms;
       const finalAmsSlots = dto.amsSlots ?? printer.amsSlots ?? undefined;
       if (finalHasAms && (finalAmsSlots === undefined || finalAmsSlots < 1)) {

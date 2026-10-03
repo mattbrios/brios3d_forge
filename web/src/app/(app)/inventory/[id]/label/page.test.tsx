@@ -32,9 +32,6 @@ const MATERIAL: Material = {
   densityGCm3: 1.24,
   nozzleTempC: 210,
   bedTempC: 60,
-  needsDrying: false,
-  dryingTemperatureC: null,
-  dryingHours: null,
   active: true,
   minimumStockGrams: null,
 };
@@ -50,7 +47,6 @@ const ROLL: FilamentRoll = {
   batch: "L-2026-07",
   purchaseDate: "2026-07-14",
   openedAt: null,
-  lastDriedAt: null,
   discardedAt: null,
   location: null,
   acquisitionCostCents: 12000,

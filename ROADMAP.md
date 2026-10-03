@@ -239,7 +239,7 @@ outros papéis (door 1, Fase 4: uma rota sem `@Roles()` é só de admin).
 | `printers` | x | leitura + `PATCH /printers/:id/hourmeter` | leitura |
 | `customers` | x | leitura | x |
 | `suppliers` | x | leitura | leitura |
-| `inventory` | x | leitura + pesagem/baixa/descarte/abertura/secagem do rolo, e consumo/perda/contagem do item (a entrada do item é admin, porque carrega custo). Os alertas de estoque mínimo são leitura dos três papéis; definir o piso é só admin | leitura |
+| `inventory` | x | leitura + pesagem/baixa/descarte/abertura do rolo, e consumo/perda/contagem do item (a entrada do item é admin, porque carrega custo). Os alertas de estoque mínimo são leitura dos três papéis; definir o piso é só admin | leitura |
 | `purchasing` | a definir na Fase 21 | a definir na Fase 21 | a definir na Fase 21 |
 | `products` | x | leitura (lista, detalhe, custo e preço) | leitura (lista, detalhe, custo e preço) |
 | `pricing` | x | x | x |
@@ -285,7 +285,7 @@ público, e `POST /print-profiles/import` está aberto aos três papéis desde e
 **Dependências:** Fase 4.
 
 **Tarefas:**
-- [x] Entidade `Material`: tipo (PLA, PETG, ABS, ASA, TPU, Nylon…), marca, cor, densidade (g/cm³), temperatura de bico e de mesa, precisa de secagem (e parâmetros de secagem, se houver), ativo
+- [x] Entidade `Material`: tipo (PLA, PETG, ABS, ASA, TPU, Nylon…), marca, cor, densidade (g/cm³), temperatura de bico e de mesa, ~~precisa de secagem (e parâmetros de secagem, se houver)~~, ativo. *A secagem saiu do material em 2026-10-03 (AD-030).*
 - [x] CRUD com paginação, busca e filtro por tipo; desativar em vez de apagar quando houver referências
 - [x] Web: componentes reutilizáveis de listagem, formulário e confirmação; tela de materiais
 - [x] Testes unitários e e2e do CRUD, incluindo a validação dos campos
@@ -340,12 +340,12 @@ público, e `POST /print-profiles/import` está aberto aos três papéis desde e
 **Dependências:** Fases 6 e 8.
 
 **Tarefas:**
-- [x] Entidade `FilamentRoll`: material, fornecedor, peso nominal (1 kg, 250 g, 3 kg…), peso inicial, tara do carretel, lote, data de compra, data de abertura, última secagem, localização, custo de aquisição, status (fechado, aberto, vazio, descartado)
+- [x] Entidade `FilamentRoll`: material, fornecedor, peso nominal (1 kg, 250 g, 3 kg…), peso inicial, tara do carretel, lote, data de compra, data de abertura, ~~última secagem~~, localização, custo de aquisição, status (fechado, aberto, vazio, descartado)
 - [x] Entidade `InventoryMovement` (ledger imutável): tipo (entrada, consumo, perda, ajuste de inventário), gramas ou quantidade, custo unitário, referência de origem (job, falha, compra, manual), usuário e data
 - [x] Entrada manual de rolo (a entrada por compra vem na Fase 21)
 - [x] Pesagem: informar o peso bruto na balança, calcular `saldo = bruto − tara` e gerar um movimento de ajuste com a diferença
 - [x] Baixa manual de consumo, perda e descarte
-- [x] Registrar abertura e secagem do rolo
+- [x] Registrar abertura ~~e secagem~~ do rolo. *A secagem do rolo saiu em 2026-10-03 (AD-030).*
 - [x] Custo médio ponderado por material, recalculado a cada entrada e exposto em R$/g
 - [x] Impedir saldo negativo
 - [x] Web: lista de rolos por material (com saldo e filtros), detalhe do rolo com histórico, formulários de entrada, pesagem e baixa
@@ -877,6 +877,7 @@ sem `@page size` fixo, então a mesma página serve A4 e térmica (questão aber
 - **Integração direta com a SEFAZ.** A emissão fiscal é só por API de terceiros.
 - **Integrações sem adaptador.** Qualquer integração externa entra por uma interface isolada.
 - **Upload e armazenamento de STL/3MF no catálogo.** O produto aponta para a URL do modelo no Printables, no MakerWorld ou no Thingiverse.
+- **Secagem de filamento** (AD-030): nem a receita no material (precisa secar, temperatura, horas), nem o registro de secagem do rolo.
 - **Leitura de arquivos G-code/3MF.** Eles podem passar de 200 MB. Os dados de impressão vêm da URL do MakerWorld (Fase 2) ou do preenchimento manual.
 - **Não descritos no CONTEXT e não planejados:** deploy/infra de produção, app mobile, multiempresa. Veja a questão 2.
 

@@ -21,9 +21,6 @@ const MATERIAL_1: Material = {
   densityGCm3: 1.24,
   nozzleTempC: 210,
   bedTempC: 60,
-  needsDrying: false,
-  dryingTemperatureC: null,
-  dryingHours: null,
   active: true,
   minimumStockGrams: null,
 };
@@ -143,6 +140,11 @@ describe("Materials page", () => {
     render(<MaterialsPage />);
     await screen.findByText("PLA");
 
+    // A secagem saiu do material: o formulário não tem mais os três campos.
+    expect(screen.queryByLabelText("Precisa secar")).toBeNull();
+    expect(screen.queryByLabelText("Temperatura de secagem (°C)")).toBeNull();
+    expect(screen.queryByLabelText("Horas de secagem")).toBeNull();
+
     fireEvent.change(screen.getByLabelText("Tipo"), { target: { value: "ABS" } });
     fireEvent.change(screen.getByLabelText("Marca"), { target: { value: "Marca X" } });
     fireEvent.change(screen.getByLabelText("Cor"), { target: { value: "Preto" } });
@@ -169,9 +171,6 @@ describe("Materials page", () => {
           densityGCm3: 1.05,
           nozzleTempC: 240,
           bedTempC: 90,
-          needsDrying: false,
-          dryingTemperatureC: null,
-          dryingHours: null,
           active: true,
           minimumStockGrams: null,
         }),
@@ -202,7 +201,6 @@ describe("Materials page", () => {
       densityGCm3: 1.05,
       nozzleTempC: 240,
       bedTempC: 90,
-      needsDrying: false,
       // Fase 11: campo vazio vira `null` explícito, que é o que limpa a política no PATCH.
       minimumStockGrams: null,
     });

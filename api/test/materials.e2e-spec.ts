@@ -21,7 +21,6 @@ const VALID_PLA = {
   densityGCm3: 1.24,
   nozzleTempC: 210,
   bedTempC: 60,
-  needsDrying: false,
 };
 
 describe('Materials (e2e)', () => {
@@ -118,14 +117,13 @@ describe('Materials (e2e)', () => {
     expect(await countAll()).toBe(0);
   });
 
-  it('rejects invalid drying parameters when needsDrying is true', async () => {
-    const base = { ...VALID_PLA, needsDrying: true };
+  // A secagem saiu do material (RemoveDryingFields): os três campos viraram propriedades não
+  // declaradas, que o ValidationPipe global recusa.
+  it('rejects the removed drying fields on POST', async () => {
     const cases = [
-      { ...base, dryingHours: 4 },
-      { ...base, dryingTemperatureC: -1, dryingHours: 4 },
-      { ...base, dryingTemperatureC: 121, dryingHours: 4 },
-      { ...base, dryingTemperatureC: 60 },
-      { ...base, dryingTemperatureC: 60, dryingHours: 0 },
+      { ...VALID_PLA, needsDrying: false },
+      { ...VALID_PLA, dryingTemperatureC: 60 },
+      { ...VALID_PLA, dryingHours: 4 },
     ];
     for (const body of cases) {
       const response = await createReq(body, adminCookie);
@@ -134,14 +132,12 @@ describe('Materials (e2e)', () => {
     expect(await countAll()).toBe(0);
   });
 
-  it('ignores drying fields when needsDrying is false', async () => {
-    const response = await createReq(
-      { ...VALID_PLA, needsDrying: false, dryingTemperatureC: 60, dryingHours: 4 },
-      adminCookie,
-    );
+  it('a created material has no drying fields in the response', async () => {
+    const response = await createReq(VALID_PLA, adminCookie);
     expect(response.status).toBe(201);
-    expect(response.body.dryingTemperatureC).toBeNull();
-    expect(response.body.dryingHours).toBeNull();
+    expect(Object.keys(response.body as object).sort()).toEqual(
+      ['active', 'bedTempC', 'brand', 'color', 'densityGCm3', 'id', 'minimumStockGrams', 'nozzleTempC', 'type'],
+    );
   });
 
   it('non-admin roles get 403 on POST /materials', async () => {
@@ -285,11 +281,10 @@ describe('Materials (e2e)', () => {
       densityGCm3: 1.24,
       nozzleTempC: 200,
       bedTempC: 60,
-      needsDrying: false,
     });
 
-    // As mesmas faixas do AC 2 (densidade/temperaturas) e do AC 4 (secagem condicional),
-    // agora pelo PATCH (AC 16).
+    // As mesmas faixas do AC 2 (densidade/temperaturas), agora pelo PATCH (AC 16), e os campos
+    // de secagem removidos (RemoveDryingFields), recusados como propriedades não declaradas.
     const cases = [
       { densityGCm3: 15 },
       { densityGCm3: 0 },
@@ -297,10 +292,9 @@ describe('Materials (e2e)', () => {
       { nozzleTempC: 501 },
       { bedTempC: -1 },
       { bedTempC: 151 },
-      { needsDrying: true, dryingHours: 4 },
-      { needsDrying: true, dryingTemperatureC: -1, dryingHours: 4 },
-      { needsDrying: true, dryingTemperatureC: 121, dryingHours: 4 },
-      { needsDrying: true, dryingTemperatureC: 60 },
+      { needsDrying: true },
+      { dryingTemperatureC: 60 },
+      { dryingHours: 4 },
     ];
     for (const body of cases) {
       const response = await patchReq(id, body, adminCookie);
@@ -311,40 +305,18 @@ describe('Materials (e2e)', () => {
       density_g_cm3: number;
       nozzle_temp_c: number;
       bed_temp_c: number;
-      needs_drying: boolean;
     }> = await dataSource.query(
-      'SELECT density_g_cm3, nozzle_temp_c, bed_temp_c, needs_drying FROM materials WHERE id = $1',
+      'SELECT density_g_cm3, nozzle_temp_c, bed_temp_c FROM materials WHERE id = $1',
       [id],
     );
-    expect(row).toEqual({ density_g_cm3: 1.24, nozzle_temp_c: 200, bed_temp_c: 60, needs_drying: false });
+    expect(row).toEqual({ density_g_cm3: 1.24, nozzle_temp_c: 200, bed_temp_c: 60 });
   });
 
-  it('rejects a PATCH that leaves needsDrying true with an existing dryingHours of zero', async () => {
-    // dryingHours: 0 só existe gravado direto (o DTO recusa 0 na entrada); confere que o
-    // serviço revalida o valor final mesmo quando ele vem do registro, não do corpo do PATCH.
-    const id = await createMaterial(dataSource, {
-      type: 'm16b-edge',
-      needsDrying: true,
-      dryingTemperatureC: 60,
-      dryingHours: 0,
-    });
-
-    const response = await patchReq(id, { color: 'Nova Cor' }, adminCookie);
-    expect(response.status).toBe(400);
-
-    const [row]: Array<{ color: string }> = await dataSource.query(
-      'SELECT color FROM materials WHERE id = $1',
-      [id],
-    );
-    expect(row.color).not.toBe('Nova Cor');
-  });
-
-  it('rejects out-of-bounds string lengths and a non-boolean needsDrying', async () => {
+  it('rejects out-of-bounds string lengths', async () => {
     const cases = [
       { ...VALID_PLA, type: 'x'.repeat(41) },
       { ...VALID_PLA, brand: 'x'.repeat(101) },
       { ...VALID_PLA, color: 'x'.repeat(101) },
-      { ...VALID_PLA, needsDrying: 'sim' as unknown as boolean },
     ];
     for (const body of cases) {
       const response = await createReq(body, adminCookie);

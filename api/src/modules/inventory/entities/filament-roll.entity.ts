@@ -56,9 +56,6 @@ export class FilamentRoll {
   @Column({ name: 'opened_at', type: 'timestamptz', nullable: true })
   openedAt: Date | null;
 
-  @Column({ name: 'last_dried_at', type: 'timestamptz', nullable: true })
-  lastDriedAt: Date | null;
-
   @Column({ name: 'discarded_at', type: 'timestamptz', nullable: true })
   discardedAt: Date | null;
 

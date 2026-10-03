@@ -98,10 +98,6 @@ describe('Inventory (e2e)', () => {
     const call = request(server()).patch(`/inventory/rolls/${id}/open`);
     return cookie ? call.set('Cookie', cookie) : call;
   };
-  const dryReq = (id: string, cookie?: string) => {
-    const call = request(server()).patch(`/inventory/rolls/${id}/dry`);
-    return cookie ? call.set('Cookie', cookie) : call;
-  };
   const summaryReq = (query: string, cookie?: string) => {
     const call = request(server()).get(`/inventory/materials-summary${query}`);
     return cookie ? call.set('Cookie', cookie) : call;
@@ -248,7 +244,7 @@ describe('Inventory (e2e)', () => {
     // `minimumStockGrams` entrou na Fase 11 (door 1) e é política de reposição, não saldo nem
     // custo: o door 5 desta fase continua valendo - nenhum campo derivado do estoque mora aqui.
     expect(Object.keys(material as object).sort()).toEqual(
-      ['active', 'bedTempC', 'brand', 'color', 'densityGCm3', 'dryingHours', 'dryingTemperatureC', 'id', 'minimumStockGrams', 'needsDrying', 'nozzleTempC', 'type'].sort(),
+      ['active', 'bedTempC', 'brand', 'color', 'densityGCm3', 'id', 'minimumStockGrams', 'nozzleTempC', 'type'].sort(),
     );
   });
 
@@ -334,7 +330,7 @@ describe('Inventory (e2e)', () => {
     expect(movements[0]).toMatchObject({ type: 'perda', quantity: -200 });
   });
 
-  // S5 - Abertura e secagem
+  // S5 - Abertura
 
   it('opening a roll sets openedAt once and is idempotent on a second call', async () => {
     const rollId = await createRoll(dataSource, { materialId });
@@ -349,20 +345,17 @@ describe('Inventory (e2e)', () => {
     expect(second.body.openedAt).toBe(first.body.openedAt);
   });
 
-  it('drying a roll always advances lastDriedAt', async () => {
+  // A secagem do rolo saiu do sistema (RemoveDryingFields): a rota não existe mais e o rolo não
+  // carrega `lastDriedAt`.
+  it('the roll drying route no longer exists and the roll has no lastDriedAt', async () => {
     const rollId = await createRoll(dataSource, { materialId });
 
-    const first = await dryReq(rollId, productionCookie);
-    expect(first.status).toBe(200);
-    expect(first.body.lastDriedAt).not.toBeNull();
+    const dry = await request(server()).patch(`/inventory/rolls/${rollId}/dry`).set('Cookie', productionCookie);
+    expect(dry.status).toBe(404);
 
-    await new Promise((resolve) => setTimeout(resolve, 5));
-
-    const second = await dryReq(rollId, productionCookie);
-    expect(second.status).toBe(200);
-    expect(new Date(second.body.lastDriedAt as string).getTime()).toBeGreaterThan(
-      new Date(first.body.lastDriedAt as string).getTime(),
-    );
+    const roll = await getByIdReq(rollId, productionCookie);
+    expect(roll.status).toBe(200);
+    expect(roll.body).not.toHaveProperty('lastDriedAt');
   });
 
   // S6 - Auditoria e histórico
@@ -490,7 +483,6 @@ describe('Inventory (e2e)', () => {
       () => movementReq(UNKNOWN_ROLL_ID, { type: 'consumo', quantity: 1 }),
       () => discardReq(UNKNOWN_ROLL_ID),
       () => openReq(UNKNOWN_ROLL_ID),
-      () => dryReq(UNKNOWN_ROLL_ID),
       () => summaryReq(''),
     ];
     for (const route of routes) {
@@ -507,7 +499,6 @@ describe('Inventory (e2e)', () => {
       () => movementReq(UNKNOWN_ROLL_ID, { type: 'consumo', quantity: 1 }, productionCookie),
       () => discardReq(UNKNOWN_ROLL_ID, productionCookie),
       () => openReq(UNKNOWN_ROLL_ID, productionCookie),
-      () => dryReq(UNKNOWN_ROLL_ID, productionCookie),
     ];
     for (const route of routes) {
       const response = await route();
@@ -523,7 +514,6 @@ describe('Inventory (e2e)', () => {
       () => movementReq(rollId, { type: 'consumo', quantity: 1 }, salesCookie),
       () => discardReq(rollId, salesCookie),
       () => openReq(rollId, salesCookie),
-      () => dryReq(rollId, salesCookie),
     ];
     for (const route of routes) {
       const response = await route();

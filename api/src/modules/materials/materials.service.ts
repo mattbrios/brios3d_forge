@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreateMaterialDto } from './dto/create-material.dto.js';
@@ -8,7 +8,6 @@ import { Material } from './entities/material.entity.js';
 import {
   DEFAULT_PAGE,
   DEFAULT_PAGE_SIZE,
-  INVALID_DRYING_PARAMS,
   type ListMaterialsResponse,
   MATERIAL_NOT_FOUND,
   type MaterialResponse,
@@ -60,10 +59,6 @@ export class MaterialsService {
   }
 
   async create(dto: CreateMaterialDto): Promise<MaterialResponse> {
-    const drying = dto.needsDrying
-      ? { dryingTemperatureC: dto.dryingTemperatureC ?? null, dryingHours: dto.dryingHours ?? null }
-      : { dryingTemperatureC: null, dryingHours: null };
-
     const created = await this.materials.save(
       this.materials.create({
         type: dto.type,
@@ -72,8 +67,6 @@ export class MaterialsService {
         densityGCm3: dto.densityGCm3,
         nozzleTempC: dto.nozzleTempC,
         bedTempC: dto.bedTempC,
-        needsDrying: dto.needsDrying,
-        ...drying,
         active: true,
         minimumStockGrams: dto.minimumStockGrams ?? null,
       }),
@@ -89,20 +82,6 @@ export class MaterialsService {
         throw new NotFoundException(MATERIAL_NOT_FOUND);
       }
 
-      // Valida com o valor final de needsDrying/secagem, enviado ou já gravado (AC 16, mesmo
-      // padrão do combined-rate de sales-channels).
-      const finalNeedsDrying = dto.needsDrying ?? material.needsDrying;
-      const finalDryingTemperatureC = dto.dryingTemperatureC ?? material.dryingTemperatureC ?? undefined;
-      const finalDryingHours = dto.dryingHours ?? material.dryingHours ?? undefined;
-      if (finalNeedsDrying) {
-        const temperatureValid =
-          finalDryingTemperatureC !== undefined && finalDryingTemperatureC >= 0 && finalDryingTemperatureC <= 120;
-        const hoursValid = finalDryingHours !== undefined && finalDryingHours > 0;
-        if (!temperatureValid || !hoursValid) {
-          throw new BadRequestException(INVALID_DRYING_PARAMS);
-        }
-      }
-
       if (dto.type !== undefined) material.type = dto.type;
       if (dto.brand !== undefined) material.brand = dto.brand;
       if (dto.color !== undefined) material.color = dto.color;
@@ -112,11 +91,6 @@ export class MaterialsService {
       if (dto.active !== undefined) material.active = dto.active;
       // Fase 11, door 1: `undefined` preserva o piso, `null` explícito limpa a política.
       if (dto.minimumStockGrams !== undefined) material.minimumStockGrams = dto.minimumStockGrams;
-      material.needsDrying = finalNeedsDrying;
-      // WHILE needsDrying for false, dryingTemperatureC/dryingHours ficam null (AC 5), mantido
-      // também no PATCH.
-      material.dryingTemperatureC = finalNeedsDrying ? (finalDryingTemperatureC ?? null) : null;
-      material.dryingHours = finalNeedsDrying ? (finalDryingHours ?? null) : null;
 
       await repo.save(material);
       return toMaterialResponse(material);

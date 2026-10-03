@@ -101,12 +101,6 @@ export class InventoryController {
     return this.inventory.open(id);
   }
 
-  @Roles('production')
-  @Patch('rolls/:id/dry')
-  dry(@Param('id', uuidParam()) id: string): Promise<RollResponse> {
-    return this.inventory.dry(id);
-  }
-
   // Cadastro do item: dado de fornecedor e de custo, então só admin (AC 8).
   @Post('items')
   @HttpCode(201)

@@ -11,7 +11,6 @@ interface NewRoll {
   batch?: string | null;
   purchaseDate?: string | null;
   openedAt?: Date | null;
-  lastDriedAt?: Date | null;
   discardedAt?: Date | null;
   location?: string | null;
   acquisitionCostCents?: number;
@@ -23,9 +22,9 @@ export async function createRoll(dataSource: DataSource, roll: NewRoll): Promise
   const rows: Array<{ id: string }> = await dataSource.query(
     `INSERT INTO filament_rolls
        (material_id, supplier_id, nominal_weight_grams, initial_weight_grams, balance_grams,
-        spool_tare_grams, batch, purchase_date, opened_at, last_dried_at, discarded_at,
+        spool_tare_grams, batch, purchase_date, opened_at, discarded_at,
         location, acquisition_cost_cents)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id`,
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`,
     [
       roll.materialId,
       roll.supplierId ?? null,
@@ -36,7 +35,6 @@ export async function createRoll(dataSource: DataSource, roll: NewRoll): Promise
       roll.batch ?? null,
       roll.purchaseDate ?? null,
       roll.openedAt ?? null,
-      roll.lastDriedAt ?? null,
       roll.discardedAt ?? null,
       roll.location ?? null,
       roll.acquisitionCostCents ?? 12000,

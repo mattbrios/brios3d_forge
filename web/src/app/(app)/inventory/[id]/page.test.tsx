@@ -23,9 +23,6 @@ const MATERIAL_1: Material = {
   densityGCm3: 1.24,
   nozzleTempC: 210,
   bedTempC: 60,
-  needsDrying: false,
-  dryingTemperatureC: null,
-  dryingHours: null,
   active: true,
   minimumStockGrams: null,
 };
@@ -41,7 +38,6 @@ const ROLL: RollDetail = {
   batch: null,
   purchaseDate: null,
   openedAt: null,
-  lastDriedAt: null,
   discardedAt: null,
   location: null,
   acquisitionCostCents: 12000,
@@ -104,7 +100,6 @@ describe("Roll detail page", () => {
     expect(screen.queryByRole("button", { name: "Pesar" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Dar baixa" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Abrir rolo" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Registrar secagem" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Descartar" })).toBeNull();
   });
 
