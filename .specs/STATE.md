@@ -39,6 +39,19 @@
 
 ## Handoff
 
+**Feature**: filament-meter-tone - concluída e mergeada (PR #12, merge `1b647c8` em 2026-10-04; Verifier PASS na rodada 1)
+**Where**: 32 checks em 2 commits (`3ff8cdf` web + PRD/plan/checks/glossário, `99651e9` verificação). Um builder só (estimativa de ~28k, abaixo do orçamento de 150k). Só `web/`: `meterFillFor` puro em `web/src/lib/meter-tone.ts` (sem Tom, material fora da lista ou hex mal formado -> `null`; contorno quando o contraste WCAG contra `#F1F1F1` é `< 1.5`), prop opcional `fill` no `StockMeter` aplicada só no tom `ok` (amarelo e vermelho do mínimo vencem o Tom), regra `.bf-meter__fill--outlined` no `forge.css`, e `fill` passado em `/inventory` (linha e rolos expandidos), `/inventory/[id]` e "Filamento por material" no Início. Alertas, "Abaixo do mínimo" e insumos sem mudança. `lint`, `test` (327) e `build` verdes no web
+**Desvios do plano**: nenhum
+**Validação em navegador** (Playwright MCP, app em docker): Tom azul, branco com contorno, Tom abaixo da metade do mínimo em vermelho e sem Tom abaixo do mínimo em amarelo em `/inventory`; rolos expandidos e detalhe do rolo no Tom; Início com Tons em "Filamento por material" e alertas sem Tom; `/inventory/alerts` e `/inventory/items` sem cor inline. Ficaram no banco de dev três materiais `PLA-QA · QA Tom` (Azul, Branco, Alerta) com um rolo de 800 g cada
+**Verificação**: 1 rodada, perfil `light`, sub-agente independente. **PASS** - 32/32 com `file:line`
+**In progress**: nada
+**Next step**: nenhum desta feature; a próxima fase em aberto do ROADMAP é a 15 (estoque de produtos acabados)
+**Blockers**: nenhum
+**Uncommitted**: nada depois do commit desta atualização
+**Branch**: main
+
+## Handoff anterior (material-brand-tone)
+
 **Feature**: material-brand-tone - concluída e mergeada (PR #11, merge `72f6b07` em 2026-10-04; Verifier PASS na rodada 1)
 **Where**: 57 checks em 3 commits (`f627535` plan/checks/glossário/AD-032, `5314026` API, `477f6c9` web). Um builder só (estimativa de ~38k, abaixo do orçamento de 150k). API: `materials.color_hex` nula (migration `AddMaterialColorHex`, sem CHECK), `colorHex` no contrato (`#rrggbb` minúsculo, `400` para outro formato, `null` remove no PATCH) e `GET /materials/brands` (`DISTINCT ON (lower(brand))`, grafia do material mais recente, admin/production/sales). Web: formulário novo com padrões 1,24 / 220 / 65 / 100 que voltam depois de salvar, `Combobox` próprio (AD-032) na Marca, amostra de tom ao lado da Cor com `<input type="color">` e "Remover", amostra na coluna Cor da tabela. `lint`, `test` e `build` verdes nas duas pastas (168 unit + 423 e2e na API, 298 no web)
 **Desvios do plano**: nenhum de forma. Dois testes de chaves exatas da resposta de material (`materials.e2e-spec.ts`, `inventory.e2e-spec.ts`) tiveram o conjunto esperado ampliado com `colorHex`
