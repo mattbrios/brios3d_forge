@@ -39,6 +39,19 @@
 
 ## Handoff
 
+**Feature**: material-brand-tone - concluída (Verifier PASS na rodada 1, `validate_verification.py` exit 0)
+**Where**: 57 checks em 3 commits (`f627535` plan/checks/glossário/AD-032, `5314026` API, `477f6c9` web). Um builder só (estimativa de ~38k, abaixo do orçamento de 150k). API: `materials.color_hex` nula (migration `AddMaterialColorHex`, sem CHECK), `colorHex` no contrato (`#rrggbb` minúsculo, `400` para outro formato, `null` remove no PATCH) e `GET /materials/brands` (`DISTINCT ON (lower(brand))`, grafia do material mais recente, admin/production/sales). Web: formulário novo com padrões 1,24 / 220 / 65 / 100 que voltam depois de salvar, `Combobox` próprio (AD-032) na Marca, amostra de tom ao lado da Cor com `<input type="color">` e "Remover", amostra na coluna Cor da tabela. `lint`, `test` e `build` verdes nas duas pastas (168 unit + 423 e2e na API, 298 no web)
+**Desvios do plano**: nenhum de forma. Dois testes de chaves exatas da resposta de material (`materials.e2e-spec.ts`, `inventory.e2e-spec.ts`) tiveram o conjunto esperado ampliado com `colorHex`
+**Validação em navegador** (Playwright MCP, app em docker, migration aplicada no banco de dev): padrões no formulário novo; lista de marcas abrindo na 1ª letra com marcas de inativos; `ArrowDown` + `Enter` escolhendo sem enviar; clique na amostra chegando ao input de cor; criação com `colorHex: "#ff8800"` e formulário de volta aos padrões; marca nova sugerida em seguida; edição removendo o tom (`PATCH` com `null`) e amostra sumindo da tabela. O material de teste `PETG-PW` foi desativado ao final (nunca apagado). Estados de carregamento, erro e vazio da tela não mudaram e seguem cobertos pelos testes de tela
+**Verificação**: 1 rodada, perfil `light`, sub-agente independente. **PASS** - 57/57 com `file:line`. Notas não bloqueantes: a parte "sem mensagem" do C25 é sondada só por `/nenhuma/i`; C42-C44 reusam testes existentes (status preservados); C54-C55 são provas de compilação
+**In progress**: nada
+**Next step**: push e PR da branch quando o usuário pedir
+**Blockers**: nenhum
+**Uncommitted**: nada depois do commit desta atualização
+**Branch**: feat/material-brand-tone
+
+## Handoff anterior (Fase 14)
+
 **Feature**: phase-14-model-metadata - concluída (Verifier PASS na rodada 2, `validate_verification.py` exit 0)
 **Where**: 26 checks em 3 commits (`c5c31c9` API, `5876130` web, `b534f53` correção dos nomes de
 teste da rodada 1). Um builder só (estimativa de ~19k, abaixo do orçamento de 150k, sem pergunta
