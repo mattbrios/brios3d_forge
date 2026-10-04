@@ -247,8 +247,9 @@ describe('Inventory (e2e)', () => {
     expect(material).toBeDefined();
     // `minimumStockGrams` entrou na Fase 11 (door 1) e é política de reposição, não saldo nem
     // custo: o door 5 desta fase continua valendo - nenhum campo derivado do estoque mora aqui.
+    // `colorHex` (tom da cor, material-brand-tone) é descritivo, também não é estoque.
     expect(Object.keys(material as object).sort()).toEqual(
-      ['active', 'bedTempC', 'brand', 'color', 'densityGCm3', 'id', 'minimumStockGrams', 'nozzleTempC', 'type'].sort(),
+      ['active', 'bedTempC', 'brand', 'color', 'colorHex', 'densityGCm3', 'id', 'minimumStockGrams', 'nozzleTempC', 'type'].sort(),
     );
   });
 

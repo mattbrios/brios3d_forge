@@ -136,7 +136,7 @@ describe('Materials (e2e)', () => {
     const response = await createReq(VALID_PLA, adminCookie);
     expect(response.status).toBe(201);
     expect(Object.keys(response.body as object).sort()).toEqual(
-      ['active', 'bedTempC', 'brand', 'color', 'densityGCm3', 'id', 'minimumStockGrams', 'nozzleTempC', 'type'],
+      ['active', 'bedTempC', 'brand', 'color', 'colorHex', 'densityGCm3', 'id', 'minimumStockGrams', 'nozzleTempC', 'type'],
     );
   });
 
@@ -371,5 +371,99 @@ describe('Materials (e2e)', () => {
     const id = await createMaterial(dataSource, { type: 'm21-no-delete' });
     const response = await request(server()).delete(`/materials/${id}`).set('Cookie', adminCookie);
     expect(response.status).toBe(404);
+  });
+
+  // Tom da cor (`colorHex`): só `#rrggbb`, gravado em minúsculas, `null` remove.
+  describe('colorHex', () => {
+    const INVALID_COLOR_HEX = { error: 'colorHex deve estar no formato #rrggbb' };
+    const storedColorHex = async (id: string) => {
+      const rows: Array<{ color_hex: string | null }> = await dataSource.query(
+        'SELECT color_hex FROM materials WHERE id = $1',
+        [id],
+      );
+      return rows[0]?.color_hex;
+    };
+
+    it('POST stores colorHex in lowercase', async () => {
+      const response = await createReq({ ...VALID_PLA, colorHex: '#FF8800' }, adminCookie);
+
+      expect(response.status).toBe(201);
+      expect(response.body.colorHex).toBe('#ff8800');
+      expect(await storedColorHex(response.body.id)).toBe('#ff8800');
+    });
+
+    it('POST without colorHex or with null answers null', async () => {
+      const omitted = await createReq(VALID_PLA, adminCookie);
+      expect(omitted.status).toBe(201);
+      expect(omitted.body.colorHex).toBeNull();
+      expect(await storedColorHex(omitted.body.id)).toBeNull();
+
+      const explicitNull = await createReq({ ...VALID_PLA, colorHex: null }, adminCookie);
+      expect(explicitNull.status).toBe(201);
+      expect(explicitNull.body.colorHex).toBeNull();
+      expect(await storedColorHex(explicitNull.body.id)).toBeNull();
+    });
+
+    it.each(['#fff', 'ff8800', '#gg0000', '#ff88001', '', 123])('POST rejects colorHex %j', async (colorHex) => {
+      const response = await createReq({ ...VALID_PLA, colorHex }, adminCookie);
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual(INVALID_COLOR_HEX);
+      expect(await countAll()).toBe(0);
+    });
+
+    it('PATCH stores colorHex in lowercase', async () => {
+      const id = await createMaterial(dataSource, { type: 'hex-patch' });
+
+      const response = await patchReq(id, { colorHex: '#00AA11' }, adminCookie);
+
+      expect(response.status).toBe(200);
+      expect(response.body.colorHex).toBe('#00aa11');
+      expect(await storedColorHex(id)).toBe('#00aa11');
+    });
+
+    it('PATCH with colorHex null removes the tone', async () => {
+      const id = await createMaterial(dataSource, { type: 'hex-null', colorHex: '#ff8800' });
+
+      const response = await patchReq(id, { colorHex: null }, adminCookie);
+
+      expect(response.status).toBe(200);
+      expect(response.body.colorHex).toBeNull();
+      expect(await storedColorHex(id)).toBeNull();
+    });
+
+    it('PATCH without colorHex keeps the tone', async () => {
+      const id = await createMaterial(dataSource, { type: 'hex-keep', colorHex: '#ff8800' });
+
+      const response = await patchReq(id, { color: 'Laranja' }, adminCookie);
+
+      expect(response.status).toBe(200);
+      expect(response.body.color).toBe('Laranja');
+      expect(response.body.colorHex).toBe('#ff8800');
+      expect(await storedColorHex(id)).toBe('#ff8800');
+    });
+
+    it('PATCH rejects an invalid colorHex and keeps the tone', async () => {
+      const id = await createMaterial(dataSource, { type: 'hex-invalid', colorHex: '#ff8800' });
+
+      const response = await patchReq(id, { colorHex: '#ff88' }, adminCookie);
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual(INVALID_COLOR_HEX);
+      expect(await storedColorHex(id)).toBe('#ff8800');
+    });
+
+    it('GET /materials includes colorHex on each item', async () => {
+      await createMaterial(dataSource, { type: 'hex-a-toned', colorHex: '#ff8800' });
+      await createMaterial(dataSource, { type: 'hex-b-plain' });
+
+      const response = await listReq('', salesCookie);
+
+      expect(response.status).toBe(200);
+      expect(response.body.items.map((item: { type: string; colorHex: string | null }) => [item.type, item.colorHex])).toEqual([
+        ['hex-a-toned', '#ff8800'],
+        ['hex-b-plain', null],
+      ]);
+    });
   });
 });

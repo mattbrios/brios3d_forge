@@ -35,6 +35,10 @@ export class Material {
   @Column({ name: 'minimum_stock_grams', type: 'double precision', nullable: true })
   minimumStockGrams: number | null;
 
+  // Tom da cor (door 1): `#rrggbb` minúsculo, ou `null` para "sem tom". O formato é garantido pela API.
+  @Column({ name: 'color_hex', type: 'varchar', length: 7, nullable: true })
+  colorHex: string | null;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 

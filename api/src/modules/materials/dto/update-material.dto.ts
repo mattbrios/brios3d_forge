@@ -7,9 +7,12 @@ import {
   IsPositive,
   IsString,
   Length,
+  Matches,
   Max,
   Min,
 } from 'class-validator';
+import { INVALID_COLOR_HEX } from '../materials.types.js';
+import { COLOR_HEX_PATTERN, lowercase } from './create-material.dto.js';
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
 
@@ -65,4 +68,10 @@ export class UpdateMaterialDto {
   @IsNumber()
   @Min(0)
   minimumStockGrams?: number | null;
+
+  // Mesma semântica do mínimo: omitir preserva o tom, `null` remove.
+  @IsOptional()
+  @Transform(lowercase)
+  @Matches(COLOR_HEX_PATTERN, { message: INVALID_COLOR_HEX })
+  colorHex?: string | null;
 }

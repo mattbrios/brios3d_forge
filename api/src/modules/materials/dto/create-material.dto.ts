@@ -1,7 +1,11 @@
 import { Transform } from 'class-transformer';
-import { IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString, Length, Max, Min } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString, Length, Matches, Max, Min } from 'class-validator';
+import { INVALID_COLOR_HEX } from '../materials.types.js';
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
+// O tom é gravado sempre minúsculo; o @Matches roda depois, sobre o valor já convertido.
+export const lowercase = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.toLowerCase() : value);
+export const COLOR_HEX_PATTERN = /^#[0-9a-f]{6}$/;
 
 export class CreateMaterialDto {
   @Transform(trim)
@@ -45,4 +49,10 @@ export class CreateMaterialDto {
   @IsNumber()
   @Min(0)
   minimumStockGrams?: number | null;
+
+  // Tom opcional `#rrggbb`; omitir ou `null` grava "sem tom".
+  @IsOptional()
+  @Transform(lowercase)
+  @Matches(COLOR_HEX_PATTERN, { message: INVALID_COLOR_HEX })
+  colorHex?: string | null;
 }

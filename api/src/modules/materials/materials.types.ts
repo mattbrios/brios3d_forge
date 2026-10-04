@@ -12,6 +12,8 @@ export interface MaterialResponse {
   active: boolean;
   // Fase 11, door 1: piso de reposição em gramas; `null` é "sem política de reposição".
   minimumStockGrams: number | null;
+  // Tom da cor: `#rrggbb` minúsculo, ou `null` para "sem tom".
+  colorHex: string | null;
 }
 
 export interface ListMaterialsResponse {
@@ -32,10 +34,12 @@ export function toMaterialResponse(material: Material): MaterialResponse {
     bedTempC: material.bedTempC,
     active: material.active,
     minimumStockGrams: material.minimumStockGrams,
+    colorHex: material.colorHex,
   };
 }
 
 export const MATERIAL_NOT_FOUND = 'Material não encontrado';
+export const INVALID_COLOR_HEX = 'colorHex deve estar no formato #rrggbb';
 
 export const DEFAULT_PAGE = 1;
 export const DEFAULT_PAGE_SIZE = 20;
