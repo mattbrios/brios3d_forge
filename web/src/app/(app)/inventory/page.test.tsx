@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, getDefaultNormalizer, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { MaterialsSummary } from "@/lib/inventory";
 import type { Material } from "@/lib/materials";
@@ -114,5 +114,95 @@ describe("Inventory page", () => {
       expect(screen.queryByRole("button", { name: "Cadastrar rolo" })).toBeNull();
       cleanup();
     }
+  });
+
+  describe("numbers in pt-BR (issue #9)", () => {
+    const EXACT = { normalizer: getDefaultNormalizer({ collapseWhitespace: false }) };
+    const bodyOf = (init?: RequestInit) => JSON.parse((init?.body as string) ?? "{}") as Record<string, unknown>;
+    const postCalls = (fetchMock: ReturnType<typeof stubApi>) =>
+      callsTo(fetchMock, "/inventory/rolls").filter(([, init]) => init?.method === "POST");
+
+    function renderAdmin(items: MaterialsSummary["items"] = [], minimumStockGrams: number | null = null) {
+      const fetchMock = stubApi({
+        "/auth/me": () => Promise.resolve(jsonResponse(200, ADMIN_ME)),
+        "/inventory/materials-summary": () => Promise.resolve(jsonResponse(200, summary(items))),
+        "/materials?pageSize=100": () =>
+          Promise.resolve(jsonResponse(200, materialsPage([{ ...MATERIAL_1, minimumStockGrams }]))),
+        "/inventory/rolls": () => Promise.resolve(jsonResponse(201, { id: "r1" })),
+      });
+      render(<InventoryPage />);
+      return fetchMock;
+    }
+
+    async function openCreate() {
+      fireEvent.click(await screen.findByRole("button", { name: "Cadastrar rolo" }));
+      fireEvent.change(screen.getByLabelText("Material"), { target: { value: "m1" } });
+    }
+
+    async function submitRoll(values: Record<string, string>) {
+      await openCreate();
+      const all = { "Peso inicial (g)": "1000", "Tara do carretel (g)": "200", "Custo de aquisição": "89,90", ...values };
+      for (const [label, value] of Object.entries(all)) {
+        fireEvent.change(screen.getByLabelText(label), { target: { value } });
+      }
+      fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
+    }
+
+    it("acquisition cost is labelled in reais", async () => {
+      renderAdmin();
+      await openCreate();
+      const input = screen.getByLabelText("Custo de aquisição") as HTMLInputElement;
+      expect(input.parentElement?.textContent).toBe("R$");
+      expect(screen.queryByText(/centavos/)).toBeNull();
+    });
+
+    it("sends the acquisition cost in cents", async () => {
+      const fetchMock = renderAdmin();
+      await submitRoll({ "Custo de aquisição": "89,90" });
+      await vi.waitFor(() => expect(postCalls(fetchMock)).toHaveLength(1));
+      expect(bodyOf(postCalls(fetchMock)[0][1] as RequestInit)).toMatchObject({ acquisitionCostCents: 8990 });
+    });
+
+    it("accepts a comma decimal weight", async () => {
+      const fetchMock = renderAdmin();
+      await submitRoll({ "Peso inicial (g)": "1,5" });
+      await vi.waitFor(() => expect(postCalls(fetchMock)).toHaveLength(1));
+      expect(bodyOf(postCalls(fetchMock)[0][1] as RequestInit)).toMatchObject({ initialWeightGrams: 1.5 });
+    });
+
+    it("rejects a malformed number without calling the API", async () => {
+      const fetchMock = renderAdmin();
+      await submitRoll({ "Peso inicial (g)": "1.800,90" });
+      expect((await screen.findByRole("alert")).textContent).toBe(
+        "Valor inválido em Peso inicial: use ponto ou vírgula apenas como separador decimal",
+      );
+      expect(postCalls(fetchMock)).toHaveLength(0);
+    });
+
+    it("rejects a blank required number without calling the API", async () => {
+      const fetchMock = renderAdmin();
+      await submitRoll({ "Peso inicial (g)": "" });
+      expect((await screen.findByRole("alert")).textContent).toBe("Preencha Peso inicial");
+      expect(postCalls(fetchMock)).toHaveLength(0);
+    });
+
+    it("reports the first invalid field", async () => {
+      const fetchMock = renderAdmin();
+      await submitRoll({ "Peso inicial (g)": "1.2.3", "Tara do carretel (g)": "abc" });
+      expect((await screen.findByRole("alert")).textContent).toBe(
+        "Valor inválido em Peso inicial: use ponto ou vírgula apenas como separador decimal",
+      );
+      expect(postCalls(fetchMock)).toHaveLength(0);
+    });
+
+    it("average cost per gram with 4 decimals", async () => {
+      renderAdmin([{ materialId: "m1", totalBalanceGrams: 500, avgCostCentsPerGram: 12.34, rollCount: 1 }]);
+      expect(await screen.findByText("1 rolo(s) · R$\u00A00,1234/g", EXACT)).toBeTruthy();
+    });
+
+    it("balance in pt-BR", async () => {
+      renderAdmin([{ materialId: "m1", totalBalanceGrams: 1800, avgCostCentsPerGram: 10, rollCount: 2 }]);
+      expect(await screen.findByText("1.800 g")).toBeTruthy();
+    });
   });
 });

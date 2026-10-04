@@ -288,4 +288,40 @@ describe("Materials page", () => {
     await within(row).findByText("Vermelho");
     expect(callsTo(fetchMock, "/materials/m1")).toHaveLength(1);
   });
+
+  describe("numbers in pt-BR (issue #9)", () => {
+    it("blank optional minimum is sent as null", async () => {
+      const fetchMock = stubApi({
+        "/auth/me": () => Promise.resolve(jsonResponse(200, ADMIN_ME)),
+        "/materials?pageSize=100": () => Promise.resolve(jsonResponse(200, page([MATERIAL_1]))),
+        "/materials": (init) => Promise.resolve(jsonResponse(201, { ...MATERIAL_1, id: "m3", type: "ABS", ...bodyOf(init) })),
+      });
+      render(<MaterialsPage />);
+      await screen.findByText("PLA");
+      fireEvent.change(screen.getByLabelText("Tipo"), { target: { value: "ABS" } });
+      fireEvent.change(screen.getByLabelText("Marca"), { target: { value: "Marca X" } });
+      fireEvent.change(screen.getByLabelText("Cor"), { target: { value: "Preto" } });
+      fireEvent.change(screen.getByLabelText("Densidade (g/cm³)"), { target: { value: "1,05" } });
+      fireEvent.change(screen.getByLabelText("Temperatura do bico (°C)"), { target: { value: "240" } });
+      fireEvent.change(screen.getByLabelText("Temperatura da mesa (°C)"), { target: { value: "90" } });
+      fireEvent.change(screen.getByLabelText("Estoque mínimo (g, opcional)"), { target: { value: "" } });
+      fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+      await screen.findByText("ABS");
+      const body = bodyOf(callsTo(fetchMock, "/materials").filter(([, init]) => init?.method === "POST")[0][1]);
+      expect(body.minimumStockGrams).toBe(null);
+      expect(body.densityGCm3).toBe(1.05);
+    });
+
+    it("minimum in pt-BR", async () => {
+      stubApi({
+        "/auth/me": () => Promise.resolve(jsonResponse(200, ADMIN_ME)),
+        "/materials?pageSize=100": () =>
+          Promise.resolve(jsonResponse(200, page([{ ...MATERIAL_1, minimumStockGrams: 1000 }]))),
+      });
+      render(<MaterialsPage />);
+      const row = (await screen.findByText("PLA")).closest("tr") as HTMLTableRowElement;
+      expect(within(row).getAllByRole("cell")[6].textContent).toBe("1.000 g");
+    });
+  });
 });

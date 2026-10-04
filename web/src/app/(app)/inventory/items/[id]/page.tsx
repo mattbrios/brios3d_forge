@@ -15,6 +15,8 @@ import { Card } from "@/components/ui/card";
 import { StockMeter } from "@/components/ui/data";
 import { Alert, EmptyState, Loading, PageError } from "@/components/ui/feedback";
 import { Field, Input, Select } from "@/components/ui/form";
+import { formatQuantity, formatUnitCents } from "@/lib/format";
+import { decimalToInput, readNumbers } from "@/lib/number-input";
 
 type Status =
   | { kind: "loading" }
@@ -86,7 +88,7 @@ function StockItemDetailContent({ id }: { id: string }) {
       .then(([me, item, printers]) => {
         if (!active) return;
         setStatus({ kind: "ready", role: me.role, item, printers: printers.items });
-        setMinimumQuantity(item.minimumQuantity === null ? "" : String(item.minimumQuantity));
+        setMinimumQuantity(item.minimumQuantity === null ? "" : decimalToInput(item.minimumQuantity));
       })
       .catch((error: unknown) => {
         if (active) setStatus({ kind: "error", message: messageOf(error) });
@@ -102,6 +104,11 @@ function StockItemDetailContent({ id }: { id: string }) {
 
   async function submitMovement(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const parsed = readNumbers({ quantity: { label: "Quantidade", text: movementQuantity, required: true } });
+    if (!parsed.ok) {
+      setMovementError(parsed.message);
+      return;
+    }
     setMovementSubmitting(true);
     setMovementError(null);
     try {
@@ -110,7 +117,7 @@ function StockItemDetailContent({ id }: { id: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type: movementType,
-          quantity: Number(movementQuantity),
+          quantity: parsed.values.quantity,
           reason: movementReason || undefined,
         }),
       });
@@ -126,13 +133,20 @@ function StockItemDetailContent({ id }: { id: string }) {
 
   async function submitCount(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const parsed = readNumbers({
+      countedQuantity: { label: "Quantidade contada", text: countedQuantity, required: true },
+    });
+    if (!parsed.ok) {
+      setCountError(parsed.message);
+      return;
+    }
     setCountSubmitting(true);
     setCountError(null);
     try {
       await apiFetch(`/inventory/items/${id}/count`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ countedQuantity: Number(countedQuantity) }),
+        body: JSON.stringify(parsed.values),
       });
       setCountedQuantity("");
       retry();
@@ -145,6 +159,11 @@ function StockItemDetailContent({ id }: { id: string }) {
 
   async function submitMinimum(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const parsed = readNumbers({ minimumQuantity: { label: "Mínimo", text: minimumQuantity ?? "" } });
+    if (!parsed.ok) {
+      setMinimumError(parsed.message);
+      return;
+    }
     setMinimumSubmitting(true);
     setMinimumError(null);
     try {
@@ -152,9 +171,7 @@ function StockItemDetailContent({ id }: { id: string }) {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         // Campo vazio é "sem mínimo": `null` explícito limpa a política.
-        body: JSON.stringify({
-          minimumQuantity: minimumQuantity === "" ? null : Number(minimumQuantity),
-        }),
+        body: JSON.stringify(parsed.values),
       });
       retry();
     } catch (error) {
@@ -221,12 +238,12 @@ function StockItemDetailContent({ id }: { id: string }) {
           <div>
             <dt>Saldo</dt>
             <dd>
-              {item.balanceQuantity} {item.unitOfMeasure}
+              {formatQuantity(item.balanceQuantity)} {item.unitOfMeasure}
             </dd>
           </div>
           <div>
             <dt>Estoque mínimo</dt>
-            <dd>{item.minimumQuantity === null ? "—" : `${item.minimumQuantity} ${item.unitOfMeasure}`}</dd>
+            <dd>{item.minimumQuantity === null ? "—" : `${formatQuantity(item.minimumQuantity)} ${item.unitOfMeasure}`}</dd>
           </div>
           <div>
             <dt>Custo médio</dt>
@@ -275,7 +292,7 @@ function StockItemDetailContent({ id }: { id: string }) {
               <form onSubmit={submitMinimum} className="flex flex-col gap-3">
                 <Field label={`Mínimo (${item.unitOfMeasure}), vazio para nenhum`}>
                   <Input
-                    type="number"
+                    inputMode="decimal"
                     value={minimumQuantity ?? ""}
                     onChange={(event) => setMinimumQuantity(event.target.value)}
                   />
@@ -310,7 +327,7 @@ function StockItemDetailContent({ id }: { id: string }) {
                   </Field>
                   <Field label={`Quantidade (${item.unitOfMeasure})`}>
                     <Input
-                      type="number"
+                      inputMode="decimal"
                       value={movementQuantity}
                       onChange={(event) => setMovementQuantity(event.target.value)}
                       required
@@ -337,7 +354,7 @@ function StockItemDetailContent({ id }: { id: string }) {
               <form onSubmit={submitCount} className="flex flex-col gap-3">
                 <Field label={`Quantidade contada (${item.unitOfMeasure})`}>
                   <Input
-                    type="number"
+                    inputMode="decimal"
                     value={countedQuantity}
                     onChange={(event) => setCountedQuantity(event.target.value)}
                     required
@@ -403,10 +420,10 @@ function StockItemDetailContent({ id }: { id: string }) {
                       <MovementBadge type={movement.type} />
                     </td>
                     <td data-label="Quantidade" className="is-num">
-                      {movement.quantity}
+                      {formatQuantity(movement.quantity)}
                     </td>
                     <td data-label="Custo unitário" className="is-num">
-                      {movement.unitCostCents !== null ? (movement.unitCostCents / 100).toFixed(2) : "—"}
+                      {movement.unitCostCents !== null ? formatUnitCents(movement.unitCostCents) : "—"}
                     </td>
                     <td data-label="Motivo">{movement.reason ?? "—"}</td>
                     <td data-label="Usuário" className="bf-mono" style={{ fontSize: 12 }}>

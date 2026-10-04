@@ -98,7 +98,7 @@ describe("Roll label page", () => {
 
     const label = await screen.findByTestId("roll-label");
     expect(label.textContent).toContain("PLA · Voolt · Preto");
-    expect(label.textContent).toContain("1000 g");
+    expect(label.textContent).toContain("1.000 g");
     expect(label.textContent).toContain("L-2026-07");
     expect(label.textContent).toContain("2026-07-14");
     expect(label.textContent).toContain("8f3c1e2a");
@@ -116,7 +116,7 @@ describe("Roll label page", () => {
     expect(label.textContent).not.toContain("2026-07-14");
     expect(label.querySelectorAll("dd")).toHaveLength(5);
     const values = [...label.querySelectorAll("dd")].map((node) => node.textContent);
-    expect(values).toEqual(["PLA · Voolt · Preto", "1000 g", "—", "—", "8f3c1e2a"]);
+    expect(values).toEqual(["PLA · Voolt · Preto", "1.000 g", "—", "—", "8f3c1e2a"]);
   });
 
   it("encodes exactly the origin plus the roll path", async () => {
@@ -197,5 +197,12 @@ describe("Roll label page", () => {
     await waitFor(() => expect(screen.queryByTestId("qr-code")).toBeNull());
     expect(screen.queryByTestId("roll-label")).toBeNull();
     expect(qr.props).toHaveLength(0);
+  });
+
+  it("nominal weight in pt-BR", async () => {
+    stubRoll({ ...ROLL, nominalWeightGrams: 1000 });
+    render(<RollLabelPage params={Promise.resolve({ id: ROLL_ID })} />);
+    const label = await screen.findByTestId("roll-label");
+    expect(label.textContent).toContain("Peso1.000 g");
   });
 });

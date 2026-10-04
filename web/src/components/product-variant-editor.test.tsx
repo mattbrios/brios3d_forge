@@ -112,7 +112,8 @@ describe("ProductVariantEditor", () => {
     expect(JSON.parse((importCall?.[1] as RequestInit).body as string)).toEqual({
       url: "https://makerworld.com/models/3007827",
     });
-    await waitFor(() => expect(valueOf("Horas de impressão")).toBe("0.47"));
+    // Preenchido no formato de entrada pt-BR (issue #9): vírgula decimal.
+    await waitFor(() => expect(valueOf("Horas de impressão")).toBe("0,47"));
     expect(valueOf("Gramas do material 1")).toBe("8");
     expect(valueOf("Gramas do material 2")).toBe("1");
     expect(valueOf("Material 1")).toBe("");
@@ -187,5 +188,23 @@ describe("ProductVariantEditor", () => {
     expect(valueOf("Material 1")).toBe("m1");
     expect(valueOf("Gramas do material 1")).toBe("8");
     expect(valueOf("Insumo 1")).toBe("s1");
+  });
+
+  it("rejects a malformed number without calling the API", async () => {
+    const fetchMock = stubApi({
+      "/products/prod2/variants": () => Promise.resolve(jsonResponse(201, { id: "v1" })),
+    });
+    const onSaved = vi.fn();
+    render(<ProductVariantEditor product={PRINTABLES_PRODUCT} onSaved={onSaved} onCancel={() => undefined} />);
+    await screen.findByLabelText("Nome da variação");
+    fillSheet();
+    fireEvent.change(screen.getByLabelText("Gramas do material 1"), { target: { value: "1.800,90" } });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar variação" }));
+
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "Valor inválido em Gramas: use ponto ou vírgula apenas como separador decimal",
+    );
+    expect(fetchMock.mock.calls.filter(([url]) => (url as string).includes("/variants"))).toHaveLength(0);
+    expect(onSaved).not.toHaveBeenCalled();
   });
 });

@@ -14,6 +14,8 @@ import { Card } from "@/components/ui/card";
 import { StockMeter } from "@/components/ui/data";
 import { Alert, EmptyState, Loading, PageError } from "@/components/ui/feedback";
 import { Field, Input, Select } from "@/components/ui/form";
+import { formatCentsPerUnit, formatQuantity } from "@/lib/format";
+import { readNumbers } from "@/lib/number-input";
 
 type Status =
   | { kind: "loading" }
@@ -44,7 +46,7 @@ function materialLabel(materials: Material[], materialId: string): string {
 }
 
 function formatCostCentsPerGram(cents: number | null): string {
-  return cents === null ? "—" : `R$ ${(cents / 100).toFixed(2)}/g`;
+  return cents === null ? "—" : formatCentsPerUnit(cents, "g");
 }
 
 export default function InventoryPage() {
@@ -109,18 +111,22 @@ export default function InventoryPage() {
 
   async function submitCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const parsed = readNumbers({
+      initialWeightGrams: { label: "Peso inicial", text: createForm.initialWeightGrams, required: true },
+      spoolTareGrams: { label: "Tara do carretel", text: createForm.spoolTareGrams, required: true },
+      acquisitionCostCents: { label: "Custo de aquisição", text: createForm.acquisitionCostCents, money: true, required: true },
+    });
+    if (!parsed.ok) {
+      setCreateError(parsed.message);
+      return;
+    }
     setCreating(true);
     setCreateError(null);
     try {
       await apiFetch<FilamentRoll>("/inventory/rolls", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          materialId: createForm.materialId,
-          initialWeightGrams: Number(createForm.initialWeightGrams),
-          spoolTareGrams: Number(createForm.spoolTareGrams),
-          acquisitionCostCents: Number(createForm.acquisitionCostCents),
-        }),
+        body: JSON.stringify({ materialId: createForm.materialId, ...parsed.values }),
       });
       setCreateForm(BLANK_FORM);
       setShowCreateForm(false);
@@ -187,26 +193,24 @@ export default function InventoryPage() {
               </Field>
               <Field label="Peso inicial (g)">
                 <Input
-                  type="number"
+                  inputMode="decimal"
                   value={createForm.initialWeightGrams}
                   onChange={(event) => setCreateForm({ ...createForm, initialWeightGrams: event.target.value })}
-                  required
                 />
               </Field>
               <Field label="Tara do carretel (g)">
                 <Input
-                  type="number"
+                  inputMode="decimal"
                   value={createForm.spoolTareGrams}
                   onChange={(event) => setCreateForm({ ...createForm, spoolTareGrams: event.target.value })}
-                  required
                 />
               </Field>
-              <Field label="Custo de aquisição (centavos)">
+              <Field label="Custo de aquisição">
                 <Input
-                  type="number"
+                  inputMode="decimal"
+                  prefixText="R$"
                   value={createForm.acquisitionCostCents}
                   onChange={(event) => setCreateForm({ ...createForm, acquisitionCostCents: event.target.value })}
-                  required
                 />
               </Field>
             </div>
@@ -229,7 +233,7 @@ export default function InventoryPage() {
 
       <Card
         title={`${summary.items.length} ${summary.items.length === 1 ? "material" : "materiais"} em estoque`}
-        subtitle={`${totalKg.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} kg no total`}
+        subtitle={`${formatQuantity(totalKg)} kg no total`}
       >
         {summary.items.length === 0 ? (
           <div className="flex flex-col items-center gap-3">
@@ -273,8 +277,8 @@ export default function InventoryPage() {
                         minimum={minimum}
                       />
                       <span className="bf-meter__text">
-                        {item.totalBalanceGrams} g
-                        {minimum !== null && <span> / {minimum} g mín.</span>}
+                        {formatQuantity(item.totalBalanceGrams)} g
+                        {minimum !== null && <span> / {formatQuantity(minimum)} g mín.</span>}
                       </span>
                     </div>
                     <span style={{ justifySelf: "end" }}>
@@ -312,7 +316,7 @@ export default function InventoryPage() {
                             </span>
                             <StockMeter value={roll.balanceGrams} max={roll.initialWeightGrams} minimum={null} />
                             <span className="bf-meter__text">
-                              {roll.balanceGrams} g · {roll.status}
+                              {formatQuantity(roll.balanceGrams)} g · {roll.status}
                             </span>
                           </Link>
                         </li>

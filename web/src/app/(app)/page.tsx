@@ -11,6 +11,7 @@ import { EmptyState, Loading, PageError } from "@/components/ui/feedback";
 import { stockHrefOf, type StockAlert, type StockAlertsResponse } from "@/lib/alerts";
 import { ApiError, apiFetch } from "@/lib/api";
 import type { AuthUser } from "@/lib/auth";
+import { formatQuantity } from "@/lib/format";
 import type { MaterialsSummary } from "@/lib/inventory";
 import type { Material, MaterialsPage } from "@/lib/materials";
 
@@ -165,10 +166,10 @@ export default function Home() {
                   <div className="flex justify-between gap-2">
                     <Link href={stockHrefOf(alert)}>{alert.label}</Link>
                     <span className="bf-meter__text">
-                      {alert.balance} {alert.unit}
+                      {formatQuantity(alert.balance)} {alert.unit}
                       <span>
                         {" "}
-                        / {alert.minimum} {alert.unit}
+                        / {formatQuantity(alert.minimum)} {alert.unit}
                       </span>
                     </span>
                   </div>

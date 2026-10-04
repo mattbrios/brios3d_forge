@@ -96,7 +96,7 @@ describe("Stock alerts page", () => {
     expect(within(materialRow).getAllByRole("cell").map((cell) => cell.textContent)).toEqual([
       "PLA · Voolt · Preto",
       "800",
-      "1000",
+      "1.000",
       "g",
     ]);
     expect(within(materialRow).getByRole("link").getAttribute("href")).toBe("/inventory");
@@ -151,5 +151,17 @@ describe("Stock alerts page", () => {
     expect(within(content).queryAllByRole("button")).toEqual([]);
     expect(within(content).queryByRole("textbox")).toBeNull();
     expect(within(content).queryByRole("spinbutton")).toBeNull();
+  });
+
+  it("quantities in pt-BR", async () => {
+    stubApi({
+      "/inventory/alerts": () =>
+        Promise.resolve(jsonResponse(200, { items: [{ ...MATERIAL_ALERT, balance: 1500, minimum: 2000 }] })),
+    });
+    render(<StockAlertsPage />);
+    const row = await waitFor(() => rowOf("PLA · Voolt · Preto"));
+    const cells = within(row).getAllByRole("cell").map((cell) => cell.textContent);
+    expect(cells[1]).toBe("1.500");
+    expect(cells[2]).toBe("2.000");
   });
 });

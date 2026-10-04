@@ -53,6 +53,7 @@ export function Field({
 
 export function Input({
   icon: IconCmp,
+  prefixText,
   suffix,
   invalid = false,
   inputSize = "md",
@@ -61,6 +62,8 @@ export function Input({
   ...rest
 }: InputHTMLAttributes<HTMLInputElement> & {
   icon?: LucideIcon;
+  // Texto fixo à esquerda do valor (ex.: "R$"), só visual.
+  prefixText?: string;
   suffix?: string;
   invalid?: boolean;
   inputSize?: "sm" | "md";
@@ -74,10 +77,15 @@ export function Input({
       {...rest}
     />
   );
-  if (!IconCmp && !suffix) return input;
+  if (!IconCmp && !prefixText && !suffix) return input;
   return (
-    <span className={cx("bf-input-wrap", suffix && !IconCmp && "bf-input-wrap--suffix")}>
+    <span className={cx("bf-input-wrap", suffix && !IconCmp && !prefixText && "bf-input-wrap--suffix")}>
       {IconCmp ? <IconCmp size={16} className="bf-input-wrap__icon" aria-hidden="true" /> : null}
+      {prefixText && !IconCmp ? (
+        <span className="bf-input-wrap__prefix" aria-hidden="true">
+          {prefixText}
+        </span>
+      ) : null}
       {input}
       {suffix ? (
         <span className="bf-input-wrap__suffix" aria-hidden="true">

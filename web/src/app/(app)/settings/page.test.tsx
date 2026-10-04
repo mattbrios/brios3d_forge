@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, getDefaultNormalizer, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SettingsPage from "./page";
 
@@ -8,6 +8,9 @@ function jsonResponse(status: number, body: unknown): Response {
     headers: { "Content-Type": "application/json" },
   });
 }
+
+// Mantém o espaço não separável do `Intl` ("R$\u00A010,50") na comparação.
+const EXACT = { normalizer: getDefaultNormalizer({ collapseWhitespace: false }) };
 
 const ADMIN_ME = { id: "u1", name: "Admin Um", email: "admin@test.local", role: "admin" };
 const SALES_ME = { id: "u2", name: "Vendas", email: "sales@test.local", role: "sales" };
@@ -71,7 +74,7 @@ describe("Settings page", () => {
 
     settings = () => Promise.resolve(jsonResponse(200, SETTINGS));
     fireEvent.click(retry);
-    await screen.findByLabelText("Tarifa de energia (centavos/kWh)");
+    await screen.findByLabelText("Tarifa de energia (por kWh)");
     expect(callsTo(fetchMock, "/settings")).toHaveLength(2);
   });
 
@@ -85,13 +88,13 @@ describe("Settings page", () => {
           : Promise.resolve(jsonResponse(200, SETTINGS)),
     });
     render(<SettingsPage />);
-    const input = await screen.findByLabelText("Tarifa de energia (centavos/kWh)");
-    expect((input as HTMLInputElement).value).toBe("80");
+    const input = await screen.findByLabelText("Tarifa de energia (por kWh)");
+    expect((input as HTMLInputElement).value).toBe("0,80");
 
-    fireEvent.change(input, { target: { value: "150" } });
+    fireEvent.change(input, { target: { value: "1,50" } });
     fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
 
-    await screen.findByDisplayValue("150");
+    await screen.findByDisplayValue("1,50");
     expect(callsTo(fetchMock, "/settings").filter(([, init]) => init?.method === "PATCH")).toHaveLength(1);
     const [, init] = callsTo(fetchMock, "/settings").filter(([, i]) => i?.method === "PATCH")[0];
     expect(bodyOf(init as RequestInit)).toMatchObject({ energyTariffCentsPerKwh: 150 });
@@ -103,8 +106,75 @@ describe("Settings page", () => {
       "/settings": () => Promise.resolve(jsonResponse(200, SETTINGS)),
     });
     render(<SettingsPage />);
-    expect(await screen.findByText("80")).toBeTruthy();
+    expect(await screen.findByText("R$\u00A00,80/kWh", EXACT)).toBeTruthy();
     expect(screen.queryByRole("textbox")).toBeNull();
     expect(screen.queryByRole("button", { name: "Salvar" })).toBeNull();
+  });
+
+  describe("values in reais (issue #9)", () => {
+    const patchCalls = (fetchMock: ReturnType<typeof stubApi>) =>
+      callsTo(fetchMock, "/settings").filter(([, init]) => init?.method === "PATCH");
+
+    function renderAs(me: typeof ADMIN_ME, settings: unknown = SETTINGS) {
+      const fetchMock = stubApi({
+        "/auth/me": () => Promise.resolve(jsonResponse(200, me)),
+        "/settings": (init) =>
+          init?.method === "PATCH"
+            ? Promise.resolve(jsonResponse(200, { ...SETTINGS, ...bodyOf(init) }))
+            : Promise.resolve(jsonResponse(200, settings)),
+      });
+      render(<SettingsPage />);
+      return fetchMock;
+    }
+
+    it("money fields are labelled in reais", async () => {
+      renderAs(ADMIN_ME);
+      for (const label of ["Tarifa de energia (por kWh)", "Hora de trabalho", "Manutenção (por hora)"]) {
+        const input = (await screen.findByLabelText(label)) as HTMLInputElement;
+        expect(input.parentElement?.textContent).toBe("R$");
+      }
+      expect(screen.queryByText(/centavos/)).toBeNull();
+    });
+
+    it("sends the energy tariff in cents with 4 decimals", async () => {
+      const fetchMock = renderAs(ADMIN_ME);
+      fireEvent.change(await screen.findByLabelText("Tarifa de energia (por kWh)"), { target: { value: "0,8732" } });
+      fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
+      await screen.findByDisplayValue("0,8732");
+      expect(bodyOf(patchCalls(fetchMock)[0][1] as RequestInit)).toMatchObject({ energyTariffCentsPerKwh: 87.32 });
+    });
+
+    it("rejects more than 4 decimals in the tariff without calling the API", async () => {
+      const fetchMock = renderAs(ADMIN_ME);
+      fireEvent.change(await screen.findByLabelText("Tarifa de energia (por kWh)"), { target: { value: "0,87321" } });
+      fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
+      expect((await screen.findByRole("alert")).textContent).toBe(
+        "Valor inválido em Tarifa de energia: use no máximo 4 casas decimais",
+      );
+      expect(patchCalls(fetchMock)).toHaveLength(0);
+    });
+
+    it("prefills the tariff in reais with 4 decimals", async () => {
+      renderAs(ADMIN_ME, { ...SETTINGS, energyTariffCentsPerKwh: 87.32 });
+      const input = (await screen.findByLabelText("Tarifa de energia (por kWh)")) as HTMLInputElement;
+      expect(input.value).toBe("0,8732");
+    });
+
+    it("fixed cost total in pt-BR", async () => {
+      renderAs(ADMIN_ME, {
+        ...SETTINGS,
+        fixedCostItems: [
+          { id: "f1", name: "Aluguel", monthlyCents: 150000 },
+          { id: "f2", name: "Internet", monthlyCents: 30050 },
+        ],
+      });
+      expect(await screen.findByText("R$\u00A01.800,50", EXACT)).toBeTruthy();
+    });
+
+    it("read only view formats money", async () => {
+      renderAs(SALES_ME, { ...SETTINGS, laborCentsPerHour: 4500, energyTariffCentsPerKwh: 87.32 });
+      expect(await screen.findByText("R$\u00A045,00", EXACT)).toBeTruthy();
+      expect(screen.getByText("R$\u00A00,8732/kWh", EXACT)).toBeTruthy();
+    });
   });
 });

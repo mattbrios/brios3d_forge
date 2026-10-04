@@ -2,7 +2,9 @@
 
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { ApiError, apiFetch } from "@/lib/api";
+import { formatQuantity } from "@/lib/format";
 import { formatPrintTime, splitPrintTime } from "@/lib/format-print-time";
+import { decimalToInput, parseDecimal } from "@/lib/number-input";
 import type { PrintProfile, PrintProfileImportResult } from "@/lib/print-profiles";
 import {
   Box,
@@ -72,12 +74,18 @@ const BLANK_FORM: FormState = {
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 
 function decimal(value: number | null): string {
-  return value === null ? "" : String(value).replace(".", ",");
+  return value === null ? "" : decimalToInput(value);
+}
+
+// Campo malformado conta como vazio aqui; quem recebe os valores valida o próprio formulário.
+function numberOrNull(text: string): number | null {
+  const parsed = parseDecimal(text);
+  return parsed.ok ? parsed.value : null;
 }
 
 function profileLabel(profile: PrintProfile): string {
   const time = profile.printSeconds === null ? "—" : formatPrintTime(profile.printSeconds);
-  const grams = profile.totalGrams === null ? "—" : `${decimal(profile.totalGrams)} g`;
+  const grams = profile.totalGrams === null ? "—" : `${formatQuantity(profile.totalGrams)} g`;
   return `${profile.title ?? `Perfil ${profile.id}`} · ${time} · ${grams}`;
 }
 
@@ -104,10 +112,10 @@ export function PrintProfileImport({
       key: row.key,
       type: row.type,
       color: row.color,
-      grams: row.grams === "" ? null : Number(row.grams.replace(",", ".")),
+      grams: numberOrNull(row.grams),
     }));
-    const hours = Number(form.hours.replace(",", "."));
-    const minutes = Number(form.minutes.replace(",", "."));
+    const hours = numberOrNull(form.hours) ?? 0;
+    const minutes = numberOrNull(form.minutes) ?? 0;
     const printHours = form.hours === "" && form.minutes === "" ? null : hours + minutes / 60;
     onFilamentsChange(filaments, printHours);
     // form é recriado a cada alteração de campo; comparar pelos próprios valores (via
@@ -196,7 +204,7 @@ export function PrintProfileImport({
 
   const loading = status.kind === "loading";
   const model = status.kind === "loaded" ? status.result.model : null;
-  const totalGrams = form.filaments.reduce((sum, row) => sum + (Number(row.grams.replace(",", ".")) || 0), 0);
+  const totalGrams = form.filaments.reduce((sum, row) => sum + (numberOrNull(row.grams) ?? 0), 0);
 
   return (
     <div className="flex flex-col gap-6">
@@ -327,7 +335,7 @@ export function PrintProfileImport({
         icon={Layers}
         subtitle={
           form.filaments.length
-            ? `${form.filaments.length} cor(es) · ${decimal(Math.round(totalGrams * 100) / 100)} g no total`
+            ? `${form.filaments.length} cor(es) · ${formatQuantity(totalGrams)} g no total`
             : "Nenhum filamento"
         }
         action={

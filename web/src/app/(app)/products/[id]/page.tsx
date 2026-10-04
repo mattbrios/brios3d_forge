@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Alert, EmptyState, Loading, PageError } from "@/components/ui/feedback";
 import { ApiError, apiFetch } from "@/lib/api";
+import { formatQuantity } from "@/lib/format";
 import type { AuthUser } from "@/lib/auth";
 import { PLATFORM_LABELS, type Product, type ProductPricing, type ProductVariant } from "@/lib/products";
 
@@ -33,7 +34,7 @@ function messageOf(error: unknown): string {
 }
 
 function hours(value: number): string {
-  return `${String(value).replace(".", ",")} h`;
+  return `${formatQuantity(value)} h`;
 }
 
 // `params` é uma Promise nesta versão do Next.js: resolvida num efeito, como no detalhe do insumo.
@@ -314,12 +315,12 @@ function ProductDetailContent({ id }: { id: string }) {
               <ul className="bf-muted" style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>
                 {variant.materials.map((line, index) => (
                   <li key={`m-${index}`}>
-                    {line.name} · {String(line.grams).replace(".", ",")} g
+                    {line.name} · {formatQuantity(line.grams)} g
                   </li>
                 ))}
                 {variant.supplies.map((line, index) => (
                   <li key={`s-${index}`}>
-                    {line.name} × {String(line.quantity).replace(".", ",")}
+                    {line.name} × {formatQuantity(line.quantity)}
                   </li>
                 ))}
                 <li>

@@ -49,3 +49,38 @@ describe("EntityForm", () => {
     expect(screen.getByRole("alert").textContent).toBe("Falha ao salvar");
   });
 });
+
+describe("EntityForm numeric fields", () => {
+  afterEach(cleanup);
+
+  interface PriceForm {
+    cost: string;
+    qty: string;
+  }
+
+  it("money and number fields are decimal text inputs", () => {
+    render(
+      <EntityForm<PriceForm>
+        fields={[
+          { key: "cost", label: "Custo", type: "money" },
+          { key: "qty", label: "Quantidade", type: "number" },
+        ]}
+        values={{ cost: "", qty: "" }}
+        onChange={() => {}}
+        onSubmit={() => {}}
+        submitting={false}
+        error={null}
+      />,
+    );
+
+    const cost = screen.getByLabelText("Custo") as HTMLInputElement;
+    expect(cost.type).toBe("text");
+    expect(cost.inputMode).toBe("decimal");
+    expect(cost.parentElement?.textContent).toBe("R$");
+
+    const qty = screen.getByLabelText("Quantidade") as HTMLInputElement;
+    expect(qty.type).toBe("text");
+    expect(qty.inputMode).toBe("decimal");
+    expect(qty.parentElement?.textContent).not.toContain("R$");
+  });
+});

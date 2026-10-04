@@ -20,6 +20,8 @@ import { Card } from "@/components/ui/card";
 import { StockMeter } from "@/components/ui/data";
 import { EmptyState, Loading, PageError } from "@/components/ui/feedback";
 import { Field, Select } from "@/components/ui/form";
+import { formatQuantity } from "@/lib/format";
+import { readNumbers } from "@/lib/number-input";
 
 type Status =
   | { kind: "loading" }
@@ -62,7 +64,7 @@ const BLANK_ENTRY: EntryFormValues = { quantity: "", unitCostCents: "" };
 
 const ENTRY_FIELDS: FieldConfig<EntryFormValues>[] = [
   { key: "quantity", label: "Quantidade", type: "number" },
-  { key: "unitCostCents", label: "Custo unitário (centavos)", type: "number" },
+  { key: "unitCostCents", label: "Custo unitário", type: "money" },
 ];
 
 function messageOf(error: unknown): string {
@@ -95,7 +97,7 @@ const COLUMNS: Column<StockItem>[] = [
           max={Math.max(item.balanceQuantity, (item.minimumQuantity ?? 0) * 2, 1)}
           minimum={item.minimumQuantity}
         />
-        <span className="bf-meter__text">{`${item.balanceQuantity} ${item.unitOfMeasure}`}</span>
+        <span className="bf-meter__text">{`${formatQuantity(item.balanceQuantity)} ${item.unitOfMeasure}`}</span>
       </div>
     ),
   },
@@ -104,7 +106,7 @@ const COLUMNS: Column<StockItem>[] = [
     label: "Mínimo",
     numeric: true,
     render: (item) =>
-      item.minimumQuantity === null ? "—" : `${item.minimumQuantity} ${item.unitOfMeasure}`,
+      item.minimumQuantity === null ? "—" : `${formatQuantity(item.minimumQuantity)} ${item.unitOfMeasure}`,
   },
   {
     key: "avgCostCents",
@@ -156,6 +158,13 @@ export default function StockItemsPageScreen() {
 
   async function submitCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const parsed = readNumbers({
+      minimumQuantity: { label: "Estoque mínimo", text: createForm.minimumQuantity },
+    });
+    if (!parsed.ok) {
+      setCreateError(parsed.message);
+      return;
+    }
     setCreating(true);
     setCreateError(null);
     try {
@@ -168,8 +177,7 @@ export default function StockItemsPageScreen() {
           unitOfMeasure: createForm.unitOfMeasure,
           sku: createForm.sku || undefined,
           location: createForm.location || undefined,
-          minimumQuantity:
-            createForm.minimumQuantity === "" ? undefined : Number(createForm.minimumQuantity),
+          minimumQuantity: parsed.values.minimumQuantity ?? undefined,
         }),
       });
       setCreateForm(BLANK_FORM);
@@ -185,16 +193,21 @@ export default function StockItemsPageScreen() {
   async function submitEntry(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!entryTarget) return;
+    const parsed = readNumbers({
+      quantity: { label: "Quantidade", text: entryForm.quantity, required: true },
+      unitCostCents: { label: "Custo unitário", text: entryForm.unitCostCents, money: true, required: true },
+    });
+    if (!parsed.ok) {
+      setEntryError(parsed.message);
+      return;
+    }
     setEntrySubmitting(true);
     setEntryError(null);
     try {
       await apiFetch<StockItem>(`/inventory/items/${entryTarget.id}/entries`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          quantity: Number(entryForm.quantity),
-          unitCostCents: Number(entryForm.unitCostCents),
-        }),
+        body: JSON.stringify(parsed.values),
       });
       setEntryForm(BLANK_ENTRY);
       setEntryTarget(null);

@@ -13,6 +13,8 @@ import { Button, IconButton } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState, Loading, PageError } from "@/components/ui/feedback";
 import { Field, Input } from "@/components/ui/form";
+import { formatCents, formatQuantity } from "@/lib/format";
+import { centsToReaisInput, decimalToInput, readNumbers } from "@/lib/number-input";
 
 type Status =
   | { kind: "loading" }
@@ -41,7 +43,7 @@ const BLANK_FORM: PrinterFormValues = {
 
 const FORM_FIELDS: FieldConfig<PrinterFormValues>[] = [
   { key: "name", label: "Nome" },
-  { key: "acquisitionCostCents", label: "Custo de aquisição (centavos)", type: "number" },
+  { key: "acquisitionCostCents", label: "Custo de aquisição", type: "money" },
   { key: "lifespanHours", label: "Vida útil (h)", type: "number" },
   { key: "powerWatts", label: "Potência (W)", type: "number" },
   { key: "nozzles", label: "Bicos (diâmetro:tipo, separados por vírgula)" },
@@ -51,10 +53,10 @@ const FORM_FIELDS: FieldConfig<PrinterFormValues>[] = [
 
 const COLUMNS: Column<Printer>[] = [
   { key: "name", label: "Nome", render: (row) => <span style={{ fontWeight: 800 }}>{row.name}</span> },
-  { key: "acquisitionCostCents", label: "Custo (centavos)", numeric: true },
-  { key: "lifespanHours", label: "Vida útil (h)", numeric: true },
-  { key: "powerWatts", label: "Potência (W)", numeric: true },
-  { key: "hourmeterHours", label: "Horímetro (h)", numeric: true },
+  { key: "acquisitionCostCents", label: "Custo", numeric: true, render: (row) => formatCents(row.acquisitionCostCents) },
+  { key: "lifespanHours", label: "Vida útil (h)", numeric: true, render: (row) => formatQuantity(row.lifespanHours) },
+  { key: "powerWatts", label: "Potência (W)", numeric: true, render: (row) => formatQuantity(row.powerWatts) },
+  { key: "hourmeterHours", label: "Horímetro (h)", numeric: true, render: (row) => formatQuantity(row.hourmeterHours) },
   {
     key: "hasAms",
     label: "AMS",
@@ -87,27 +89,34 @@ function formatNozzles(nozzles: Nozzle[]): string {
   return nozzles.map((nozzle) => `${nozzle.diameterMm}:${nozzle.type}`).join(", ");
 }
 
-function buildBody(values: PrinterFormValues): Record<string, unknown> {
+function buildBody(values: PrinterFormValues): { ok: true; body: Record<string, unknown> } | { ok: false; message: string } {
+  const parsed = readNumbers({
+    acquisitionCostCents: { label: "Custo de aquisição", text: values.acquisitionCostCents, money: true, required: true },
+    lifespanHours: { label: "Vida útil", text: values.lifespanHours, required: true },
+    powerWatts: { label: "Potência", text: values.powerWatts, required: true },
+    amsSlots: { label: "Slots do AMS", text: values.hasAms ? values.amsSlots : "", required: values.hasAms },
+  });
+  if (!parsed.ok) return parsed;
   const body: Record<string, unknown> = {
     name: values.name,
-    acquisitionCostCents: Number(values.acquisitionCostCents),
-    lifespanHours: Number(values.lifespanHours),
-    powerWatts: Number(values.powerWatts),
+    acquisitionCostCents: parsed.values.acquisitionCostCents,
+    lifespanHours: parsed.values.lifespanHours,
+    powerWatts: parsed.values.powerWatts,
     nozzles: parseNozzles(values.nozzles),
     hasAms: values.hasAms,
   };
   if (values.hasAms) {
-    body.amsSlots = Number(values.amsSlots);
+    body.amsSlots = parsed.values.amsSlots;
   }
-  return body;
+  return { ok: true, body };
 }
 
 function formFromPrinter(printer: Printer): PrinterFormValues {
   return {
     name: printer.name,
-    acquisitionCostCents: String(printer.acquisitionCostCents),
-    lifespanHours: String(printer.lifespanHours),
-    powerWatts: String(printer.powerWatts),
+    acquisitionCostCents: centsToReaisInput(printer.acquisitionCostCents),
+    lifespanHours: decimalToInput(printer.lifespanHours),
+    powerWatts: decimalToInput(printer.powerWatts),
     nozzles: formatNozzles(printer.nozzles),
     hasAms: printer.hasAms,
     amsSlots: printer.amsSlots !== null ? String(printer.amsSlots) : "",
@@ -162,13 +171,18 @@ export default function PrintersPage() {
 
   async function submitCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const built = buildBody(createForm);
+    if (!built.ok) {
+      setCreateError(built.message);
+      return;
+    }
     setCreating(true);
     setCreateError(null);
     try {
       const created = await apiFetch<Printer>("/printers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildBody(createForm)),
+        body: JSON.stringify(built.body),
       });
       setStatus((current) =>
         current.kind === "ready" ? { ...current, printers: [...current.printers, created] } : current,
@@ -196,13 +210,18 @@ export default function PrintersPage() {
   async function submitEdit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!editingId || !editForm) return;
+    const built = buildBody(editForm);
+    if (!built.ok) {
+      setEditError(built.message);
+      return;
+    }
     setEditSubmitting(true);
     setEditError(null);
     try {
       const updated = await apiFetch<Printer>(`/printers/${editingId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildBody(editForm)),
+        body: JSON.stringify(built.body),
       });
       setStatus((current) =>
         current.kind === "ready" ? { ...current, printers: replacePrinter(current.printers, updated) } : current,
@@ -240,12 +259,17 @@ export default function PrintersPage() {
   async function adjustHourmeter(printer: Printer) {
     const draft = hourmeterDraft[printer.id];
     if (draft === undefined) return;
+    const parsed = readNumbers({ hourmeterHours: { label: "Horímetro", text: draft, required: true } });
+    if (!parsed.ok) {
+      setRowError((current) => ({ ...current, [printer.id]: parsed.message }));
+      return;
+    }
     setHourmeterSubmitting((current) => ({ ...current, [printer.id]: true }));
     try {
       const updated = await apiFetch<Printer>(`/printers/${printer.id}/hourmeter`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ hourmeterHours: Number(draft) }),
+        body: JSON.stringify(parsed.values),
       });
       setStatus((current) =>
         current.kind === "ready" ? { ...current, printers: replacePrinter(current.printers, updated) } : current,
@@ -319,8 +343,8 @@ export default function PrintersPage() {
                             <Input
                               inputSize="sm"
                               style={{ width: 110 }}
-                              type="number"
-                              value={hourmeterDraft[printer.id] ?? String(printer.hourmeterHours)}
+                              inputMode="decimal"
+                              value={hourmeterDraft[printer.id] ?? decimalToInput(printer.hourmeterHours)}
                               onChange={(event) =>
                                 setHourmeterDraft((current) => ({ ...current, [printer.id]: event.target.value }))
                               }

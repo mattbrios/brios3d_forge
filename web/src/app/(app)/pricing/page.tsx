@@ -24,6 +24,8 @@ import { Button, IconButton } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Alert, Loading, PageError } from "@/components/ui/feedback";
 import { Checkbox, Field, Input, Select } from "@/components/ui/form";
+import { formatQuantity } from "@/lib/format";
+import { readNumbers } from "@/lib/number-input";
 
 interface Registries {
   materials: Material[];
@@ -171,24 +173,47 @@ export default function PricingPage() {
 
   async function submitCalculate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const materials = materialLines.filter((line) => line.materialId !== "");
+    const supplies = supplyLines.filter((line) => line.stockItemId !== "");
+    const fields = readNumbers({
+      printHours: { label: "Horas de impressão", text: printHours, required: true },
+      quantity: { label: "Quantidade", text: quantity, required: true },
+      prepHours: { label: "Preparo", text: prepHours },
+      slicingHours: { label: "Fatiamento", text: slicingHours },
+      postProcessingHours: { label: "Pós-processamento", text: postProcessingHours },
+      centsPerHour: { label: "Custo da hora de mão de obra", text: laborCentsPerHour, money: true },
+    });
+    const lines = readNumbers({
+      ...Object.fromEntries(
+        materials.map((line) => [`m${line.key}`, { label: "Gramas", text: line.grams, required: true }]),
+      ),
+      ...Object.fromEntries(
+        supplies.map((line) => [`s${line.key}`, { label: "Quantidade", text: line.quantity, required: true }]),
+      ),
+    });
+    if (!fields.ok) {
+      setCalc({ kind: "error", message: fields.message });
+      return;
+    }
+    if (!lines.ok) {
+      setCalc({ kind: "error", message: lines.message });
+      return;
+    }
+    const values = fields.values;
     setCalc({ kind: "loading" });
     try {
       const body: QuotePreviewRequest = {
         printerId,
-        materials: materialLines
-          .filter((line) => line.materialId !== "")
-          .map((line) => ({ materialId: line.materialId, grams: Number(line.grams) })),
-        supplies: supplyLines
-          .filter((line) => line.stockItemId !== "")
-          .map((line) => ({ stockItemId: line.stockItemId, quantity: Number(line.quantity) })),
-        printHours: Number(printHours),
+        materials: materials.map((line) => ({ materialId: line.materialId, grams: lines.values[`m${line.key}`] ?? 0 })),
+        supplies: supplies.map((line) => ({ stockItemId: line.stockItemId, quantity: lines.values[`s${line.key}`] ?? 0 })),
+        printHours: values.printHours,
         labor: {
-          prepHours: Number(prepHours || 0),
-          slicingHours: Number(slicingHours || 0),
-          postProcessingHours: Number(postProcessingHours || 0),
-          centsPerHour: Number(laborCentsPerHour || 0),
+          prepHours: values.prepHours ?? 0,
+          slicingHours: values.slicingHours ?? 0,
+          postProcessingHours: values.postProcessingHours ?? 0,
+          centsPerHour: values.centsPerHour ?? 0,
         },
-        quantity: Number(quantity),
+        quantity: values.quantity,
         channelIds,
       };
       const result = await apiFetch<QuotePreviewResult>("/pricing/quote-preview", {
@@ -279,9 +304,10 @@ export default function PricingPage() {
                   onChange={(event) => setPostProcessingHours(event.target.value)}
                 />
               </Field>
-              <Field label="Custo da hora de mão de obra (centavos)" style={{ gridColumn: "1 / -1" }}>
+              <Field label="Custo da hora de mão de obra" style={{ gridColumn: "1 / -1" }}>
                 <Input
                   inputMode="decimal"
+                  prefixText="R$"
                   value={laborCentsPerHour}
                   onChange={(event) => setLaborCentsPerHour(event.target.value)}
                 />
@@ -430,7 +456,7 @@ export default function PricingPage() {
         <Card
           title="Resultado"
           icon={Receipt}
-          subtitle={`${calc.result.printer.name} · ${calc.result.quantity} un.`}
+          subtitle={`${calc.result.printer.name} · ${formatQuantity(calc.result.quantity)} un.`}
         >
           <CostBreakdown result={calc.result} />
         </Card>

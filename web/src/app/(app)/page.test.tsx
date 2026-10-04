@@ -130,4 +130,18 @@ describe("Home page", () => {
     fireEvent.click(screen.getByRole("button", { name: "Tentar novamente" }));
     expect(await screen.findByText("Olá, Ana")).toBeTruthy();
   });
+
+  it("alert quantities in pt-BR", async () => {
+    stubApi(
+      readyRoutes({
+        "/inventory/alerts": () =>
+          Promise.resolve(
+            jsonResponse(200, { items: [{ ...ALERT, kind: "material", label: "PLA", balance: 1800, minimum: 2500, unit: "g" }] }),
+          ),
+      }),
+    );
+    render(<Home />);
+    const link = await screen.findByRole("link", { name: "PLA" });
+    expect(link.closest("li")?.textContent).toContain("1.800 g / 2.500 g");
+  });
 });

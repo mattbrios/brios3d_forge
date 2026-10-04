@@ -88,7 +88,7 @@ describe("Movements page", () => {
     );
     const itemCells = within(itemRow).getAllByRole("cell").map((cell) => cell.textContent);
     expect(itemCells[2]).toBe("20");
-    expect(itemCells[3]).toBe("0.30");
+    expect(itemCells[3]).toBe("R$\u00A00,30");
     expect(itemCells[4]).toBe("u1");
     cleanup();
 
@@ -110,5 +110,15 @@ describe("Movements page", () => {
     render(<MovementsPageScreen />);
     await screen.findByText("Nenhuma movimentação registrada.");
     expect(screen.queryByRole("table")).toBeNull();
+  });
+
+  it("unit cost in reais", async () => {
+    stubApi({
+      [MOVEMENTS_PATH]: () =>
+        Promise.resolve(jsonResponse(200, movementsPage([{ ...ITEM_MOVEMENT, unitCostCents: 1050 }]))),
+    });
+    render(<MovementsPageScreen />);
+    const row = (await screen.findByText("entrada")).closest("tr") as HTMLTableRowElement;
+    expect(within(row).getAllByRole("cell")[3].textContent).toBe("R$\u00A010,50");
   });
 });

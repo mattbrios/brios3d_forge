@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Alert, Loading, PageError } from "@/components/ui/feedback";
 import { Field, Input } from "@/components/ui/form";
-import { formatCents } from "@/lib/format";
+import { formatCents, formatCentsPerUnit, formatQuantity } from "@/lib/format";
+import { centsToReaisInput, decimalToInput, readNumbers } from "@/lib/number-input";
 
 interface FieldsForm {
   energyTariffCentsPerKwh: string;
@@ -26,15 +27,26 @@ type Status =
   | { kind: "error"; message: string }
   | { kind: "ready"; role: AuthUser["role"]; settings: Settings; form: FieldsForm };
 
-const FIELDS: Array<{ key: keyof FieldsForm; label: string }> = [
-  { key: "energyTariffCentsPerKwh", label: "Tarifa de energia (centavos/kWh)" },
-  { key: "laborCentsPerHour", label: "Hora de trabalho (centavos)" },
+// `money` marca os campos em reais; a tarifa (4 casas) é exibida por kWh.
+const FIELDS: Array<{ key: keyof FieldsForm; label: string; money?: boolean; unit?: string }> = [
+  { key: "energyTariffCentsPerKwh", label: "Tarifa de energia (por kWh)", money: true, unit: "kWh" },
+  { key: "laborCentsPerHour", label: "Hora de trabalho", money: true },
   { key: "defaultMarginRate", label: "Margem padrão" },
   { key: "failureRate", label: "% falha" },
   { key: "purgeRate", label: "% purga" },
-  { key: "maintenanceCentsPerHour", label: "Manutenção (centavos/hora)" },
+  { key: "maintenanceCentsPerHour", label: "Manutenção (por hora)", money: true },
   { key: "productiveHoursPerMonth", label: "Horas produtivas/mês" },
 ];
+
+// Taxas seguem como fração, como antes (fora do escopo da issue #9).
+const RATE_KEYS: ReadonlyArray<keyof FieldsForm> = ["defaultMarginRate", "failureRate", "purgeRate"];
+
+function displayValue(field: (typeof FIELDS)[number], value: number): string {
+  if (field.unit) return formatCentsPerUnit(value, field.unit);
+  if (field.money) return formatCents(value);
+  if (RATE_KEYS.includes(field.key)) return String(value);
+  return formatQuantity(value);
+}
 
 function messageOf(error: unknown): string {
   return error instanceof ApiError ? error.message : "Não foi possível conectar à API";
@@ -42,13 +54,13 @@ function messageOf(error: unknown): string {
 
 function formOf(settings: Settings): FieldsForm {
   return {
-    energyTariffCentsPerKwh: String(settings.energyTariffCentsPerKwh),
-    laborCentsPerHour: String(settings.laborCentsPerHour),
-    defaultMarginRate: String(settings.defaultMarginRate),
-    failureRate: String(settings.failureRate),
-    purgeRate: String(settings.purgeRate),
-    maintenanceCentsPerHour: String(settings.maintenanceCentsPerHour),
-    productiveHoursPerMonth: String(settings.productiveHoursPerMonth),
+    energyTariffCentsPerKwh: centsToReaisInput(settings.energyTariffCentsPerKwh, 4),
+    laborCentsPerHour: centsToReaisInput(settings.laborCentsPerHour),
+    defaultMarginRate: decimalToInput(settings.defaultMarginRate),
+    failureRate: decimalToInput(settings.failureRate),
+    purgeRate: decimalToInput(settings.purgeRate),
+    maintenanceCentsPerHour: centsToReaisInput(settings.maintenanceCentsPerHour),
+    productiveHoursPerMonth: decimalToInput(settings.productiveHoursPerMonth),
   };
 }
 
@@ -91,21 +103,26 @@ export default function SettingsPage() {
     event.preventDefault();
     if (status.kind !== "ready") return;
     const { form } = status;
+    const parsed = readNumbers({
+      energyTariffCentsPerKwh: { label: "Tarifa de energia", text: form.energyTariffCentsPerKwh, money: true, maxDecimals: 4, required: true },
+      laborCentsPerHour: { label: "Hora de trabalho", text: form.laborCentsPerHour, money: true, required: true },
+      defaultMarginRate: { label: "Margem padrão", text: form.defaultMarginRate, required: true },
+      failureRate: { label: "% falha", text: form.failureRate, required: true },
+      purgeRate: { label: "% purga", text: form.purgeRate, required: true },
+      maintenanceCentsPerHour: { label: "Manutenção", text: form.maintenanceCentsPerHour, money: true, required: true },
+      productiveHoursPerMonth: { label: "Horas produtivas/mês", text: form.productiveHoursPerMonth, required: true },
+    });
+    if (!parsed.ok) {
+      setSaveError(parsed.message);
+      return;
+    }
     setSaving(true);
     setSaveError(null);
     try {
       const updated = await apiFetch<Settings>("/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          energyTariffCentsPerKwh: Number(form.energyTariffCentsPerKwh),
-          laborCentsPerHour: Number(form.laborCentsPerHour),
-          defaultMarginRate: Number(form.defaultMarginRate),
-          failureRate: Number(form.failureRate),
-          purgeRate: Number(form.purgeRate),
-          maintenanceCentsPerHour: Number(form.maintenanceCentsPerHour),
-          productiveHoursPerMonth: Number(form.productiveHoursPerMonth),
-        }),
+        body: JSON.stringify(parsed.values),
       });
       setStatus((current) =>
         current.kind === "ready" ? { ...current, settings: updated, form: formOf(updated) } : current,
@@ -138,9 +155,14 @@ export default function SettingsPage() {
         {editable ? (
           <form onSubmit={submit} className="flex flex-col gap-5">
             <div className="bf-form-grid">
-              {FIELDS.map(({ key, label }) => (
+              {FIELDS.map(({ key, label, money }) => (
                 <Field key={key} label={label}>
-                  <Input value={form[key]} onChange={(event) => setField(key, event.target.value)} />
+                  <Input
+                    inputMode="decimal"
+                    prefixText={money ? "R$" : undefined}
+                    value={form[key]}
+                    onChange={(event) => setField(key, event.target.value)}
+                  />
                 </Field>
               ))}
             </div>
@@ -157,10 +179,10 @@ export default function SettingsPage() {
           </form>
         ) : (
           <dl className="bf-dl">
-            {FIELDS.map(({ key, label }) => (
-              <div key={key}>
-                <dt>{label}</dt>
-                <dd>{settings[key as keyof Settings] as number}</dd>
+            {FIELDS.map((field) => (
+              <div key={field.key}>
+                <dt>{field.label}</dt>
+                <dd>{displayValue(field, settings[field.key])}</dd>
               </div>
             ))}
           </dl>
