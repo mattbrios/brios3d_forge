@@ -51,7 +51,7 @@ As fases seguem os quatro marcos do `CONTEXT.md` (MVP → Operação diária →
 | 12 | Calculadora integrada | Tela de precificação usando cadastros, estoque e os dados importados pela URL do MakerWorld | ✅ |
 | **Marco 2** | | *Operação diária no sistema* | |
 | 13 | Catálogo e ficha técnica | Produtos com URL do modelo, variações, ficha técnica, licença e custo sempre atualizado | ✅ |
-| 14 | Metadados do modelo por URL | Buscar imagem, título e licença no Printables, MakerWorld ou Thingiverse | ⬜ |
+| 14 | Metadados do modelo por URL | Buscar imagem, título e licença no Printables, MakerWorld ou Thingiverse | ✅ |
 | 15 | Estoque de produtos acabados | Saldo de pronta-entrega por produto/variação | ⬜ |
 | 16 | Orçamentos | Criar orçamento com itens, canal, desconto por quantidade e preço mínimo | ⬜ |
 | 17 | Orçamento em link/PDF e aprovação | Link público com validade, PDF e conversão em pedido | ⬜ |
