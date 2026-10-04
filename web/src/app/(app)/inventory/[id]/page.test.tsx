@@ -305,6 +305,27 @@ describe("Roll detail page", () => {
     expect(callsTo(fetchMock, "/inventory/rolls/r1").filter(([, init]) => init?.method === "PATCH")).toHaveLength(0);
   });
 
+  describe("meter in the material tone", () => {
+    async function rollFill(colorHex: string | null) {
+      stubApi({
+        "/auth/me": () => Promise.resolve(jsonResponse(200, PRODUCTION_ME)),
+        "/inventory/rolls/r1": () => Promise.resolve(jsonResponse(200, ROLL)),
+        "/materials?pageSize=100": () => Promise.resolve(jsonResponse(200, materialsPage([{ ...MATERIAL_1, colorHex }]))),
+      });
+      const { container } = render(<RollDetailPage params={Promise.resolve({ id: "r1" })} />);
+      await screen.findByText("PLA · Marca A · Natural");
+      return container.querySelector(".bf-meter__fill") as HTMLElement;
+    }
+
+    it("roll meter uses the material tone", async () => {
+      expect((await rollFill("#1e88e5")).style.background).toBe("rgb(30, 136, 229)");
+    });
+
+    it("roll meter without tone keeps the default fill", async () => {
+      expect((await rollFill(null)).style.background).toBe("");
+    });
+  });
+
   describe("numbers in pt-BR (issue #9)", () => {
     function renderRoll(roll: RollDetail) {
       stubApi({

@@ -14,6 +14,7 @@ import type { AuthUser } from "@/lib/auth";
 import { formatQuantity } from "@/lib/format";
 import type { MaterialsSummary } from "@/lib/inventory";
 import type { Material, MaterialsPage } from "@/lib/materials";
+import { meterFillFor } from "@/lib/meter-tone";
 
 type Status =
   | { kind: "loading" }
@@ -139,7 +140,12 @@ export default function Home() {
                       {GRAMS.format(item.totalBalanceGrams)} g<span> · {item.rollCount} rolo(s)</span>
                     </span>
                   </div>
-                  <StockMeter value={item.totalBalanceGrams} max={largest} minimum={null} />
+                  <StockMeter
+                    value={item.totalBalanceGrams}
+                    max={largest}
+                    minimum={null}
+                    fill={meterFillFor(materials.find((candidate) => candidate.id === item.materialId)?.colorHex)}
+                  />
                 </li>
               ))}
             </ul>

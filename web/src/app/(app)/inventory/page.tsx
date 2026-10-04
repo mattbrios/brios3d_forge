@@ -15,6 +15,7 @@ import { StockMeter } from "@/components/ui/data";
 import { Alert, EmptyState, Loading, PageError } from "@/components/ui/feedback";
 import { Field, Input, Select } from "@/components/ui/form";
 import { formatCentsPerUnit, formatQuantity } from "@/lib/format";
+import { meterFillFor } from "@/lib/meter-tone";
 import { readNumbers } from "@/lib/number-input";
 
 type Status =
@@ -249,6 +250,7 @@ export default function InventoryPage() {
             {summary.items.map((item) => {
               const material = materials.find((candidate) => candidate.id === item.materialId);
               const minimum = material?.minimumStockGrams ?? null;
+              const fill = meterFillFor(material?.colorHex);
               const low = minimum !== null && item.totalBalanceGrams < minimum;
               const expanded = expandedMaterialId === item.materialId;
               return (
@@ -275,6 +277,7 @@ export default function InventoryPage() {
                         value={item.totalBalanceGrams}
                         max={Math.max(item.totalBalanceGrams, (minimum ?? 0) * 2, 1000)}
                         minimum={minimum}
+                        fill={fill}
                       />
                       <span className="bf-meter__text">
                         {formatQuantity(item.totalBalanceGrams)} g
@@ -314,7 +317,12 @@ export default function InventoryPage() {
                               </span>
                               <RollStatusBadge status={roll.status} size="sm" />
                             </span>
-                            <StockMeter value={roll.balanceGrams} max={roll.initialWeightGrams} minimum={null} />
+                            <StockMeter
+                              value={roll.balanceGrams}
+                              max={roll.initialWeightGrams}
+                              minimum={null}
+                              fill={fill}
+                            />
                             <span className="bf-meter__text">
                               {formatQuantity(roll.balanceGrams)} g · {roll.status}
                             </span>

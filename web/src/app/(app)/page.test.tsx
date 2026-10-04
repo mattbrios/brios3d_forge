@@ -131,6 +131,44 @@ describe("Home page", () => {
     expect(await screen.findByText("Olá, Ana")).toBeTruthy();
   });
 
+  describe("meter in the material tone", () => {
+    function renderWithTone(colorHex: string | null, alerts: StockAlert[] = []) {
+      stubApi(
+        readyRoutes({
+          "/materials?pageSize=100": () =>
+            Promise.resolve(jsonResponse(200, { items: [{ ...MATERIAL, colorHex }], total: 1, page: 1, pageSize: 100 })),
+          "/inventory/alerts": () => Promise.resolve(jsonResponse(200, { items: alerts })),
+        }),
+      );
+      render(<Home />);
+    }
+
+    async function filamentFill() {
+      const item = (await screen.findByText("PLA · Voolt · Preto")).closest("li") as HTMLElement;
+      return item.querySelector(".bf-meter__fill") as HTMLElement;
+    }
+
+    it("filament by material meter uses the material tone", async () => {
+      renderWithTone("#1e88e5");
+      expect((await filamentFill()).style.background).toBe("rgb(30, 136, 229)");
+    });
+
+    it("filament by material without tone keeps the default fill", async () => {
+      renderWithTone(null);
+      expect((await filamentFill()).style.background).toBe("");
+    });
+
+    it("below minimum meter ignores the material tone", async () => {
+      // Saldo igual ao mínimo deixa a barra no tom "ok": só assim um `fill` passado por engano
+      // apareceria, porque amarelo e vermelho já ignoram o Tom.
+      renderWithTone("#1e88e5", [
+        { kind: "material", id: "mat-1", label: "PLA · Voolt · Preto", balance: 1000, minimum: 1000, unit: "g" },
+      ]);
+      const alert = (await screen.findByRole("link", { name: "PLA · Voolt · Preto" })).closest("li") as HTMLElement;
+      expect((alert.querySelector(".bf-meter__fill") as HTMLElement).style.background).toBe("");
+    });
+  });
+
   it("alert quantities in pt-BR", async () => {
     stubApi(
       readyRoutes({
