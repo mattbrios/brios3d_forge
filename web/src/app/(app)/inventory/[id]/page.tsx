@@ -7,6 +7,7 @@ import { ApiError, apiFetch } from "@/lib/api";
 import type { AuthUser } from "@/lib/auth";
 import type { FilamentRoll, RollDetail } from "@/lib/inventory";
 import type { Material, MaterialsPage } from "@/lib/materials";
+import { meterFillFor } from "@/lib/meter-tone";
 import {
   CircleMinus,
   History,
@@ -293,7 +294,12 @@ function RollDetailContent({ id }: { id: string }) {
             Imprimir etiqueta
           </ButtonLink>
         </div>
-        <StockMeter value={roll.balanceGrams} max={roll.initialWeightGrams} minimum={null} />
+        <StockMeter
+          value={roll.balanceGrams}
+          max={roll.initialWeightGrams}
+          minimum={null}
+          fill={meterFillFor(materials.find((candidate) => candidate.id === roll.materialId)?.colorHex)}
+        />
         <dl className="bf-dl">
           <div>
             <dt>Saldo</dt>

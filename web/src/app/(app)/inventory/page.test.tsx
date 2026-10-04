@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, getDefaultNormalizer, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, getDefaultNormalizer, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { MaterialsSummary } from "@/lib/inventory";
 import type { Material } from "@/lib/materials";
@@ -115,6 +115,112 @@ describe("Inventory page", () => {
       expect(screen.queryByRole("button", { name: "Cadastrar rolo" })).toBeNull();
       cleanup();
     }
+  });
+
+  describe("meter in the material tone", () => {
+    const LABEL = "PLA · Marca A · Natural";
+    const ROLL_BASE = {
+      materialId: "m1",
+      supplierId: null,
+      nominalWeightGrams: 1000,
+      initialWeightGrams: 1000,
+      spoolTareGrams: 250,
+      batch: null,
+      purchaseDate: null,
+      openedAt: null,
+      discardedAt: null,
+      location: null,
+      acquisitionCostCents: 12000,
+      status: "fechado",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    };
+    const ROLLS = [
+      { ...ROLL_BASE, id: "r1", balanceGrams: 800 },
+      { ...ROLL_BASE, id: "r2", balanceGrams: 300 },
+    ];
+
+    function renderWith(material: Partial<Material>, balance = 500, materialId = "m1") {
+      stubApi({
+        "/auth/me": () => Promise.resolve(jsonResponse(200, ADMIN_ME)),
+        "/inventory/materials-summary": () =>
+          Promise.resolve(
+            jsonResponse(200, summary([{ materialId, totalBalanceGrams: balance, avgCostCentsPerGram: 10, rollCount: 2 }])),
+          ),
+        "/materials?pageSize=100": () => Promise.resolve(jsonResponse(200, materialsPage([{ ...MATERIAL_1, ...material }]))),
+        [`/inventory/rolls?materialId=${materialId}&pageSize=100`]: () =>
+          Promise.resolve(jsonResponse(200, { items: ROLLS, total: 2, page: 1, pageSize: 100 })),
+      });
+      render(<InventoryPage />);
+    }
+
+    async function rowOf(label: string) {
+      return (await screen.findByText(label)).closest("li") as HTMLElement;
+    }
+
+    const rowMeter = (row: HTMLElement) => row.querySelector(".bf-meter") as HTMLElement;
+    const rowFill = (row: HTMLElement) => row.querySelector(".bf-meter__fill") as HTMLElement;
+
+    async function expandedRollFills() {
+      fireEvent.click(await screen.findByRole("button", { name: "Ver rolos" }));
+      await screen.findByText("r1");
+      return Array.from(document.querySelectorAll<HTMLElement>(".bf-roll-card .bf-meter__fill"));
+    }
+
+    it("material row meter uses the material tone", async () => {
+      renderWith({ colorHex: "#1e88e5", minimumStockGrams: null });
+      const fill = rowFill(await rowOf(LABEL));
+      expect(fill.style.background).toBe("rgb(30, 136, 229)");
+      expect(fill.classList.contains("bf-meter__fill--outlined")).toBe(false);
+    });
+
+    it("material row without tone keeps the default fill", async () => {
+      renderWith({ colorHex: null });
+      expect(rowFill(await rowOf(LABEL)).style.background).toBe("");
+    });
+
+    it("low balance shows warning instead of the tone", async () => {
+      renderWith({ colorHex: "#1e88e5", minimumStockGrams: 100 }, 60);
+      const row = await rowOf(LABEL);
+      expect(rowMeter(row).classList.contains("bf-meter--warning")).toBe(true);
+      expect(rowFill(row).style.background).toBe("");
+      expect(within(row).getByText("Abaixo do mínimo")).toBeTruthy();
+    });
+
+    it("critical balance shows danger instead of the tone", async () => {
+      renderWith({ colorHex: "#1e88e5", minimumStockGrams: 100 }, 40);
+      const row = await rowOf(LABEL);
+      expect(rowMeter(row).classList.contains("bf-meter--danger")).toBe(true);
+      expect(rowFill(row).style.background).toBe("");
+      expect(within(row).getByText("Abaixo do mínimo")).toBeTruthy();
+    });
+
+    it("white tone row meter is outlined", async () => {
+      renderWith({ colorHex: "#ffffff" });
+      const fill = rowFill(await rowOf(LABEL));
+      expect(fill.style.background).toBe("rgb(255, 255, 255)");
+      expect(fill.classList.contains("bf-meter__fill--outlined")).toBe(true);
+    });
+
+    it("material missing from the list keeps the default fill", async () => {
+      // O resumo traz m9, mas a lista carregada só tem m1 (com tom): o rótulo cai no id cru.
+      renderWith({ colorHex: "#1e88e5" }, 500, "m9");
+      expect(rowFill(await rowOf("m9")).style.background).toBe("");
+    });
+
+    it("expanded rolls use the material tone", async () => {
+      renderWith({ colorHex: "#1e88e5" });
+      const fills = await expandedRollFills();
+      expect(fills).toHaveLength(2);
+      expect(fills.map((fill) => fill.style.background)).toEqual(["rgb(30, 136, 229)", "rgb(30, 136, 229)"]);
+    });
+
+    it("expanded rolls without tone keep the default fill", async () => {
+      renderWith({ colorHex: null });
+      const fills = await expandedRollFills();
+      expect(fills).toHaveLength(2);
+      expect(fills.map((fill) => fill.style.background)).toEqual(["", ""]);
+    });
   });
 
   describe("numbers in pt-BR (issue #9)", () => {
