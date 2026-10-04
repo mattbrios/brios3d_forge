@@ -479,10 +479,18 @@ describe('Users administration (e2e)', () => {
     const cookieA = await loginCookie(app.getHttpServer(), 'u26-a@test.local');
     const cookieB = await loginCookie(app.getHttpServer(), 'u26-b@test.local');
 
-    // Isola a corrida: sem tirar o admin do arquivo (u-admin) da contagem, ele sempre
-    // sobraria como o terceiro admin ativo e o teste nunca chegaria ao caso do último.
-    await dataSource.query("UPDATE users SET active = false WHERE email = 'u-admin@test.local'");
+    // Isola a corrida: qualquer outro admin ativo (u-admin e os que os testes anteriores deixam
+    // ativos, como u25-a1/u25-a2) sobraria na contagem, e as duas desativações seriam legítimas.
+    // No Postgres, o TypeORM devolve UPDATE ... RETURNING como [linhas, quantidade].
+    const [otherAdmins]: [Array<{ id: string }>, number] = await dataSource.query(
+      "UPDATE users SET active = false WHERE role = 'admin' AND active = true AND id <> ALL($1) RETURNING id",
+      [[idA, idB]],
+    );
     try {
+      const [{ count }]: Array<{ count: number }> = await dataSource.query(
+        "SELECT count(*)::int AS count FROM users WHERE role = 'admin' AND active = true",
+      );
+      expect(count).toBe(2);
       const [responseA, responseB] = await Promise.all([
         patchUser(idB, { active: false }, cookieA),
         patchUser(idA, { active: false }, cookieB),
@@ -506,7 +514,9 @@ describe('Users administration (e2e)', () => {
       );
       expect(rows.filter((row) => row.active)).toHaveLength(1);
     } finally {
-      await dataSource.query("UPDATE users SET active = true WHERE email = 'u-admin@test.local'");
+      await dataSource.query('UPDATE users SET active = true WHERE id = ANY($1)', [
+        otherAdmins.map((admin) => admin.id),
+      ]);
     }
   });
 

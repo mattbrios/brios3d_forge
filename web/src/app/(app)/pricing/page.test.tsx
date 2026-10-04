@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import seaAnimals from "@/components/fixtures/print-profile-import.json";
 import type { Material } from "@/lib/materials";
@@ -184,8 +184,11 @@ describe("Pricing page", () => {
     fireEvent.click(screen.getByRole("button", { name: "Importar" }));
 
     await screen.findByRole("combobox", { name: "Perfil" });
-    expect((screen.getByLabelText("Horas de impressão") as HTMLInputElement).value).toBe(
-      String(28 / 60),
+    // As horas chegam num render seguinte (efeito do import -> estado da página): espera o valor.
+    await waitFor(() =>
+      expect((screen.getByLabelText("Horas de impressão") as HTMLInputElement).value).toBe(
+        String(28 / 60),
+      ),
     );
     const materialSelectors = screen.getAllByLabelText(/^Material \d+$/);
     expect(materialSelectors).toHaveLength(2);
