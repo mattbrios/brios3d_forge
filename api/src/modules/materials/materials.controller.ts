@@ -17,6 +17,13 @@ export class MaterialsController {
     return this.materials.list(query);
   }
 
+  // Mesmo acesso da listagem. Declarada antes de qualquer rota com `:id`.
+  @Roles('production', 'sales')
+  @Get('brands')
+  listBrands(): Promise<string[]> {
+    return this.materials.listBrands();
+  }
+
   // Sem @Roles(): só admin (AC 6).
   @Post()
   @HttpCode(201)

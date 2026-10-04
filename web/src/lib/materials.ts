@@ -10,6 +10,8 @@ export interface Material {
   active: boolean;
   // Fase 11: piso de reposição em gramas, somando os rolos; null é "sem mínimo".
   minimumStockGrams: number | null;
+  // Tom da cor: `#rrggbb` minúsculo, ou null para "sem tom".
+  colorHex: string | null;
 }
 
 export interface MaterialsPage {

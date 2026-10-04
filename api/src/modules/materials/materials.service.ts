@@ -49,6 +49,15 @@ export class MaterialsService {
     return { items: rows.map(toMaterialResponse), total, page, pageSize };
   }
 
+  // Door 3: uma marca por grafia ignorando maiúsculas, com a grafia do material criado por último
+  // (desempate pelo maior id), inclusive inativos, em ordem alfabética sem diferenciar maiúsculas.
+  async listBrands(): Promise<string[]> {
+    const rows: Array<{ brand: string }> = await this.materials.query(
+      'SELECT DISTINCT ON (lower(brand)) brand FROM materials ORDER BY lower(brand), created_at DESC, id DESC',
+    );
+    return rows.map((row) => row.brand);
+  }
+
   // Consumido pela Fase 12 (quote-preview) para validar o materialId recebido no corpo.
   async getById(id: string): Promise<MaterialResponse> {
     const material = await this.materials.findOne({ where: { id } });
@@ -69,6 +78,7 @@ export class MaterialsService {
         bedTempC: dto.bedTempC,
         active: true,
         minimumStockGrams: dto.minimumStockGrams ?? null,
+        colorHex: dto.colorHex ?? null,
       }),
     );
     return toMaterialResponse(created);
@@ -91,6 +101,7 @@ export class MaterialsService {
       if (dto.active !== undefined) material.active = dto.active;
       // Fase 11, door 1: `undefined` preserva o piso, `null` explícito limpa a política.
       if (dto.minimumStockGrams !== undefined) material.minimumStockGrams = dto.minimumStockGrams;
+      if (dto.colorHex !== undefined) material.colorHex = dto.colorHex;
 
       await repo.save(material);
       return toMaterialResponse(material);

@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useId, useState } from "react";
 import { ConfirmDialog } from "@/components/crud/confirm-dialog";
 import { DataTable, type Column } from "@/components/crud/data-table";
 import { EntityForm, type FieldConfig } from "@/components/crud/entity-form";
@@ -9,7 +9,8 @@ import type { AuthUser } from "@/lib/auth";
 import type { Material, MaterialsPage } from "@/lib/materials";
 import { Layers, Pencil, Plus, Power, Search } from "lucide-react";
 import { ActiveBadge } from "@/components/ui/badge";
-import { IconButton } from "@/components/ui/button";
+import { Button, IconButton } from "@/components/ui/button";
+import { Combobox } from "@/components/ui/combobox";
 import { Card } from "@/components/ui/card";
 import { EmptyState, Loading, PageError } from "@/components/ui/feedback";
 import { Field, Input } from "@/components/ui/form";
@@ -25,37 +26,106 @@ interface MaterialFormValues {
   type: string;
   brand: string;
   color: string;
+  // Tom `#rrggbb`, ou "" para "sem tom" (enviado como `null`).
+  colorHex: string;
   densityGCm3: string;
   nozzleTempC: string;
   bedTempC: string;
   minimumStockGrams: string;
 }
 
-const BLANK_FORM: MaterialFormValues = {
+// Valores usuais de um filamento novo. Só o web conhece: a API continua exigindo os números.
+const NEW_MATERIAL_DEFAULTS: MaterialFormValues = {
   type: "",
   brand: "",
   color: "",
-  densityGCm3: "",
-  nozzleTempC: "",
-  bedTempC: "",
-  minimumStockGrams: "",
+  colorHex: "",
+  densityGCm3: "1,24",
+  nozzleTempC: "220",
+  bedTempC: "65",
+  minimumStockGrams: "100",
 };
 
-const FORM_FIELDS: FieldConfig<MaterialFormValues>[] = [
-  { key: "type", label: "Tipo" },
-  { key: "brand", label: "Marca" },
-  { key: "color", label: "Cor" },
-  { key: "densityGCm3", label: "Densidade (g/cm³)", type: "number" },
-  { key: "nozzleTempC", label: "Temperatura do bico (°C)", type: "number" },
-  { key: "bedTempC", label: "Temperatura da mesa (°C)", type: "number" },
-  // Fase 11: piso opcional; campo vazio limpa a política (envia null).
-  { key: "minimumStockGrams", label: "Estoque mínimo (g, opcional)", type: "number" },
-];
+// Amostra do tom: o <label> de um <input type="color">, então clicar nela abre o seletor nativo.
+function ColorField({
+  values,
+  onChange,
+}: {
+  values: MaterialFormValues;
+  onChange: (values: MaterialFormValues) => void;
+}) {
+  const toneId = useId();
+  return (
+    <div className="bf-color-field">
+      <Input value={values.color} onChange={(event) => onChange({ ...values, color: event.target.value })} />
+      <input
+        id={toneId}
+        type="color"
+        aria-label="Tom"
+        className="bf-visually-hidden"
+        // O input nativo não tem "vazio": sem tom ele mostra preto, mas quem decide é o estado.
+        value={values.colorHex || "#000000"}
+        onChange={(event) => onChange({ ...values, colorHex: event.target.value })}
+      />
+      <label
+        htmlFor={toneId}
+        title="Escolher tom"
+        className={values.colorHex ? "bf-swatch" : "bf-swatch bf-swatch--none"}
+        style={values.colorHex ? { background: values.colorHex } : undefined}
+      >
+        <span className="bf-visually-hidden">Escolher tom</span>
+      </label>
+      {values.colorHex && (
+        <Button variant="ghost" size="sm" onClick={() => onChange({ ...values, colorHex: "" })}>
+          Remover
+        </Button>
+      )}
+    </div>
+  );
+}
+
+function formFields(brands: string[]): FieldConfig<MaterialFormValues>[] {
+  return [
+    { key: "type", label: "Tipo" },
+    {
+      key: "brand",
+      label: "Marca",
+      render: ({ values, onChange }) => (
+        <Combobox value={values.brand} onChange={(brand) => onChange({ ...values, brand })} options={brands} />
+      ),
+    },
+    { key: "color", label: "Cor", render: (props) => <ColorField {...props} /> },
+    { key: "densityGCm3", label: "Densidade (g/cm³)", type: "number" },
+    { key: "nozzleTempC", label: "Temperatura do bico (°C)", type: "number" },
+    { key: "bedTempC", label: "Temperatura da mesa (°C)", type: "number" },
+    // Fase 11: piso opcional; campo vazio limpa a política (envia null).
+    { key: "minimumStockGrams", label: "Estoque mínimo (g, opcional)", type: "number" },
+  ];
+}
+
+// A marca salva entra nas sugestões sem recarregar, com a grafia nova no lugar da antiga (a API
+// também devolve a grafia do material mais recente), na mesma ordem sem diferenciar maiúsculas.
+function withBrand(brands: string[], brand: string): string[] {
+  const others = brands.filter((current) => current.toLowerCase() !== brand.toLowerCase());
+  return [...others, brand].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+}
 
 const COLUMNS: Column<Material>[] = [
   { key: "type", label: "Tipo", render: (row) => <span style={{ fontWeight: 800 }}>{row.type}</span> },
   { key: "brand", label: "Marca" },
-  { key: "color", label: "Cor" },
+  {
+    key: "color",
+    label: "Cor",
+    render: (row) =>
+      row.colorHex ? (
+        <span className="bf-color-cell">
+          <span role="img" aria-label={`Tom ${row.colorHex}`} className="bf-swatch bf-swatch--sm" style={{ background: row.colorHex }} />
+          {row.color}
+        </span>
+      ) : (
+        row.color
+      ),
+  },
   { key: "densityGCm3", label: "Densidade", numeric: true, render: (row) => formatQuantity(row.densityGCm3) },
   { key: "nozzleTempC", label: "Bico °C", numeric: true, render: (row) => formatQuantity(row.nozzleTempC) },
   { key: "bedTempC", label: "Mesa °C", numeric: true, render: (row) => formatQuantity(row.bedTempC) },
@@ -81,7 +151,16 @@ function buildBody(values: MaterialFormValues): { ok: true; body: Record<string,
     minimumStockGrams: { label: "Estoque mínimo", text: values.minimumStockGrams },
   });
   if (!parsed.ok) return parsed;
-  return { ok: true, body: { type: values.type, brand: values.brand, color: values.color, ...parsed.values } };
+  return {
+    ok: true,
+    body: {
+      type: values.type,
+      brand: values.brand,
+      color: values.color,
+      colorHex: values.colorHex === "" ? null : values.colorHex,
+      ...parsed.values,
+    },
+  };
 }
 
 function formFromMaterial(material: Material): MaterialFormValues {
@@ -89,6 +168,7 @@ function formFromMaterial(material: Material): MaterialFormValues {
     type: material.type,
     brand: material.brand,
     color: material.color,
+    colorHex: material.colorHex ?? "",
     densityGCm3: decimalToInput(material.densityGCm3),
     nozzleTempC: decimalToInput(material.nozzleTempC),
     bedTempC: decimalToInput(material.bedTempC),
@@ -101,7 +181,10 @@ export default function MaterialsPage() {
   const [attempt, setAttempt] = useState(0);
   const [search, setSearch] = useState("");
 
-  const [createForm, setCreateForm] = useState<MaterialFormValues>(BLANK_FORM);
+  // Sugestões da Marca; `null` até a primeira busca. Falhar deixa a lista vazia, sem alerta.
+  const [brands, setBrands] = useState<string[] | null>(null);
+
+  const [createForm, setCreateForm] = useState<MaterialFormValues>(NEW_MATERIAL_DEFAULTS);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
@@ -131,6 +214,19 @@ export default function MaterialsPage() {
     };
   }, [attempt, search]);
 
+  // Só o admin vê os formulários, então só ele busca as marcas, uma vez por tela.
+  const isAdmin = status.kind === "ready" && status.role === "admin";
+  useEffect(() => {
+    if (!isAdmin || brands !== null) return;
+    apiFetch<string[]>("/materials/brands")
+      .then(setBrands)
+      .catch(() => setBrands([]));
+  }, [isAdmin, brands]);
+
+  function rememberBrand(brand: string) {
+    setBrands((current) => withBrand(current ?? [], brand));
+  }
+
   function retry() {
     setAttempt((current) => current + 1);
   }
@@ -157,7 +253,8 @@ export default function MaterialsPage() {
       setStatus((current) =>
         current.kind === "ready" ? { ...current, materials: [...current.materials, created] } : current,
       );
-      setCreateForm(BLANK_FORM);
+      rememberBrand(created.brand);
+      setCreateForm(NEW_MATERIAL_DEFAULTS);
     } catch (error) {
       setCreateError(messageOf(error));
     } finally {
@@ -196,6 +293,7 @@ export default function MaterialsPage() {
       setStatus((current) =>
         current.kind === "ready" ? { ...current, materials: replaceMaterial(current.materials, updated) } : current,
       );
+      rememberBrand(updated.brand);
       cancelEdit();
     } catch (error) {
       setEditError(messageOf(error));
@@ -235,6 +333,7 @@ export default function MaterialsPage() {
   }
 
   const { role, materials } = status;
+  const fields = formFields(brands ?? []);
   const editable = role === "admin";
   const activeCount = materials.filter((material) => material.active).length;
 
@@ -256,7 +355,7 @@ export default function MaterialsPage() {
       {editable && editingId && editForm && (
         <Card title="Editar material" icon={Layers}>
           <EntityForm
-            fields={FORM_FIELDS}
+            fields={fields}
             values={editForm}
             onChange={setEditForm}
             onSubmit={submitEdit}
@@ -321,7 +420,7 @@ export default function MaterialsPage() {
       {editable && !editingId && (
         <Card title="Novo material" icon={Plus}>
           <EntityForm
-            fields={FORM_FIELDS}
+            fields={fields}
             values={createForm}
             onChange={setCreateForm}
             onSubmit={submitCreate}

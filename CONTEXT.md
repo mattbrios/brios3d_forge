@@ -19,7 +19,10 @@ Sistema de gestão para uma empresa de **impressões 3D personalizadas em FDM (f
 ## Módulos do sistema
 
 ### 1. Cadastros base (fundação)
-- **Materiais:** tipo (PLA, PETG, ABS, ASA, TPU, Nylon…), marca, cor, densidade (g/cm³), temperaturas de bico e de mesa
+- **Materiais:** tipo (PLA, PETG, ABS, ASA, TPU, Nylon…), marca, cor, tom, densidade (g/cm³), temperaturas de bico e de mesa
+  - **Cor:** o nome livre da cor do filamento ("Preto Fosco", "Silk Gold")
+  - **Tom:** a aparência da cor, um único hex `#rrggbb` usado para desenhar a amostra. É opcional: um material pode não ter tom
+  - **Marca:** texto livre; o cadastro sugere as marcas já usadas, mas aceita uma marca nova
 - **Impressoras:** modelo, custo de aquisição, vida útil estimada (horas), potência média (W), horímetro, bicos instalados, AMS/multicor
 - **Clientes e fornecedores**
 - **Configurações globais:** tarifa de energia (R$/kWh), valor da hora de trabalho, margem padrão, % de falha, % de purga/perda, impostos e taxas por canal de venda

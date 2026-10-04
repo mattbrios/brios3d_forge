@@ -34,6 +34,7 @@ const MATERIAL: Material = {
   bedTempC: 60,
   active: true,
   minimumStockGrams: null,
+  colorHex: null,
 };
 
 const ROLL: FilamentRoll = {
