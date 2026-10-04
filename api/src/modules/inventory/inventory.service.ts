@@ -12,6 +12,7 @@ import { ListMovementsDto } from './dto/list-movements.dto.js';
 import { ListRollsDto } from './dto/list-rolls.dto.js';
 import { ListStockItemsDto } from './dto/list-stock-items.dto.js';
 import { MaterialsSummaryDto } from './dto/materials-summary.dto.js';
+import { UpdateRollDto } from './dto/update-roll.dto.js';
 import { UpdateStockItemDto } from './dto/update-stock-item.dto.js';
 import { WeighRollDto } from './dto/weigh-roll.dto.js';
 import { FilamentRoll } from './entities/filament-roll.entity.js';
@@ -155,6 +156,25 @@ export class InventoryService {
     }
     const movements = await this.movements.find({ where: { rollId: id }, order: { createdAt: 'ASC' } });
     return { ...toRollResponse(roll), movements: movements.map(toMovementResponse) };
+  }
+
+  // Edição descritiva (AD-031): não gera movimento nem mexe no saldo. Uma tara nova só vale para as
+  // próximas pesagens. Rolo descartado é histórico e não se edita (mesmo 409 das ações).
+  async updateRoll(id: string, dto: UpdateRollDto): Promise<RollResponse> {
+    const roll = await this.rolls.findOne({ where: { id } });
+    if (!roll) {
+      throw new NotFoundException(ROLL_NOT_FOUND);
+    }
+    if (roll.discardedAt !== null) {
+      throw new ConflictException(ROLL_DISCARDED);
+    }
+
+    if (dto.spoolTareGrams !== undefined) roll.spoolTareGrams = dto.spoolTareGrams;
+    if (dto.nominalWeightGrams !== undefined) roll.nominalWeightGrams = dto.nominalWeightGrams;
+    if (dto.batch !== undefined) roll.batch = dto.batch;
+    if (dto.purchaseDate !== undefined) roll.purchaseDate = dto.purchaseDate;
+    if (dto.location !== undefined) roll.location = dto.location;
+    return toRollResponse(await this.rolls.save(roll));
   }
 
   async weigh(id: string, dto: WeighRollDto, userId: string): Promise<RollResponse> {

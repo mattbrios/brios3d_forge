@@ -98,6 +98,10 @@ describe('Inventory (e2e)', () => {
     const call = request(server()).patch(`/inventory/rolls/${id}/open`);
     return cookie ? call.set('Cookie', cookie) : call;
   };
+  const updateReq = (id: string, body: object, cookie?: string) => {
+    const call = request(server()).patch(`/inventory/rolls/${id}`).send(body);
+    return cookie ? call.set('Cookie', cookie) : call;
+  };
   const summaryReq = (query: string, cookie?: string) => {
     const call = request(server()).get(`/inventory/materials-summary${query}`);
     return cookie ? call.set('Cookie', cookie) : call;
@@ -472,6 +476,154 @@ describe('Inventory (e2e)', () => {
     expect(del.status).toBe(404);
   });
 
+  // Edição dos dados descritivos do rolo
+
+  it('editing a roll updates its descriptive fields without touching the balance or the ledger', async () => {
+    const rollId = await createRoll(dataSource, {
+      materialId,
+      balanceGrams: 562,
+      batch: 'L-01',
+      location: 'Prateleira A',
+      purchaseDate: '2026-09-01',
+    });
+
+    const response = await updateReq(
+      rollId,
+      { spoolTareGrams: 180, nominalWeightGrams: 750, batch: '  L-02  ', purchaseDate: '2026-09-15', location: 'Prateleira B' },
+      productionCookie,
+    );
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      spoolTareGrams: 180,
+      nominalWeightGrams: 750,
+      batch: 'L-02',
+      purchaseDate: '2026-09-15',
+      location: 'Prateleira B',
+      balanceGrams: 562,
+      initialWeightGrams: 1000,
+      acquisitionCostCents: 12000,
+    });
+    expect(await balanceOf(rollId)).toBe(562);
+    expect(await movementsOf(rollId)).toHaveLength(0);
+  });
+
+  it('the next weighing uses the edited tare', async () => {
+    const rollId = await createRoll(dataSource, { materialId, spoolTareGrams: 250 });
+    expect((await updateReq(rollId, { spoolTareGrams: 180 }, productionCookie)).status).toBe(200);
+
+    const weighed = await weighReq(rollId, { grossWeightGrams: 812 }, productionCookie);
+    expect(weighed.status).toBe(200);
+    expect(weighed.body.balanceGrams).toBe(632);
+  });
+
+  it('an explicit null clears batch, purchaseDate and location, and omitted fields are kept', async () => {
+    const rollId = await createRoll(dataSource, {
+      materialId,
+      batch: 'L-01',
+      location: 'Prateleira A',
+      purchaseDate: '2026-09-01',
+    });
+
+    const response = await updateReq(rollId, { batch: null, purchaseDate: null, location: null }, adminCookie);
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      batch: null,
+      purchaseDate: null,
+      location: null,
+      spoolTareGrams: 250,
+      nominalWeightGrams: 1000,
+    });
+  });
+
+  it('rejects invalid edit payloads and leaves the roll unchanged', async () => {
+    const rollId = await createRoll(dataSource, { materialId, location: 'Prateleira A' });
+    const invalidBodies: object[] = [
+      { spoolTareGrams: -1 },
+      { spoolTareGrams: null },
+      { spoolTareGrams: '250' },
+      { nominalWeightGrams: 0 },
+      { nominalWeightGrams: null },
+      { batch: '   ' },
+      { batch: 'x'.repeat(101) },
+      { location: 'x'.repeat(101) },
+      { purchaseDate: 'ontem' },
+      { materialId },
+      { supplierId: UNKNOWN_SUPPLIER_ID },
+      { acquisitionCostCents: 1 },
+      { initialWeightGrams: 2000 },
+      { balanceGrams: 2000 },
+    ];
+    for (const body of invalidBodies) {
+      const response = await updateReq(rollId, body, adminCookie);
+      expect(response.status, JSON.stringify(body)).toBe(400);
+      expect(typeof response.body.error, JSON.stringify(body)).toBe('string');
+    }
+
+    const roll = await getByIdReq(rollId, adminCookie);
+    expect(roll.body).toMatchObject({
+      spoolTareGrams: 250,
+      nominalWeightGrams: 1000,
+      location: 'Prateleira A',
+      balanceGrams: 1000,
+      acquisitionCostCents: 12000,
+    });
+  });
+
+  it('accepts the edit limits on the allowed side: zero tare, the smallest positive nominal weight and 100 characters', async () => {
+    const rollId = await createRoll(dataSource, { materialId });
+    const response = await updateReq(
+      rollId,
+      { spoolTareGrams: 0, nominalWeightGrams: 0.5, batch: 'b'.repeat(100), location: 'l'.repeat(100) },
+      adminCookie,
+    );
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      spoolTareGrams: 0,
+      nominalWeightGrams: 0.5,
+      batch: 'b'.repeat(100),
+      location: 'l'.repeat(100),
+    });
+  });
+
+  it('editing a discarded roll is 409 and keeps it unchanged', async () => {
+    const rollId = await createRoll(dataSource, {
+      materialId,
+      balanceGrams: 0,
+      discardedAt: new Date(),
+      location: 'Prateleira A',
+    });
+
+    const response = await updateReq(rollId, { location: 'Prateleira B' }, adminCookie);
+    expect(response.status).toBe(409);
+    expect(response.body).toEqual({ error: 'Rolo já descartado' });
+    expect((await getByIdReq(rollId, adminCookie)).body.location).toBe('Prateleira A');
+  });
+
+  it('editing a roll is allowed for admin and production and forbidden for sales', async () => {
+    const cases: Array<{ role: string; cookie: () => string; status: number }> = [
+      { role: 'admin', cookie: () => adminCookie, status: 200 },
+      { role: 'production', cookie: () => productionCookie, status: 200 },
+      { role: 'sales', cookie: () => salesCookie, status: 403 },
+    ];
+    for (const { role, cookie, status } of cases) {
+      const rollId = await createRoll(dataSource, { materialId, location: 'Prateleira A' });
+      const response = await updateReq(rollId, { location: 'Prateleira B' }, cookie());
+      expect(response.status, role).toBe(status);
+      const stored = (await getByIdReq(rollId, adminCookie)).body.location;
+      if (status === 200) {
+        expect(stored, role).toBe('Prateleira B');
+      } else {
+        expect(response.body, role).toEqual(PERMISSION_DENIED);
+        expect(stored, role).toBe('Prateleira A');
+      }
+    }
+  });
+
+  it('editing a roll rejects a malformed id with 400', async () => {
+    const response = await updateReq('not-a-uuid', { location: 'B' }, adminCookie);
+    expect(response.status).toBe(400);
+  });
+
   // S7 - Regras cruzadas de rota: sessão, papel e rolo inexistente
 
   it('every inventory route is 401 without a session', async () => {
@@ -483,6 +635,7 @@ describe('Inventory (e2e)', () => {
       () => movementReq(UNKNOWN_ROLL_ID, { type: 'consumo', quantity: 1 }),
       () => discardReq(UNKNOWN_ROLL_ID),
       () => openReq(UNKNOWN_ROLL_ID),
+      () => updateReq(UNKNOWN_ROLL_ID, { location: 'B' }),
       () => summaryReq(''),
     ];
     for (const route of routes) {
@@ -499,6 +652,7 @@ describe('Inventory (e2e)', () => {
       () => movementReq(UNKNOWN_ROLL_ID, { type: 'consumo', quantity: 1 }, productionCookie),
       () => discardReq(UNKNOWN_ROLL_ID, productionCookie),
       () => openReq(UNKNOWN_ROLL_ID, productionCookie),
+      () => updateReq(UNKNOWN_ROLL_ID, { location: 'B' }, productionCookie),
     ];
     for (const route of routes) {
       const response = await route();
@@ -514,6 +668,7 @@ describe('Inventory (e2e)', () => {
       () => movementReq(rollId, { type: 'consumo', quantity: 1 }, salesCookie),
       () => discardReq(rollId, salesCookie),
       () => openReq(rollId, salesCookie),
+      () => updateReq(rollId, { location: 'Prateleira B' }, salesCookie),
     ];
     for (const route of routes) {
       const response = await route();

@@ -36,6 +36,7 @@ Tipos de item:
 
 Funcionalidades:
 - **Rastreio por rolo:** peso inicial, peso restante, **tara do carretel** (ajuste de saldo pesando na balança), lote, data de abertura, localização. Etiqueta com QR code no rolo.
+- **Correção do rolo:** tara, peso nominal, lote, data de compra e localização podem ser editados. Material, custo, peso inicial e saldo não: o saldo só muda por movimentação. Rolo não se exclui; o fim de vida é o descarte
 - **Baixa automática** ao concluir a impressão, usando os gramas do G-code, **mais** baixa por falha ou descarte
 - **Custo médio ponderado** por material
 - **Estoque mínimo com alertas**

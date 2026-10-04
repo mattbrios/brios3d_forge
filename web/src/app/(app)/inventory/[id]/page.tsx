@@ -5,12 +5,13 @@ import { type FormEvent, useEffect, useState } from "react";
 import { ConfirmDialog } from "@/components/crud/confirm-dialog";
 import { ApiError, apiFetch } from "@/lib/api";
 import type { AuthUser } from "@/lib/auth";
-import type { RollDetail } from "@/lib/inventory";
+import type { FilamentRoll, RollDetail } from "@/lib/inventory";
 import type { Material, MaterialsPage } from "@/lib/materials";
 import {
   CircleMinus,
   History,
   PackageOpen,
+  Pencil,
   QrCode,
   Trash2,
   Weight,
@@ -31,6 +32,27 @@ type Status =
 function messageOf(error: unknown): string {
   return error instanceof ApiError ? error.message : "Não foi possível conectar à API";
 }
+
+interface EditFormValues {
+  spoolTareGrams: string;
+  nominalWeightGrams: string;
+  batch: string;
+  location: string;
+  purchaseDate: string;
+}
+
+function editFormOf(roll: FilamentRoll): EditFormValues {
+  return {
+    spoolTareGrams: String(roll.spoolTareGrams),
+    nominalWeightGrams: String(roll.nominalWeightGrams),
+    batch: roll.batch ?? "",
+    location: roll.location ?? "",
+    purchaseDate: roll.purchaseDate ?? "",
+  };
+}
+
+// Campo de texto vazio vira `null` explícito, que é o que limpa o valor no PATCH.
+const orNull = (value: string): string | null => (value.trim() === "" ? null : value.trim());
 
 function materialLabel(materials: Material[], materialId: string): string {
   const material = materials.find((candidate) => candidate.id === materialId);
@@ -74,6 +96,10 @@ function RollDetailContent({ id }: { id: string }) {
 
   const [openSubmitting, setOpenSubmitting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  const [editForm, setEditForm] = useState<EditFormValues | null>(null);
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const [discarding, setDiscarding] = useState(false);
@@ -148,6 +174,37 @@ function RollDetailContent({ id }: { id: string }) {
     }
   }
 
+  async function submitEdit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (editForm === null) return;
+    setEditSubmitting(true);
+    setEditError(null);
+    try {
+      await apiFetch(`/inventory/rolls/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          spoolTareGrams: Number(editForm.spoolTareGrams),
+          nominalWeightGrams: Number(editForm.nominalWeightGrams),
+          batch: orNull(editForm.batch),
+          location: orNull(editForm.location),
+          purchaseDate: orNull(editForm.purchaseDate),
+        }),
+      });
+      setEditForm(null);
+      retry();
+    } catch (error) {
+      setEditError(messageOf(error));
+    } finally {
+      setEditSubmitting(false);
+    }
+  }
+
+  function startEdit(roll: FilamentRoll) {
+    setEditError(null);
+    setEditForm(editFormOf(roll));
+  }
+
   async function submitOpen() {
     setOpenSubmitting(true);
     setActionError(null);
@@ -207,6 +264,11 @@ function RollDetailContent({ id }: { id: string }) {
               {roll.batch ? ` · lote ${roll.batch}` : ""}
             </p>
           </div>
+          {editable && !discarded && editForm === null && (
+            <Button variant="secondary" icon={Pencil} onClick={() => startEdit(roll)}>
+              Editar
+            </Button>
+          )}
           {/* Fase 11: o rolo na prateleira ganha um caminho de volta para esta página. */}
           <ButtonLink href={`/inventory/${id}/label`} icon={QrCode}>
             Imprimir etiqueta
@@ -226,8 +288,82 @@ function RollDetailContent({ id }: { id: string }) {
             <dt>Peso inicial</dt>
             <dd>{roll.initialWeightGrams} g</dd>
           </div>
+          <div>
+            <dt>Peso nominal</dt>
+            <dd>{roll.nominalWeightGrams} g</dd>
+          </div>
+          <div>
+            <dt>Data de compra</dt>
+            <dd>{roll.purchaseDate ? new Date(`${roll.purchaseDate}T00:00:00`).toLocaleDateString("pt-BR") : "—"}</dd>
+          </div>
         </dl>
       </Card>
+
+      {editForm !== null && (
+        <Card title="Editar rolo" icon={Pencil} subtitle="Mudar a tara não altera o saldo; ela vale para as próximas pesagens.">
+          <form onSubmit={submitEdit} className="flex flex-col gap-3">
+            <div
+              className="bf-form-grid"
+              style={{ gridTemplateColumns: "repeat(auto-fill,minmax(min(100%,180px),1fr))" }}
+            >
+              <Field label="Tara do carretel (g)">
+                <Input
+                  type="number"
+                  min={0}
+                  step="any"
+                  value={editForm.spoolTareGrams}
+                  onChange={(event) => setEditForm({ ...editForm, spoolTareGrams: event.target.value })}
+                  required
+                />
+              </Field>
+              <Field label="Peso nominal (g)">
+                <Input
+                  type="number"
+                  min={0}
+                  step="any"
+                  value={editForm.nominalWeightGrams}
+                  onChange={(event) => setEditForm({ ...editForm, nominalWeightGrams: event.target.value })}
+                  required
+                />
+              </Field>
+              <Field label="Lote">
+                <Input
+                  value={editForm.batch}
+                  maxLength={100}
+                  onChange={(event) => setEditForm({ ...editForm, batch: event.target.value })}
+                />
+              </Field>
+              <Field label="Localização">
+                <Input
+                  value={editForm.location}
+                  maxLength={100}
+                  onChange={(event) => setEditForm({ ...editForm, location: event.target.value })}
+                />
+              </Field>
+              <Field label="Data de compra">
+                <Input
+                  type="date"
+                  value={editForm.purchaseDate}
+                  onChange={(event) => setEditForm({ ...editForm, purchaseDate: event.target.value })}
+                />
+              </Field>
+            </div>
+            {editError && (
+              <Alert tone="danger" role="alert">
+                {editError}
+              </Alert>
+            )}
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" loading={editSubmitting}>
+                {editSubmitting ? "Salvando…" : "Salvar"}
+              </Button>
+              <Button variant="ghost" onClick={() => setEditForm(null)} disabled={editSubmitting}>
+                Cancelar
+              </Button>
+            </div>
+          </form>
+        </Card>
+      )}
 
       {actionError && (
         <Alert tone="danger" role="alert">

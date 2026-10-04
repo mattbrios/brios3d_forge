@@ -239,7 +239,7 @@ outros papéis (door 1, Fase 4: uma rota sem `@Roles()` é só de admin).
 | `printers` | x | leitura + `PATCH /printers/:id/hourmeter` | leitura |
 | `customers` | x | leitura | x |
 | `suppliers` | x | leitura | leitura |
-| `inventory` | x | leitura + pesagem/baixa/descarte/abertura do rolo, e consumo/perda/contagem do item (a entrada do item é admin, porque carrega custo). Os alertas de estoque mínimo são leitura dos três papéis; definir o piso é só admin | leitura |
+| `inventory` | x | leitura + pesagem/baixa/descarte/abertura/edição dos dados descritivos do rolo, e consumo/perda/contagem do item (a entrada do item é admin, porque carrega custo). Os alertas de estoque mínimo são leitura dos três papéis; definir o piso é só admin | leitura |
 | `purchasing` | a definir na Fase 21 | a definir na Fase 21 | a definir na Fase 21 |
 | `products` | x | leitura (lista, detalhe, custo e preço) | leitura (lista, detalhe, custo e preço) |
 | `pricing` | x | x | x |
@@ -346,9 +346,10 @@ público, e `POST /print-profiles/import` está aberto aos três papéis desde e
 - [x] Pesagem: informar o peso bruto na balança, calcular `saldo = bruto − tara` e gerar um movimento de ajuste com a diferença
 - [x] Baixa manual de consumo, perda e descarte
 - [x] Registrar abertura ~~e secagem~~ do rolo. *A secagem do rolo saiu em 2026-10-03 (AD-030).*
+- [x] Editar os dados descritivos do rolo (tara, peso nominal, lote, data de compra, localização), sem mexer no saldo nem no custo. *Adicionado em 2026-10-03 (AD-031).*
 - [x] Custo médio ponderado por material, recalculado a cada entrada e exposto em R$/g
 - [x] Impedir saldo negativo
-- [x] Web: lista de rolos por material (com saldo e filtros), detalhe do rolo com histórico, formulários de entrada, pesagem e baixa
+- [x] Web: lista de rolos por material (com saldo e filtros), detalhe do rolo com histórico, formulários de entrada, pesagem, baixa e edição
 - [x] Testes: custo médio (várias entradas com preços diferentes), pesagem, ledger, auditoria (usuário gravado)
 
 **Critérios de aceite:**
