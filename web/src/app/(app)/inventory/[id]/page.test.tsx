@@ -199,4 +199,103 @@ describe("Roll detail page", () => {
     expect(discardCalled).toBe(true);
     expect(callsTo(fetchMock, "/inventory/rolls/r1/discard")).toHaveLength(1);
   });
+
+  it("offers editing only to admin and production on a roll that is not discarded", async () => {
+    const cases = [
+      { me: ADMIN_ME, roll: ROLL, visible: true },
+      { me: PRODUCTION_ME, roll: ROLL, visible: true },
+      { me: SALES_ME, roll: ROLL, visible: false },
+      {
+        me: ADMIN_ME,
+        roll: { ...ROLL, balanceGrams: 0, status: "descartado" as const, discardedAt: "2026-01-02T00:00:00.000Z" },
+        visible: false,
+      },
+    ];
+    for (const { me, roll, visible } of cases) {
+      stubApi({
+        "/auth/me": () => Promise.resolve(jsonResponse(200, me)),
+        "/inventory/rolls/r1": () => Promise.resolve(jsonResponse(200, roll)),
+        "/materials?pageSize=100": () => Promise.resolve(jsonResponse(200, materialsPage([MATERIAL_1]))),
+      });
+      render(<RollDetailPage params={Promise.resolve({ id: "r1" })} />);
+
+      await screen.findByText("entrada");
+      const label = `${me.role} ${roll.status}`;
+      expect(screen.queryByRole("button", { name: "Editar" }) !== null, label).toBe(visible);
+      cleanup();
+    }
+  });
+
+  it("edits the roll, sending blank text fields as null, and reloads it", async () => {
+    let patchBody: unknown = null;
+    let currentRoll: RollDetail = { ...ROLL, batch: "L-01", location: "Prateleira A", purchaseDate: "2026-09-01" };
+    const fetchMock = stubApi({
+      "/auth/me": () => Promise.resolve(jsonResponse(200, PRODUCTION_ME)),
+      "/inventory/rolls/r1": (init) => {
+        if (init?.method === "PATCH") {
+          patchBody = JSON.parse(init.body as string);
+          currentRoll = { ...currentRoll, spoolTareGrams: 180, batch: null, location: "Prateleira B" };
+        }
+        return Promise.resolve(jsonResponse(200, currentRoll));
+      },
+      "/materials?pageSize=100": () => Promise.resolve(jsonResponse(200, materialsPage([MATERIAL_1]))),
+    });
+    render(<RollDetailPage params={Promise.resolve({ id: "r1" })} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Editar" }));
+    expect((screen.getByLabelText("Tara do carretel (g)") as HTMLInputElement).value).toBe("250");
+    expect((screen.getByLabelText("Lote") as HTMLInputElement).value).toBe("L-01");
+
+    fireEvent.change(screen.getByLabelText("Tara do carretel (g)"), { target: { value: "180" } });
+    fireEvent.change(screen.getByLabelText("Lote"), { target: { value: "  " } });
+    fireEvent.change(screen.getByLabelText("Localização"), { target: { value: "Prateleira B" } });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+    expect(await screen.findByText("180 g")).toBeTruthy();
+    expect(patchBody).toEqual({
+      spoolTareGrams: 180,
+      nominalWeightGrams: 1000,
+      batch: null,
+      location: "Prateleira B",
+      purchaseDate: "2026-09-01",
+    });
+    expect(screen.queryByRole("button", { name: "Salvar" })).toBeNull();
+    expect(callsTo(fetchMock, "/inventory/rolls/r1").filter(([, init]) => init?.method === "PATCH")).toHaveLength(1);
+  });
+
+  it("keeps the edit form open with the API error message", async () => {
+    stubApi({
+      "/auth/me": () => Promise.resolve(jsonResponse(200, ADMIN_ME)),
+      "/inventory/rolls/r1": (init) =>
+        Promise.resolve(
+          init?.method === "PATCH"
+            ? jsonResponse(409, { error: "Rolo já descartado" })
+            : jsonResponse(200, ROLL),
+        ),
+      "/materials?pageSize=100": () => Promise.resolve(jsonResponse(200, materialsPage([MATERIAL_1]))),
+    });
+    render(<RollDetailPage params={Promise.resolve({ id: "r1" })} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Editar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+    expect((await screen.findByRole("alert")).textContent).toBe("Rolo já descartado");
+    expect(screen.getByRole("button", { name: "Salvar" })).toBeTruthy();
+  });
+
+  it("cancelling the edit closes the form without calling the API", async () => {
+    const fetchMock = stubApi({
+      "/auth/me": () => Promise.resolve(jsonResponse(200, ADMIN_ME)),
+      "/inventory/rolls/r1": () => Promise.resolve(jsonResponse(200, ROLL)),
+      "/materials?pageSize=100": () => Promise.resolve(jsonResponse(200, materialsPage([MATERIAL_1]))),
+    });
+    render(<RollDetailPage params={Promise.resolve({ id: "r1" })} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Editar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+
+    expect(screen.queryByRole("button", { name: "Salvar" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Editar" })).toBeTruthy();
+    expect(callsTo(fetchMock, "/inventory/rolls/r1").filter(([, init]) => init?.method === "PATCH")).toHaveLength(0);
+  });
 });

@@ -12,6 +12,7 @@ import { ListMovementsDto } from './dto/list-movements.dto.js';
 import { ListRollsDto } from './dto/list-rolls.dto.js';
 import { ListStockItemsDto } from './dto/list-stock-items.dto.js';
 import { MaterialsSummaryDto } from './dto/materials-summary.dto.js';
+import { UpdateRollDto } from './dto/update-roll.dto.js';
 import { UpdateStockItemDto } from './dto/update-stock-item.dto.js';
 import { WeighRollDto } from './dto/weigh-roll.dto.js';
 import { InventoryService } from './inventory.service.js';
@@ -65,6 +66,13 @@ export class InventoryController {
   @Get('rolls/:id')
   getById(@Param('id', uuidParam()) id: string): Promise<RollDetailResponse> {
     return this.inventory.getById(id);
+  }
+
+  // Dados descritivos do rolo (tara, lote, localização…), sem custo: quem pesa também corrige (AD-031).
+  @Roles('production')
+  @Patch('rolls/:id')
+  updateRoll(@Param('id', uuidParam()) id: string, @Body() dto: UpdateRollDto): Promise<RollResponse> {
+    return this.inventory.updateRoll(id, dto);
   }
 
   // Ação operacional de chão de fábrica: produção (e admin, que sempre passa) pesa (AC 15).
