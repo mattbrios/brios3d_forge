@@ -245,3 +245,7 @@ Proof: `grep -q '^| AD-032 |.*| active |' .specs/STATE.md`
 
 - S1-S7 ≈ 38k tokens (≈ 150 KB / 4: os arquivos de `materials` na API e no web somam 65 KB por `wc -c`, mais ~25 KB de arquivos novos e 60 KB das 6 fixtures de outras telas que só ganham `colorHex: null`), abaixo do orçamento de 150k - one builder
 - Mechanism: one builder (cabe no orçamento, sem pergunta)
+
+- **Boundary:** C7-C15, C34-C46, C55 closed at `5314026` (API); C1-C6, C16-C33, C47-C54 closed in the web commit that carries this line; C56-C57 closed at `f627535`
+- **Settled mid-build:** commits locais na branch `feat/material-brand-tone`, sem push (pedido do usuário, já que o `AGENTS.md` exige pedido explícito para commit)
+- **Abandoned:** asserir `getAttribute("style") === null` na amostra sem tom - o React deixa o atributo vazio, não ausente; a afirmação do check (amostra sem cor) é `style.background === ""`. Dois testes de chaves exatas da resposta de material (`materials.e2e-spec.ts`, `inventory.e2e-spec.ts`) tiveram o conjunto esperado ampliado com `colorHex`, nunca relaxado

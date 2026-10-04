@@ -25,6 +25,7 @@ const MATERIAL_1: Material = {
   bedTempC: 60,
   active: true,
   minimumStockGrams: null,
+  colorHex: null,
 };
 
 const ROLL: RollDetail = {

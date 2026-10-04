@@ -1,6 +1,6 @@
 "use client";
 
-import type { FormEvent } from "react";
+import type { FormEvent, ReactNode } from "react";
 import { Button } from "../ui/button";
 import { Alert } from "../ui/feedback";
 import { Checkbox, Field, Input } from "../ui/form";
@@ -13,6 +13,9 @@ export interface FieldConfig<V> {
   // recusa vírgula; "money" mostra o prefixo "R$" e a tela converte reais em centavos.
   type?: "text" | "number" | "money" | "checkbox";
   placeholder?: string;
+  // Campo que não cabe nos tipos acima (AD-032): o retorno entra no mesmo <Field label>, e um
+  // <Input> dentro dele recebe o id do rótulo.
+  render?: (props: { values: V; onChange: (values: V) => void }) => ReactNode;
 }
 
 export function EntityForm<V extends object>({
@@ -39,7 +42,11 @@ export function EntityForm<V extends object>({
     <form onSubmit={onSubmit} className="flex flex-col gap-5">
       <div className="bf-form-grid">
         {fields.map((field) =>
-          field.type === "checkbox" ? (
+          field.render ? (
+            <Field key={field.key} label={field.label}>
+              {field.render({ values, onChange })}
+            </Field>
+          ) : field.type === "checkbox" ? (
             <div key={field.key} className="flex items-end" style={{ paddingBottom: 8 }}>
               <Checkbox
                 label={field.label}
