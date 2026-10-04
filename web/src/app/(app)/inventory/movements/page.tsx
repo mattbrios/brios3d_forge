@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ApiError, apiFetch } from "@/lib/api";
+import { formatQuantity, formatUnitCents } from "@/lib/format";
 import type { InventoryMovement } from "@/lib/inventory";
 import type { MovementsPage } from "@/lib/stock-items";
 import { MovementBadge } from "@/components/movement-badge";
@@ -84,10 +85,10 @@ export default function MovementsPageScreen() {
                     <MovementBadge type={movement.type} />
                   </td>
                   <td data-label="Quantidade" className="is-num">
-                    {movement.quantity}
+                    {formatQuantity(movement.quantity)}
                   </td>
                   <td data-label="Custo unitário" className="is-num">
-                    {movement.unitCostCents !== null ? (movement.unitCostCents / 100).toFixed(2) : "—"}
+                    {movement.unitCostCents !== null ? formatUnitCents(movement.unitCostCents) : "—"}
                   </td>
                   <td data-label="Usuário" className="bf-mono" style={{ fontSize: 12 }}>
                     {movement.userId}

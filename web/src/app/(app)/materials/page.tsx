@@ -13,6 +13,8 @@ import { IconButton } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState, Loading, PageError } from "@/components/ui/feedback";
 import { Field, Input } from "@/components/ui/form";
+import { formatQuantity } from "@/lib/format";
+import { decimalToInput, readNumbers } from "@/lib/number-input";
 
 type Status =
   | { kind: "loading" }
@@ -54,14 +56,14 @@ const COLUMNS: Column<Material>[] = [
   { key: "type", label: "Tipo", render: (row) => <span style={{ fontWeight: 800 }}>{row.type}</span> },
   { key: "brand", label: "Marca" },
   { key: "color", label: "Cor" },
-  { key: "densityGCm3", label: "Densidade", numeric: true },
-  { key: "nozzleTempC", label: "Bico °C", numeric: true },
-  { key: "bedTempC", label: "Mesa °C", numeric: true },
+  { key: "densityGCm3", label: "Densidade", numeric: true, render: (row) => formatQuantity(row.densityGCm3) },
+  { key: "nozzleTempC", label: "Bico °C", numeric: true, render: (row) => formatQuantity(row.nozzleTempC) },
+  { key: "bedTempC", label: "Mesa °C", numeric: true, render: (row) => formatQuantity(row.bedTempC) },
   {
     key: "minimumStockGrams",
     label: "Mínimo",
     numeric: true,
-    render: (row) => (row.minimumStockGrams === null ? "—" : `${row.minimumStockGrams} g`),
+    render: (row) => (row.minimumStockGrams === null ? "—" : `${formatQuantity(row.minimumStockGrams)} g`),
   },
   { key: "active", label: "Situação", render: (row) => <ActiveBadge active={row.active} /> },
 ];
@@ -70,18 +72,16 @@ function messageOf(error: unknown): string {
   return error instanceof ApiError ? error.message : "Não foi possível conectar à API";
 }
 
-function buildBody(values: MaterialFormValues): Record<string, unknown> {
-  const body: Record<string, unknown> = {
-    type: values.type,
-    brand: values.brand,
-    color: values.color,
-    densityGCm3: Number(values.densityGCm3),
-    nozzleTempC: Number(values.nozzleTempC),
-    bedTempC: Number(values.bedTempC),
-  };
-  // Campo vazio é "sem mínimo": `null` explícito, que é o que limpa a política no PATCH.
-  body.minimumStockGrams = values.minimumStockGrams === "" ? null : Number(values.minimumStockGrams);
-  return body;
+function buildBody(values: MaterialFormValues): { ok: true; body: Record<string, unknown> } | { ok: false; message: string } {
+  // Campo vazio no mínimo é "sem mínimo": `null` explícito, que é o que limpa a política no PATCH.
+  const parsed = readNumbers({
+    densityGCm3: { label: "Densidade", text: values.densityGCm3, required: true },
+    nozzleTempC: { label: "Temperatura do bico", text: values.nozzleTempC, required: true },
+    bedTempC: { label: "Temperatura da mesa", text: values.bedTempC, required: true },
+    minimumStockGrams: { label: "Estoque mínimo", text: values.minimumStockGrams },
+  });
+  if (!parsed.ok) return parsed;
+  return { ok: true, body: { type: values.type, brand: values.brand, color: values.color, ...parsed.values } };
 }
 
 function formFromMaterial(material: Material): MaterialFormValues {
@@ -89,10 +89,10 @@ function formFromMaterial(material: Material): MaterialFormValues {
     type: material.type,
     brand: material.brand,
     color: material.color,
-    densityGCm3: String(material.densityGCm3),
-    nozzleTempC: String(material.nozzleTempC),
-    bedTempC: String(material.bedTempC),
-    minimumStockGrams: material.minimumStockGrams !== null ? String(material.minimumStockGrams) : "",
+    densityGCm3: decimalToInput(material.densityGCm3),
+    nozzleTempC: decimalToInput(material.nozzleTempC),
+    bedTempC: decimalToInput(material.bedTempC),
+    minimumStockGrams: material.minimumStockGrams !== null ? decimalToInput(material.minimumStockGrams) : "",
   };
 }
 
@@ -141,13 +141,18 @@ export default function MaterialsPage() {
 
   async function submitCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const built = buildBody(createForm);
+    if (!built.ok) {
+      setCreateError(built.message);
+      return;
+    }
     setCreating(true);
     setCreateError(null);
     try {
       const created = await apiFetch<Material>("/materials", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildBody(createForm)),
+        body: JSON.stringify(built.body),
       });
       setStatus((current) =>
         current.kind === "ready" ? { ...current, materials: [...current.materials, created] } : current,
@@ -175,13 +180,18 @@ export default function MaterialsPage() {
   async function submitEdit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!editingId || !editForm) return;
+    const built = buildBody(editForm);
+    if (!built.ok) {
+      setEditError(built.message);
+      return;
+    }
     setEditSubmitting(true);
     setEditError(null);
     try {
       const updated = await apiFetch<Material>(`/materials/${editingId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildBody(editForm)),
+        body: JSON.stringify(built.body),
       });
       setStatus((current) =>
         current.kind === "ready" ? { ...current, materials: replaceMaterial(current.materials, updated) } : current,

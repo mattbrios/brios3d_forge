@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, getDefaultNormalizer, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Printer } from "@/lib/printers";
 import PrintersPage from "./page";
@@ -160,11 +160,95 @@ describe("Printers page", () => {
       fireEvent.change(within(row).getByLabelText("Horímetro (h)"), { target: { value: "120.5" } });
       fireEvent.click(within(row).getByRole("button", { name: "Ajustar horímetro" }));
 
-      await within(row).findByText("120.5");
+      await within(row).findByText("120,5");
       expect(callsTo(fetchMock, "/printers/p1/hourmeter")).toHaveLength(1);
       expect(bodyOf(callsTo(fetchMock, "/printers/p1/hourmeter")[0][1])).toEqual({ hourmeterHours: 120.5 });
       expect(callsTo(fetchMock, "/printers?pageSize=100")).toHaveLength(1);
       cleanup();
     }
+  });
+
+  describe("numbers in pt-BR (issue #9)", () => {
+    const EXACT = { normalizer: getDefaultNormalizer({ collapseWhitespace: false }) };
+    const postCalls = (fetchMock: ReturnType<typeof stubApi>) =>
+      callsTo(fetchMock, "/printers").filter(([, init]) => init?.method === "POST");
+
+    function renderAdmin(printers: Printer[], post?: Route) {
+      const fetchMock = stubApi({
+        "/auth/me": () => Promise.resolve(jsonResponse(200, ADMIN_ME)),
+        "/printers?pageSize=100": () => Promise.resolve(jsonResponse(200, page(printers))),
+        "/printers": post ?? ((init) => Promise.resolve(jsonResponse(201, { ...PRINTER_1, id: "p9", ...bodyOf(init) }))),
+      });
+      render(<PrintersPage />);
+      return fetchMock;
+    }
+
+    async function fillCreate(values: Record<string, string>) {
+      await screen.findByLabelText("Nome");
+      const all = { Nome: "P1S", "Custo de aquisição": "5000", "Vida útil (h)": "10000", "Potência (W)": "250", ...values };
+      for (const [label, value] of Object.entries(all)) {
+        fireEvent.change(screen.getByLabelText(label), { target: { value } });
+      }
+      fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
+    }
+
+    it("acquisition cost is labelled in reais", async () => {
+      renderAdmin([]);
+      const input = (await screen.findByLabelText("Custo de aquisição")) as HTMLInputElement;
+      expect(input.parentElement?.textContent).toBe("R$");
+      expect(screen.queryByText(/centavos/)).toBeNull();
+    });
+
+    it("dot is always the decimal separator", async () => {
+      const fetchMock = renderAdmin([]);
+      await fillCreate({ "Custo de aquisição": "1.50" });
+      await screen.findByText("P1S");
+      expect(bodyOf(postCalls(fetchMock)[0][1] as RequestInit)).toMatchObject({ acquisitionCostCents: 150 });
+    });
+
+    it("rejects more than 2 decimals without calling the API", async () => {
+      const fetchMock = renderAdmin([]);
+      await fillCreate({ "Custo de aquisição": "10,123" });
+      expect((await screen.findByRole("alert")).textContent).toBe(
+        "Valor inválido em Custo de aquisição: use no máximo 2 casas decimais",
+      );
+      expect(postCalls(fetchMock)).toHaveLength(0);
+    });
+
+    it("integer fields send decimals and show the API error", async () => {
+      const fetchMock = renderAdmin([], () =>
+        Promise.resolve(jsonResponse(400, { error: "powerWatts must be an integer number" })),
+      );
+      await fillCreate({ "Potência (W)": "1,5" });
+      expect((await screen.findByRole("alert")).textContent).toBe("powerWatts must be an integer number");
+      expect(bodyOf(postCalls(fetchMock)[0][1] as RequestInit)).toMatchObject({ powerWatts: 1.5 });
+    });
+
+    it("edit form shows the cost in reais", async () => {
+      renderAdmin([{ ...PRINTER_1, acquisitionCostCents: 8990 }]);
+      const row = (await screen.findByText("X2D")).closest("tr")!;
+      fireEvent.click(within(row).getByRole("button", { name: "Editar" }));
+      expect(screen.getAllByLabelText("Custo de aquisição").map((input) => (input as HTMLInputElement).value)).toContain(
+        "89,90",
+      );
+    });
+
+    it("cost column in reais", async () => {
+      renderAdmin([{ ...PRINTER_1, acquisitionCostCents: 899000 }]);
+      const row = (await screen.findByText("X2D")).closest("tr")!;
+      expect(within(row).getByText("R$\u00A08.990,00", EXACT)).toBeTruthy();
+    });
+
+    it("quantities in pt-BR", async () => {
+      renderAdmin([{ ...PRINTER_1, lifespanHours: 20000 }]);
+      const row = (await screen.findByText("X2D")).closest("tr")!;
+      expect(within(row).getByText("20.000")).toBeTruthy();
+    });
+
+    it("ams slots are not grouped", async () => {
+      renderAdmin([{ ...PRINTER_1, hasAms: true, amsSlots: 1000 }]);
+      const row = (await screen.findByText("X2D")).closest("tr")!;
+      expect(within(row).getByText("Sim (1000)")).toBeTruthy();
+    });
   });
 });

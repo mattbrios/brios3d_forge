@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { type StockAlert, type StockAlertsResponse, stockHrefOf } from "@/lib/alerts";
 import { ApiError, apiFetch } from "@/lib/api";
+import { formatQuantity } from "@/lib/format";
 import { TriangleAlert } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { StockMeter } from "@/components/ui/data";
@@ -83,11 +84,11 @@ export default function StockAlertsPage() {
                   <td data-label="Saldo">
                     <div className="flex flex-col gap-1.5" style={{ minWidth: 140 }}>
                       <StockMeter value={alert.balance} max={alert.minimum * 1.5} minimum={alert.minimum} />
-                      <span className="bf-meter__text">{alert.balance}</span>
+                      <span className="bf-meter__text">{formatQuantity(alert.balance)}</span>
                     </div>
                   </td>
                   <td data-label="Mínimo" className="is-num">
-                    {alert.minimum}
+                    {formatQuantity(alert.minimum)}
                   </td>
                   <td data-label="Unidade">{alert.unit}</td>
                 </tr>

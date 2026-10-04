@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, getDefaultNormalizer, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import seaAnimals from "@/components/fixtures/print-profile-import.json";
 import type { Material } from "@/lib/materials";
@@ -263,7 +263,7 @@ describe("Pricing page", () => {
 
     resolveQuote(jsonResponse(200, QUOTE_RESULT));
     await screen.findByText("Resultado");
-    expect(screen.getByText("R$ 10.50")).toBeTruthy();
+    expect(screen.getByText("R$\u00A010,50", { normalizer: getDefaultNormalizer({ collapseWhitespace: false }) })).toBeTruthy();
     expect(screen.getAllByText("Balcão")).toHaveLength(2); // checkbox do formulário + linha do resultado
     expect((screen.getByRole("button", { name: "Calcular" }) as HTMLButtonElement).disabled).toBe(false);
   });
@@ -298,5 +298,38 @@ describe("Pricing page", () => {
     await screen.findByText("Resultado");
     expect(callsTo(fetchMock, "/pricing/quote-preview")).toHaveLength(2);
     expect((screen.getByLabelText("Quantidade") as HTMLInputElement).value).toBe("2");
+  });
+
+  describe("money in reais (issue #9)", () => {
+    const EXACT = { normalizer: getDefaultNormalizer({ collapseWhitespace: false }) };
+
+    it("labor cost is labelled in reais", async () => {
+      stubApi(defaultRegistries({}));
+      render(<PricingPage />);
+      const input = (await screen.findByLabelText("Custo da hora de mão de obra")) as HTMLInputElement;
+      expect(input.parentElement?.textContent).toBe("R$");
+      expect(screen.queryByText(/centavos/)).toBeNull();
+    });
+
+    it("cost breakdown in pt-BR", async () => {
+      const fetchMock = stubApi({
+        ...defaultRegistries({}),
+        "/pricing/quote-preview": () => Promise.resolve(jsonResponse(200, QUOTE_RESULT)),
+      });
+      render(<PricingPage />);
+      await screen.findByRole("heading", { name: "Impressão" });
+      fireEvent.change(screen.getByLabelText("Impressora cadastrada"), { target: { value: "p1" } });
+      fireEvent.change(screen.getByLabelText("Horas de impressão"), { target: { value: "5,5" } });
+      fireEvent.change(screen.getByLabelText("Custo da hora de mão de obra"), { target: { value: "30,00" } });
+      fireEvent.click(screen.getByLabelText("Balcão"));
+      fireEvent.click(screen.getByRole("button", { name: "Calcular" }));
+
+      await screen.findByText("Resultado");
+      // materialCents 1050 do QUOTE_RESULT
+      expect(screen.getByText("R$\u00A010,50", EXACT)).toBeTruthy();
+      const body = bodyOf(callsTo(fetchMock, "/pricing/quote-preview")[0][1]);
+      expect(body.printHours).toBe(5.5);
+      expect(body.labor).toMatchObject({ centsPerHour: 3000 });
+    });
   });
 });

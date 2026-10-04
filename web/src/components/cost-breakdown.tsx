@@ -1,5 +1,5 @@
 import type { QuotePreviewResult } from "@/lib/pricing";
-import { formatCents } from "@/lib/format";
+import { formatCents, formatQuantity } from "@/lib/format";
 import { Badge } from "./ui/badge";
 
 // Parcelas do custo direto, na ordem e nas cores do resultado (CostBreakdown do Design System).
@@ -77,7 +77,7 @@ export function CostBreakdown({ result }: { result: QuotePreviewResult }) {
               <small>/un.</small>
             </div>
             <div className="bf-cost__total">
-              {result.quantity > 1 ? `${result.quantity} un. · ` : ""}Total {formatCents(channel.totalPriceCents)}
+              {result.quantity > 1 ? `${formatQuantity(result.quantity)} un. · ` : ""}Total {formatCents(channel.totalPriceCents)}
             </div>
           </li>
         ))}

@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, getDefaultNormalizer, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { QuotePreviewResult } from "@/lib/pricing";
 import type { Product, ProductPricing, ProductVariant } from "@/lib/products";
@@ -73,6 +73,9 @@ const LARANJA_PRICING: QuotePreviewResult = {
   materials: [],
   supplies: [],
 };
+
+// Mantém o espaço não separável do `Intl` ("R$\u00A055,79") na comparação.
+const EXACT = { normalizer: getDefaultNormalizer({ collapseWhitespace: false }) };
 
 const BLACK_ERROR = "Material sem custo médio disponível: PLA · Bambu · Preto";
 
@@ -161,7 +164,7 @@ describe("Product detail page", () => {
 
     pricingRoute = ok({ variants: [{ variantId: "v-laranja", name: "Laranja", pricing: LARANJA_PRICING, error: null }] });
     fireEvent.click(screen.getByRole("button", { name: "Tentar novamente" }));
-    await within(variantCard("Laranja")).findByText("R$ 55.79");
+    await within(variantCard("Laranja")).findByText("R$\u00A055,79", EXACT);
     expect(callsTo(fetchMock, "/products/p1/pricing")).toHaveLength(2);
     expect(callsTo(fetchMock, "/products/p1")).toHaveLength(1);
   });
@@ -185,9 +188,9 @@ describe("Product detail page", () => {
     expect(within(black).queryByText("Custo com risco")).toBeNull();
 
     const orange = variantCard("Laranja");
-    expect(within(orange).getByText("R$ 39.05")).toBeTruthy();
+    expect(within(orange).getByText("R$\u00A039,05", EXACT)).toBeTruthy();
     expect(within(orange).getByText("Balcão")).toBeTruthy();
-    expect(within(orange).getByText("R$ 55.79")).toBeTruthy();
+    expect(within(orange).getByText("R$\u00A055,79", EXACT)).toBeTruthy();
     expect(within(orange).queryByText(BLACK_ERROR)).toBeNull();
   });
 
@@ -257,7 +260,7 @@ describe("Product detail page", () => {
         "/products/p1/pricing": ok({ variants: [{ variantId: "v-laranja", name: "Laranja", pricing: LARANJA_PRICING, error: null }] }),
       });
       renderPage();
-      await within(await waitFor(() => variantCard("Laranja"))).findByText("R$ 55.79");
+      await within(await waitFor(() => variantCard("Laranja"))).findByText("R$\u00A055,79", EXACT);
       expect(screen.queryByRole("button", { name: "Nova variação" }), me.role).toBeNull();
       expect(screen.queryByRole("button", { name: "Editar" }), me.role).toBeNull();
       expect(screen.queryByRole("button", { name: "Desativar" }), me.role).toBeNull();
@@ -285,5 +288,22 @@ describe("Product detail page", () => {
     expect(callsTo(fetchMock, "/products/p1/variants/v-laranja")).toHaveLength(0);
     fireEvent.click(within(dialog).getByRole("button", { name: "Desativar" }));
     await waitFor(() => expect(patched).toEqual({ active: false }));
+  });
+
+  it("quantities in pt-BR", async () => {
+    const big = variant({
+      printHours: 1.5,
+      materials: [{ materialId: "m1", name: "PLA · Bambu · Laranja", grams: 1234.5 }],
+    });
+    stubApi({
+      "/auth/me": ok(SALES_ME),
+      "/products/p1": ok(product([big])),
+      "/products/p1/pricing": pending,
+    });
+    renderPage();
+    await screen.findByText("Estrela do mar");
+    const card = variantCard("Laranja");
+    expect(within(card).getByText("Bambu X1C · impressão 1,5 h")).toBeTruthy();
+    expect(within(card).getByText("PLA · Bambu · Laranja · 1.234,5 g")).toBeTruthy();
   });
 });

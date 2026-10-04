@@ -132,7 +132,12 @@ describe("Roll detail page", () => {
 
     const entryRow = (await screen.findByText("entrada")).closest("tr") as HTMLTableRowElement;
     const entryCells = within(entryRow).getAllByRole("cell").map((cell) => cell.textContent);
-    expect(entryCells).toEqual(["entrada", "1000", "0.12", new Date("2026-01-01T00:00:00.000Z").toLocaleString("pt-BR")]);
+    expect(entryCells).toEqual([
+      "entrada",
+      "1.000",
+      "R$\u00A00,12",
+      new Date("2026-01-01T00:00:00.000Z").toLocaleString("pt-BR"),
+    ]);
 
     const consumoRow = screen.getByText("consumo").closest("tr") as HTMLTableRowElement;
     const consumoCells = within(consumoRow).getAllByRole("cell").map((cell) => cell.textContent);
@@ -297,5 +302,36 @@ describe("Roll detail page", () => {
     expect(screen.queryByRole("button", { name: "Salvar" })).toBeNull();
     expect(screen.getByRole("button", { name: "Editar" })).toBeTruthy();
     expect(callsTo(fetchMock, "/inventory/rolls/r1").filter(([, init]) => init?.method === "PATCH")).toHaveLength(0);
+  });
+
+  describe("numbers in pt-BR (issue #9)", () => {
+    function renderRoll(roll: RollDetail) {
+      stubApi({
+        "/auth/me": () => Promise.resolve(jsonResponse(200, PRODUCTION_ME)),
+        "/inventory/rolls/r1": () => Promise.resolve(jsonResponse(200, roll)),
+        "/materials?pageSize=100": () => Promise.resolve(jsonResponse(200, materialsPage([MATERIAL_1]))),
+      });
+      render(<RollDetailPage params={Promise.resolve({ id: "r1" })} />);
+    }
+    const consumo = { ...ROLL.movements[0], id: "mv2", type: "consumo" as const, quantity: -1200, unitCostCents: null };
+
+    it("edit form shows the tare without grouping", async () => {
+      renderRoll({ ...ROLL, spoolTareGrams: 1800 });
+      fireEvent.click(await screen.findByRole("button", { name: "Editar" }));
+      expect((screen.getByLabelText("Tara do carretel (g)") as HTMLInputElement).value).toBe("1800");
+    });
+
+    it("movement cost in reais", async () => {
+      renderRoll({ ...ROLL, movements: [{ ...ROLL.movements[0], unitCostCents: 12.34 }] });
+      const row = (await screen.findByText("entrada")).closest("tr") as HTMLTableRowElement;
+      expect(within(row).getAllByRole("cell")[2].textContent).toBe("R$\u00A00,1234");
+    });
+
+    it("quantities in pt-BR", async () => {
+      renderRoll({ ...ROLL, balanceGrams: 1800, movements: [consumo] });
+      expect(await screen.findByText("1.800 g")).toBeTruthy();
+      const row = screen.getByText("consumo").closest("tr") as HTMLTableRowElement;
+      expect(within(row).getAllByRole("cell")[1].textContent).toBe("-1.200");
+    });
   });
 });

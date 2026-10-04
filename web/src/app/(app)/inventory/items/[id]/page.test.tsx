@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, getDefaultNormalizer, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Printer } from "@/lib/printers";
 import type { StockItemDetail } from "@/lib/stock-items";
@@ -217,7 +217,7 @@ describe("Stock item detail page", () => {
     render(<StockItemDetailPage params={Promise.resolve({ id: "i2" })} />);
 
     expect(await screen.findByText("5 un")).toBeTruthy();
-    expect(screen.getByText("R$ 45.00/un")).toBeTruthy();
+    expect(screen.getByText("R$\u00A045,00/un", { normalizer: getDefaultNormalizer({ collapseWhitespace: false }) })).toBeTruthy();
     // Peça de reposição mostra a impressora pelo nome, não pelo id.
     expect(screen.getByText("Bambu X1C")).toBeTruthy();
 
@@ -300,6 +300,35 @@ describe("Stock item detail page", () => {
     await vi.waitFor(() => expect(callsTo(fetchMock, "/inventory/items/i2/count")).toHaveLength(1));
     expect(bodyOf(callsTo(fetchMock, "/inventory/items/i2/count")[0][1] as RequestInit)).toEqual({
       countedQuantity: 4,
+    });
+  });
+
+  describe("numbers in pt-BR (issue #9)", () => {
+    const EXACT = { normalizer: getDefaultNormalizer({ collapseWhitespace: false }) };
+
+    function renderItem(item: StockItemDetail) {
+      stubApi({
+        "/auth/me": () => Promise.resolve(jsonResponse(200, ADMIN_ME)),
+        "/inventory/items/i2": () => Promise.resolve(jsonResponse(200, item)),
+        "/printers?pageSize=100": () => Promise.resolve(jsonResponse(200, printersPage([PRINTER_1]))),
+      });
+      render(<StockItemDetailPage params={Promise.resolve({ id: "i2" })} />);
+    }
+
+    it("average unit cost in pt-BR", async () => {
+      renderItem({ ...SPARE_PART, avgCostCents: 4500 });
+      expect(await screen.findByText("R$\u00A045,00/un", EXACT)).toBeTruthy();
+    });
+
+    it("movement cost in reais", async () => {
+      renderItem({ ...SPARE_PART, movements: [{ ...SPARE_PART.movements[0], unitCostCents: 1050 }] });
+      const row = (await screen.findByText("entrada")).closest("tr") as HTMLTableRowElement;
+      expect(within(row).getAllByRole("cell")[2].textContent).toBe("R$\u00A010,50");
+    });
+
+    it("balance in pt-BR", async () => {
+      renderItem({ ...SPARE_PART, balanceQuantity: 1200 });
+      expect(await screen.findByText("1.200 un")).toBeTruthy();
     });
   });
 });

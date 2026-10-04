@@ -1,3 +1,4 @@
+import { formatCentsPerUnit } from "./format";
 import type { InventoryMovement } from "./inventory";
 
 // Contrato de /inventory/items* (Fase 10).
@@ -47,5 +48,5 @@ export interface MovementsPage {
 
 // O custo médio é sempre por unidade de medida do item, então a unidade viaja junto no rótulo.
 export function formatAvgCost(cents: number | null, unitOfMeasure: string): string {
-  return cents === null ? "—" : `R$ ${(cents / 100).toFixed(2)}/${unitOfMeasure}`;
+  return cents === null ? "—" : formatCentsPerUnit(cents, unitOfMeasure);
 }

@@ -3,6 +3,7 @@
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useState } from "react";
 import { ApiError, apiFetch } from "@/lib/api";
+import { formatQuantity } from "@/lib/format";
 import type { FilamentRoll } from "@/lib/inventory";
 import type { Material, MaterialsPage } from "@/lib/materials";
 import Link from "next/link";
@@ -134,7 +135,7 @@ function RollLabelContent({ id }: { id: string }) {
           </div>
           <div className="flex gap-1">
             <dt>Peso</dt>
-            <dd>{roll.nominalWeightGrams} g</dd>
+            <dd>{formatQuantity(roll.nominalWeightGrams)} g</dd>
           </div>
           <div className="flex gap-1">
             <dt>Lote</dt>

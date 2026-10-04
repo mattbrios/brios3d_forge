@@ -9,7 +9,9 @@ import { Checkbox, Field, Input } from "../ui/form";
 export interface FieldConfig<V> {
   key: keyof V & string;
   label: string;
-  type?: "text" | "number" | "checkbox";
+  // "number" e "money" são texto com teclado decimal, porque o input numérico do navegador
+  // recusa vírgula; "money" mostra o prefixo "R$" e a tela converte reais em centavos.
+  type?: "text" | "number" | "money" | "checkbox";
   placeholder?: string;
 }
 
@@ -48,7 +50,9 @@ export function EntityForm<V extends object>({
           ) : (
             <Field key={field.key} label={field.label}>
               <Input
-                type={field.type === "number" ? "number" : "text"}
+                type="text"
+                inputMode={field.type === "number" || field.type === "money" ? "decimal" : undefined}
+                prefixText={field.type === "money" ? "R$" : undefined}
                 placeholder={field.placeholder}
                 value={String(values[field.key] ?? "")}
                 onChange={(event) => onChange({ ...values, [field.key]: event.target.value })}

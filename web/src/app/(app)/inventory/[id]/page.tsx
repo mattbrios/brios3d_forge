@@ -23,6 +23,8 @@ import { Card } from "@/components/ui/card";
 import { StockMeter } from "@/components/ui/data";
 import { Alert, EmptyState, Loading, PageError } from "@/components/ui/feedback";
 import { Field, Input, Select } from "@/components/ui/form";
+import { formatQuantity, formatUnitCents } from "@/lib/format";
+import { decimalToInput, readNumbers } from "@/lib/number-input";
 
 type Status =
   | { kind: "loading" }
@@ -43,8 +45,8 @@ interface EditFormValues {
 
 function editFormOf(roll: FilamentRoll): EditFormValues {
   return {
-    spoolTareGrams: String(roll.spoolTareGrams),
-    nominalWeightGrams: String(roll.nominalWeightGrams),
+    spoolTareGrams: decimalToInput(roll.spoolTareGrams),
+    nominalWeightGrams: decimalToInput(roll.nominalWeightGrams),
     batch: roll.batch ?? "",
     location: roll.location ?? "",
     purchaseDate: roll.purchaseDate ?? "",
@@ -133,13 +135,18 @@ function RollDetailContent({ id }: { id: string }) {
 
   async function submitWeigh(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const parsed = readNumbers({ grossWeightGrams: { label: "Peso bruto na balança", text: grossWeightGrams, required: true } });
+    if (!parsed.ok) {
+      setWeighError(parsed.message);
+      return;
+    }
     setWeighSubmitting(true);
     setWeighError(null);
     try {
       await apiFetch(`/inventory/rolls/${id}/weigh`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ grossWeightGrams: Number(grossWeightGrams) }),
+        body: JSON.stringify(parsed.values),
       });
       setGrossWeightGrams("");
       retry();
@@ -152,6 +159,11 @@ function RollDetailContent({ id }: { id: string }) {
 
   async function submitMovement(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const parsed = readNumbers({ quantity: { label: "Gramas", text: movementQuantity, required: true } });
+    if (!parsed.ok) {
+      setMovementError(parsed.message);
+      return;
+    }
     setMovementSubmitting(true);
     setMovementError(null);
     try {
@@ -160,7 +172,7 @@ function RollDetailContent({ id }: { id: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type: movementType,
-          quantity: Number(movementQuantity),
+          quantity: parsed.values.quantity,
           reason: movementReason || undefined,
         }),
       });
@@ -177,6 +189,14 @@ function RollDetailContent({ id }: { id: string }) {
   async function submitEdit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (editForm === null) return;
+    const parsed = readNumbers({
+      spoolTareGrams: { label: "Tara do carretel", text: editForm.spoolTareGrams, required: true },
+      nominalWeightGrams: { label: "Peso nominal", text: editForm.nominalWeightGrams, required: true },
+    });
+    if (!parsed.ok) {
+      setEditError(parsed.message);
+      return;
+    }
     setEditSubmitting(true);
     setEditError(null);
     try {
@@ -184,8 +204,7 @@ function RollDetailContent({ id }: { id: string }) {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          spoolTareGrams: Number(editForm.spoolTareGrams),
-          nominalWeightGrams: Number(editForm.nominalWeightGrams),
+          ...parsed.values,
           batch: orNull(editForm.batch),
           location: orNull(editForm.location),
           purchaseDate: orNull(editForm.purchaseDate),
@@ -278,19 +297,19 @@ function RollDetailContent({ id }: { id: string }) {
         <dl className="bf-dl">
           <div>
             <dt>Saldo</dt>
-            <dd>{roll.balanceGrams} g</dd>
+            <dd>{formatQuantity(roll.balanceGrams)} g</dd>
           </div>
           <div>
             <dt>Tara do carretel</dt>
-            <dd>{roll.spoolTareGrams} g</dd>
+            <dd>{formatQuantity(roll.spoolTareGrams)} g</dd>
           </div>
           <div>
             <dt>Peso inicial</dt>
-            <dd>{roll.initialWeightGrams} g</dd>
+            <dd>{formatQuantity(roll.initialWeightGrams)} g</dd>
           </div>
           <div>
             <dt>Peso nominal</dt>
-            <dd>{roll.nominalWeightGrams} g</dd>
+            <dd>{formatQuantity(roll.nominalWeightGrams)} g</dd>
           </div>
           <div>
             <dt>Data de compra</dt>
@@ -308,9 +327,7 @@ function RollDetailContent({ id }: { id: string }) {
             >
               <Field label="Tara do carretel (g)">
                 <Input
-                  type="number"
-                  min={0}
-                  step="any"
+                  inputMode="decimal"
                   value={editForm.spoolTareGrams}
                   onChange={(event) => setEditForm({ ...editForm, spoolTareGrams: event.target.value })}
                   required
@@ -318,9 +335,7 @@ function RollDetailContent({ id }: { id: string }) {
               </Field>
               <Field label="Peso nominal (g)">
                 <Input
-                  type="number"
-                  min={0}
-                  step="any"
+                  inputMode="decimal"
                   value={editForm.nominalWeightGrams}
                   onChange={(event) => setEditForm({ ...editForm, nominalWeightGrams: event.target.value })}
                   required
@@ -383,11 +398,11 @@ function RollDetailContent({ id }: { id: string }) {
           style={{ gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,300px),1fr))", gap: "var(--layout-gutter)" }}
         >
           {!discarded && (
-            <Card title="Pesagem" icon={Weight} subtitle={`Saldo = peso bruto − tara (${roll.spoolTareGrams} g)`}>
+            <Card title="Pesagem" icon={Weight} subtitle={`Saldo = peso bruto − tara (${formatQuantity(roll.spoolTareGrams)} g)`}>
               <form onSubmit={submitWeigh} className="flex flex-col gap-3">
                 <Field label="Peso bruto na balança (g)">
                   <Input
-                    type="number"
+                    inputMode="decimal"
                     value={grossWeightGrams}
                     onChange={(event) => setGrossWeightGrams(event.target.value)}
                     required
@@ -423,7 +438,7 @@ function RollDetailContent({ id }: { id: string }) {
                   </Field>
                   <Field label="Gramas">
                     <Input
-                      type="number"
+                      inputMode="decimal"
                       value={movementQuantity}
                       onChange={(event) => setMovementQuantity(event.target.value)}
                       required
@@ -475,7 +490,7 @@ function RollDetailContent({ id }: { id: string }) {
       {confirmingDiscard && (
         <ConfirmDialog
           title="Descartar rolo"
-          message={`Descartar este rolo? O saldo restante (${roll.balanceGrams} g) vira perda.`}
+          message={`Descartar este rolo? O saldo restante (${formatQuantity(roll.balanceGrams)} g) vira perda.`}
           confirmLabel="Descartar"
           onConfirm={() => void confirmDiscard()}
           onCancel={() => setConfirmingDiscard(false)}
@@ -506,10 +521,10 @@ function RollDetailContent({ id }: { id: string }) {
                       <MovementBadge type={movement.type} />
                     </td>
                     <td data-label="Gramas" className="is-num">
-                      {movement.quantity}
+                      {formatQuantity(movement.quantity)}
                     </td>
                     <td data-label="Custo (R$/g)" className="is-num">
-                      {movement.unitCostCents !== null ? (movement.unitCostCents / 100).toFixed(2) : "—"}
+                      {movement.unitCostCents !== null ? formatUnitCents(movement.unitCostCents) : "—"}
                     </td>
                     <td data-label="Data">{new Date(movement.createdAt).toLocaleString("pt-BR")}</td>
                   </tr>

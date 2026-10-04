@@ -7,6 +7,7 @@ import type { Material, MaterialsPage } from "@/lib/materials";
 import type { Printer, PrintersPage } from "@/lib/printers";
 import type { ModelPlatform, ProductVariant, VariantBody } from "@/lib/products";
 import type { StockItem, StockItemsPage } from "@/lib/stock-items";
+import { decimalToInput, readNumbers } from "@/lib/number-input";
 import { type ImportedFilament, PrintProfileImport } from "./print-profile-import";
 import { Button, IconButton } from "./ui/button";
 import { Card } from "./ui/card";
@@ -42,11 +43,6 @@ function materialLabel(material: Material): string {
   return material.active ? name : `${name} (inativo)`;
 }
 
-// Aceita "0,47" digitado à mão.
-function toNumber(value: string): number {
-  return Number(value.replace(",", "."));
-}
-
 // Editor da ficha técnica de uma variação (Fase 13). Material, insumo e impressora só vêm do
 // cadastro (AC 21); o custo nunca é digitado aqui, é calculado pela API.
 export function ProductVariantEditor({
@@ -70,22 +66,22 @@ export function ProductVariantEditor({
 
   const [name, setName] = useState(variant?.name ?? "");
   const [printerId, setPrinterId] = useState(variant?.printer.id ?? "");
-  const [printHours, setPrintHours] = useState(variant ? String(variant.printHours) : "");
-  const [prepHours, setPrepHours] = useState(variant ? String(variant.prepHours) : "");
-  const [slicingHours, setSlicingHours] = useState(variant ? String(variant.slicingHours) : "");
-  const [postProcessingHours, setPostProcessingHours] = useState(variant ? String(variant.postProcessingHours) : "");
+  const [printHours, setPrintHours] = useState(variant ? decimalToInput(variant.printHours) : "");
+  const [prepHours, setPrepHours] = useState(variant ? decimalToInput(variant.prepHours) : "");
+  const [slicingHours, setSlicingHours] = useState(variant ? decimalToInput(variant.slicingHours) : "");
+  const [postProcessingHours, setPostProcessingHours] = useState(variant ? decimalToInput(variant.postProcessingHours) : "");
   const [materialLines, setMaterialLines] = useState<MaterialLine[]>(() =>
     (variant?.materials ?? []).map((line, index) => ({
       key: index,
       materialId: line.materialId,
-      grams: String(line.grams),
+      grams: decimalToInput(line.grams),
     })),
   );
   const [supplyLines, setSupplyLines] = useState<SupplyLine[]>(() =>
     (variant?.supplies ?? []).map((line, index) => ({
       key: index,
       stockItemId: line.stockItemId,
-      quantity: String(line.quantity),
+      quantity: decimalToInput(line.quantity),
     })),
   );
 
@@ -120,14 +116,14 @@ export function ProductVariantEditor({
   // para o usuário escolher do cadastro (mesma regra da calculadora, Fase 12).
   function handleFilamentsChange(filaments: ImportedFilament[], importedPrintHours: number | null) {
     if (importedPrintHours !== null) {
-      setPrintHours(String(Math.round(importedPrintHours * 100) / 100));
+      setPrintHours(decimalToInput(Math.round(importedPrintHours * 100) / 100));
     }
     setMaterialLines((current) => {
       const kept = current.filter((line) => !importedKeys.current.has(line.key));
       const imported = filaments.map((filament) => {
         const key = nextKey.current++;
         importedKeys.current.add(key);
-        return { key, materialId: "", grams: filament.grams === null ? "" : String(filament.grams) };
+        return { key, materialId: "", grams: filament.grams === null ? "" : decimalToInput(filament.grams) };
       });
       return [...kept, ...imported];
     });
@@ -148,17 +144,39 @@ export function ProductVariantEditor({
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const hours = readNumbers({
+      printHours: { label: "Horas de impressão", text: printHours, required: true },
+      prepHours: { label: "Preparo", text: prepHours },
+      slicingHours: { label: "Fatiamento", text: slicingHours },
+      postProcessingHours: { label: "Pós-processamento", text: postProcessingHours },
+    });
+    const lines = readNumbers({
+      ...Object.fromEntries(
+        materialLines.map((line) => [`m${line.key}`, { label: "Gramas", text: line.grams, required: true }]),
+      ),
+      ...Object.fromEntries(
+        supplyLines.map((line) => [`s${line.key}`, { label: "Quantidade", text: line.quantity, required: true }]),
+      ),
+    });
+    if (!hours.ok) {
+      setError(hours.message);
+      return;
+    }
+    if (!lines.ok) {
+      setError(lines.message);
+      return;
+    }
     setSubmitting(true);
     setError(null);
     const body: VariantBody = {
       name,
       printerId,
-      printHours: toNumber(printHours),
-      prepHours: toNumber(prepHours || "0"),
-      slicingHours: toNumber(slicingHours || "0"),
-      postProcessingHours: toNumber(postProcessingHours || "0"),
-      materials: materialLines.map((line) => ({ materialId: line.materialId, grams: toNumber(line.grams) })),
-      supplies: supplyLines.map((line) => ({ stockItemId: line.stockItemId, quantity: toNumber(line.quantity) })),
+      printHours: hours.values.printHours,
+      prepHours: hours.values.prepHours ?? 0,
+      slicingHours: hours.values.slicingHours ?? 0,
+      postProcessingHours: hours.values.postProcessingHours ?? 0,
+      materials: materialLines.map((line) => ({ materialId: line.materialId, grams: lines.values[`m${line.key}`] ?? 0 })),
+      supplies: supplyLines.map((line) => ({ stockItemId: line.stockItemId, quantity: lines.values[`s${line.key}`] ?? 0 })),
     };
     try {
       const saved = await apiFetch<ProductVariant>(

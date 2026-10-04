@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, getDefaultNormalizer, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { StockItem } from "@/lib/stock-items";
 import StockItemsPageScreen from "./page";
@@ -112,7 +112,7 @@ describe("Stock items page", () => {
       "un",
       "200 un",
       "50 un",
-      "R$ 0.60/un",
+      "R$\u00A00,60/un",
     ]);
     // Saldo zero não inventa custo médio: a coluna mostra o traço.
     expect(
@@ -208,7 +208,7 @@ describe("Stock items page", () => {
     await screen.findByText("Parafuso M3x8");
     fireEvent.click(screen.getByRole("button", { name: "Registrar entrada" }));
     fireEvent.change(screen.getByLabelText("Quantidade"), { target: { value: "100" } });
-    fireEvent.change(screen.getByLabelText("Custo unitário (centavos)"), { target: { value: "70" } });
+    fireEvent.change(screen.getByLabelText("Custo unitário"), { target: { value: "0,70" } });
     fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
 
     await vi.waitFor(() => expect(callsTo(fetchMock, "/inventory/items/i1/entries")).toHaveLength(1));
@@ -270,5 +270,38 @@ describe("Stock items page", () => {
       cleanup();
       vi.unstubAllGlobals();
     }
+  });
+
+  describe("numbers in pt-BR (issue #9)", () => {
+    const EXACT = { normalizer: getDefaultNormalizer({ collapseWhitespace: false }) };
+
+    function renderAdmin(items: StockItem[]) {
+      stubApi({
+        "/auth/me": () => Promise.resolve(jsonResponse(200, ADMIN_ME)),
+        [ALL_ITEMS_PATH]: () => Promise.resolve(jsonResponse(200, itemsPage(items))),
+      });
+      render(<StockItemsPageScreen />);
+    }
+
+    it("unit cost is labelled in reais", async () => {
+      renderAdmin([CONSUMABLE]);
+      await screen.findByText("Parafuso M3x8");
+      fireEvent.click(screen.getByRole("button", { name: "Registrar entrada" }));
+      const input = screen.getByLabelText("Custo unitário") as HTMLInputElement;
+      expect(input.parentElement?.textContent).toBe("R$");
+      expect(screen.queryByText(/centavos/)).toBeNull();
+    });
+
+    it("average unit cost in pt-BR", async () => {
+      renderAdmin([{ ...CONSUMABLE, avgCostCents: 60 }]);
+      await screen.findByText("Parafuso M3x8");
+      expect(within(rowOf("Parafuso M3x8")).getByText("R$\u00A00,60/un", EXACT)).toBeTruthy();
+    });
+
+    it("balance in pt-BR", async () => {
+      renderAdmin([{ ...CONSUMABLE, balanceQuantity: 1200 }]);
+      await screen.findByText("Parafuso M3x8");
+      expect(within(rowOf("Parafuso M3x8")).getByText("1.200 un")).toBeTruthy();
+    });
   });
 });

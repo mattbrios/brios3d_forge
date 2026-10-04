@@ -10,6 +10,7 @@ import { Button, IconButton } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Alert, Loading, PageError } from "@/components/ui/feedback";
 import { Field, Input } from "@/components/ui/form";
+import { decimalToInput, readNumbers } from "@/lib/number-input";
 
 type Status =
   | { kind: "loading" }
@@ -72,17 +73,21 @@ export default function SalesChannelsPage() {
 
   async function submitCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const parsed = readNumbers({
+      taxRate: { label: "% imposto", text: createForm.taxRate, required: true },
+      feeRate: { label: "% taxa", text: createForm.feeRate, required: true },
+    });
+    if (!parsed.ok) {
+      setCreateError(parsed.message);
+      return;
+    }
     setCreating(true);
     setCreateError(null);
     try {
       const created = await apiFetch<SalesChannel>("/sales-channels", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: createForm.name,
-          taxRate: Number(createForm.taxRate),
-          feeRate: Number(createForm.feeRate),
-        }),
+        body: JSON.stringify({ name: createForm.name, ...parsed.values }),
       });
       setStatus((current) =>
         current.kind === "ready" ? { ...current, channels: [...current.channels, created] } : current,
@@ -97,7 +102,7 @@ export default function SalesChannelsPage() {
 
   function startEdit(channel: SalesChannel) {
     setEditingId(channel.id);
-    setEditForm({ name: channel.name, taxRate: String(channel.taxRate), feeRate: String(channel.feeRate) });
+    setEditForm({ name: channel.name, taxRate: decimalToInput(channel.taxRate), feeRate: decimalToInput(channel.feeRate) });
     setEditError(null);
   }
 
@@ -109,10 +114,18 @@ export default function SalesChannelsPage() {
 
   async function saveEdit(channel: SalesChannel) {
     if (!editForm) return;
+    const parsed = readNumbers({
+      taxRate: { label: "% imposto", text: editForm.taxRate, required: true },
+      feeRate: { label: "% taxa", text: editForm.feeRate, required: true },
+    });
+    if (!parsed.ok) {
+      setEditError(parsed.message);
+      return;
+    }
     const patch: Record<string, string | number> = {};
     if (editForm.name !== channel.name) patch.name = editForm.name;
-    if (Number(editForm.taxRate) !== channel.taxRate) patch.taxRate = Number(editForm.taxRate);
-    if (Number(editForm.feeRate) !== channel.feeRate) patch.feeRate = Number(editForm.feeRate);
+    if (parsed.values.taxRate !== channel.taxRate) patch.taxRate = parsed.values.taxRate;
+    if (parsed.values.feeRate !== channel.feeRate) patch.feeRate = parsed.values.feeRate;
 
     setEditSubmitting(true);
     setEditError(null);
@@ -197,6 +210,7 @@ export default function SalesChannelsPage() {
                           <Field label="% imposto">
                             <Input
                               inputSize="sm"
+                              inputMode="decimal"
                               value={editForm.taxRate}
                               onChange={(event) => setEditForm({ ...editForm, taxRate: event.target.value })}
                             />
@@ -206,6 +220,7 @@ export default function SalesChannelsPage() {
                           <Field label="% taxa">
                             <Input
                               inputSize="sm"
+                              inputMode="decimal"
                               value={editForm.feeRate}
                               onChange={(event) => setEditForm({ ...editForm, feeRate: event.target.value })}
                             />
@@ -294,12 +309,14 @@ export default function SalesChannelsPage() {
               </Field>
               <Field label="% imposto">
                 <Input
+                  inputMode="decimal"
                   value={createForm.taxRate}
                   onChange={(event) => setCreateForm({ ...createForm, taxRate: event.target.value })}
                 />
               </Field>
               <Field label="% taxa">
                 <Input
+                  inputMode="decimal"
                   value={createForm.feeRate}
                   onChange={(event) => setCreateForm({ ...createForm, feeRate: event.target.value })}
                 />
